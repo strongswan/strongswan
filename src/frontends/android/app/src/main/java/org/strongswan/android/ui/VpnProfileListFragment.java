@@ -48,6 +48,7 @@ import org.strongswan.android.data.VpnProfileSource;
 import org.strongswan.android.logic.StrongSwanApplication;
 import org.strongswan.android.ui.adapter.VpnProfileAdapter;
 import org.strongswan.android.utils.Constants;
+import org.strongswan.android.utils.Utils;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -147,6 +148,8 @@ public class VpnProfileListFragment extends Fragment implements MenuProvider
 		mListView.setAdapter(mListAdapter);
 		mListView.setEmptyView(view.findViewById(R.id.profile_list_empty));
 		mListView.setOnItemClickListener(mVpnProfileClicked);
+
+		Utils.applyWindowInsetsAsPaddingForLists(mListView);
 
 		if (!mReadOnly)
 		{

@@ -34,6 +34,7 @@ import org.strongswan.android.data.VpnProfile;
 import org.strongswan.android.logic.StrongSwanApplication;
 import org.strongswan.android.logic.TrustedCertificateManager;
 import org.strongswan.android.ui.VpnProfileListFragment.OnVpnProfileSelectedListener;
+import org.strongswan.android.utils.Utils;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -43,6 +44,7 @@ import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.app.AppCompatDialogFragment;
+import androidx.core.view.WindowCompat;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentTransaction;
@@ -66,6 +68,8 @@ public class MainActivity extends AppCompatActivity implements OnVpnProfileSelec
 	{
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.main);
+		WindowCompat.enableEdgeToEdge(getWindow());
+		Utils.applyWindowInsetsAsMarginsForLists(findViewById(R.id.layout));
 
 		ActionBar bar = getSupportActionBar();
 		bar.setDisplayShowHomeEnabled(true);

@@ -17,8 +17,15 @@
 package org.strongswan.android.utils;
 
 
+import android.view.View;
+import android.view.ViewGroup;
+
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+
+import androidx.core.graphics.Insets;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowInsetsCompat;
 
 public class Utils
 {
@@ -74,5 +81,40 @@ public class Utils
 			throw new UnknownHostException();
 		}
 		return InetAddress.getByAddress(bytes);
+	}
+
+	/**
+	 * Apply window insets for the system UI as margins except for the bottom,
+	 * which is useful if the view ends with a list. WindowInsetsCompat.CONSUMED
+	 * is not returned so padding can be applied to the list.
+	 *
+	 * @param view view to apply margins to
+	 */
+	public static void applyWindowInsetsAsMarginsForLists(View view)
+	{
+		ViewCompat.setOnApplyWindowInsetsListener(view, (v, windowInsets) -> {
+			Insets insets = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars());
+			ViewGroup.MarginLayoutParams mlp = (ViewGroup.MarginLayoutParams)v.getLayoutParams();
+			mlp.topMargin = insets.top;
+			mlp.leftMargin = insets.left;
+			mlp.rightMargin = insets.right;
+			v.setLayoutParams(mlp);
+			return windowInsets;
+		});
+	}
+
+	/**
+	 * Apply bottom inset for the system UI as padding on the given (list) view
+	 * so the last item can be scrolled fully into view.
+	 *
+	 * @param view view to apply padding to
+	 */
+	public static void applyWindowInsetsAsPaddingForLists(View view)
+	{
+		ViewCompat.setOnApplyWindowInsetsListener(view, (v, windowInsets) -> {
+			Insets insets = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars());
+			v.setPaddingRelative(0, 0, 0, insets.bottom);
+			return WindowInsetsCompat.CONSUMED;
+		});
 	}
 }

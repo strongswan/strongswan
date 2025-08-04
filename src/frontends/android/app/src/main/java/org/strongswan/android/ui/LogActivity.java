@@ -26,10 +26,12 @@ import android.widget.Toast;
 import org.strongswan.android.R;
 import org.strongswan.android.data.LogContentProvider;
 import org.strongswan.android.logic.CharonVpnService;
+import org.strongswan.android.utils.Utils;
 
 import java.io.File;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.view.WindowCompat;
 
 public class LogActivity extends AppCompatActivity
 {
@@ -38,6 +40,8 @@ public class LogActivity extends AppCompatActivity
 	{
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.log_activity);
+		WindowCompat.enableEdgeToEdge(getWindow());
+		Utils.applyWindowInsetsAsMarginsForLists(findViewById(R.id.layout));
 
 		getSupportActionBar().setDisplayHomeAsUpEnabled(true);
 	}
