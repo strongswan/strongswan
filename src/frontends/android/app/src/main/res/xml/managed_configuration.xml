@@ -324,7 +324,7 @@
                     android:description="@string/managed_config_proxy_port_description"
                     android:key="proxy_port"
                     android:restrictionType="integer"
-                    android:title="@string/managed_config_proxy_port_description" />
+                    android:title="@string/managed_config_proxy_port_title" />
 
                 <restriction
                     android:defaultValue=""
