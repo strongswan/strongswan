@@ -273,13 +273,6 @@ printf-builtin)
 	fi
 	;;
 all|alpine|codeql|coverage|sonarcloud|no-dbg|no-testable-ke)
-	if [ "$TEST" = "sonarcloud" ]; then
-		if [ -z "$SONAR_PROJECT" -o -z "$SONAR_ORGANIZATION" -o -z "$SONAR_TOKEN" ]; then
-			echo "The SONAR_PROJECT, SONAR_ORGANIZATION and SONAR_TOKEN" \
-				 "environment variables are required to run this test"
-			exit 1
-		fi
-	fi
 	if [ "$TEST" = "codeql" ]; then
 		# don't run tests, only analyze built code
 		TARGET=
@@ -552,7 +545,7 @@ case "$TEST" in
 sonarcloud)
 	# without target, coverage is currently not supported anyway because
 	# sonarqube only supports gcov, not lcov
-	build-wrapper-linux-x86-64 --out-dir bw-output make -j$(nproc) || exit $?
+	build-wrapper-linux-x86-64 --out-dir $BUILD_WRAPPER_OUT_DIR make -j$(nproc) || exit $?
 	;;
 *)
 	make -j$(nproc) $TARGET || exit $?
@@ -566,20 +559,6 @@ apidoc)
 		exit 1
 	fi
 	rm make.warnings
-	;;
-sonarcloud)
-	sonar-scanner \
-		-Dsonar.host.url=https://sonarcloud.io \
-		-Dsonar.projectKey=${SONAR_PROJECT} \
-		-Dsonar.organization=${SONAR_ORGANIZATION} \
-		-Dsonar.token=${SONAR_TOKEN} \
-		-Dsonar.projectVersion=$(git describe --exclude 'android-*')+${BUILD_NUMBER} \
-		-Dsonar.sources=. \
-		-Dsonar.cfamily.threads=2 \
-		-Dsonar.cfamily.analysisCache.mode=fs \
-		-Dsonar.cfamily.analysisCache.path=$HOME/.sonar-cache \
-		-Dsonar.cfamily.build-wrapper-output=bw-output || exit $?
-	rm -r bw-output .scannerwork
 	;;
 android)
 	rm -r strongswan-*
