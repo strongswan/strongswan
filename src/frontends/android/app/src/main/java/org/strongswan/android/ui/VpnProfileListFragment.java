@@ -60,7 +60,6 @@ import java.util.UUID;
 import androidx.annotation.NonNull;
 import androidx.core.view.MenuProvider;
 import androidx.fragment.app.Fragment;
-import androidx.lifecycle.Lifecycle;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 public class VpnProfileListFragment extends Fragment implements MenuProvider
@@ -197,7 +196,10 @@ public class VpnProfileListFragment extends Fragment implements MenuProvider
 	public void onSaveInstanceState(Bundle outState)
 	{
 		super.onSaveInstanceState(outState);
-		outState.putIntegerArrayList(SELECTED_KEY, new ArrayList<>(mSelected));
+		if (!mReadOnly)
+		{
+			outState.putIntegerArrayList(SELECTED_KEY, new ArrayList<>(mSelected));
+		}
 	}
 
 	@Override
