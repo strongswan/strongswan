@@ -1,11 +1,11 @@
 apply plugin: 'com.android.application'
 
 android {
-    namespace 'org.strongswan.android'
+    namespace = 'org.strongswan.android'
 
     defaultConfig {
         applicationId "org.strongswan.android"
-        compileSdk 36
+        compileSdk = 36
         minSdkVersion 21
         targetSdkVersion 36
 
@@ -19,7 +19,7 @@ android {
         }
     }
 
-    ndkVersion "27.3.13750724"
+    ndkVersion = "27.3.13750724"
 
     externalNativeBuild {
         ndkBuild {
