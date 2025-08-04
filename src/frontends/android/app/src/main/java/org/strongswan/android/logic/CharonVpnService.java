@@ -966,7 +966,6 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
 			return fd != null ? fd.detachFd() : -1;
 		}
 
-		@TargetApi(Build.VERSION_CODES.LOLLIPOP)
 		public synchronized void establishBlocking()
 		{
 			/* just choose some arbitrary values to block all traffic (except for what's configured in the profile) */
