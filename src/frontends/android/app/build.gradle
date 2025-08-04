@@ -5,9 +5,9 @@ android {
 
     defaultConfig {
         applicationId "org.strongswan.android"
-        compileSdk 34
+        compileSdk 36
         minSdkVersion 21
-        targetSdkVersion 34
+        targetSdkVersion 36
 
         versionCode 91
         versionName "2.5.6"
