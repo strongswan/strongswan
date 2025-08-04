@@ -20,6 +20,7 @@ import android.os.Bundle;
 import android.view.MenuItem;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.view.WindowCompat;
 
 public class SettingsActivity extends AppCompatActivity
 {
@@ -28,6 +29,8 @@ public class SettingsActivity extends AppCompatActivity
 	protected void onCreate(Bundle savedInstanceState)
 	{
 		super.onCreate(savedInstanceState);
+		WindowCompat.enableEdgeToEdge(getWindow());
+		WindowCompat.setDecorFitsSystemWindows(getWindow(), true);
 
 		getSupportActionBar().setDisplayHomeAsUpEnabled(true);
 

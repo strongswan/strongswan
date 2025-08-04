@@ -78,6 +78,7 @@ import javax.net.ssl.SSLHandshakeException;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.view.WindowCompat;
 import androidx.loader.app.LoaderManager;
 import androidx.loader.content.AsyncTaskLoader;
 import androidx.loader.content.Loader;
@@ -204,6 +205,7 @@ public class VpnProfileImportActivity extends AppCompatActivity
 		mDataSource.open();
 
 		setContentView(R.layout.profile_import_view);
+		WindowCompat.enableEdgeToEdge(getWindow());
 
 		mProgressBar = findViewById(R.id.progress_bar);
 		mExistsWarning = findViewById(R.id.exists_warning);

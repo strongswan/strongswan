@@ -18,6 +18,8 @@ package org.strongswan.android.ui;
 
 import android.os.Bundle;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.view.WindowCompat;
+
 import android.view.MenuItem;
 
 import org.strongswan.android.R;
@@ -33,6 +35,7 @@ public class RemediationInstructionsActivity extends AppCompatActivity implement
 	{
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.remediation_instructions);
+		WindowCompat.enableEdgeToEdge(getWindow());
 		getSupportActionBar().setDisplayHomeAsUpEnabled(true);
 
 		if (savedInstanceState != null)

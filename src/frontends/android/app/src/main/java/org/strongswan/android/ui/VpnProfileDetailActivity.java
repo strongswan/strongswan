@@ -84,6 +84,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.app.AppCompatDialogFragment;
 import androidx.appcompat.widget.SwitchCompat;
 import androidx.core.text.HtmlCompat;
+import androidx.core.view.WindowCompat;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 public class VpnProfileDetailActivity extends AppCompatActivity
@@ -199,6 +200,7 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 		mDataSource.open();
 
 		setContentView(R.layout.profile_detail_view);
+		WindowCompat.enableEdgeToEdge(getWindow());
 
 		mManagedProfile = findViewById(R.id.managed_profile);
 
