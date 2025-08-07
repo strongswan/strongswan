@@ -2341,6 +2341,9 @@ static bool redirect_established(private_ike_sa_t *this, identification_t *to)
 	{
 		return FALSE;
 	}
+	/* mark the SA so it won't get reused even though it's established */
+	set_condition(this, COND_REDIRECTED, TRUE);
+
 	new_priv = (private_ike_sa_t*)new;
 	new->set_peer_cfg(new, this->peer_cfg);
 	new_priv->redirected_from = this->other_host->clone(this->other_host);
