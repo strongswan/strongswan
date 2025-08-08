@@ -51,7 +51,7 @@ build_wolfssl()
 					-DRSA_MIN_SIZE=1024"
 	WOLFSSL_CONFIG="--prefix=$DEPS_PREFIX
 					--disable-crypttests --disable-examples
-					--enable-aesccm --enable-aesctr --enable-camellia
+					--enable-aesccm --enable-aesctr --enable-aescfb --enable-camellia
 					--enable-curve25519 --enable-curve448 --enable-des3
 					--enable-ecccustcurves --enable-ed25519 --enable-ed448
 					--enable-keygen --enable-mlkem --with-max-rsa-bits=8192
