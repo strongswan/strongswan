@@ -393,6 +393,26 @@ METHOD(listener_t, child_state_change_terminate, bool,
 	return TRUE;
 }
 
+METHOD(listener_t, ike_reestablish_pre, bool,
+	interface_listener_t *this, ike_sa_t *old, ike_sa_t *new)
+{
+	if (old->has_condition(old, COND_REDIRECTED))
+	{
+		/* if we get redirected during IKE_AUTH, we just migrate to the new SA.
+		 * we'd have to disable listening for child state changes otherwise (due
+		 * to task migration).  and if the initiation failed, the initial SA
+		 * couldn't be used anyway, so we can also just track the destruction of
+		 * of the new one in that case */
+		this->lock->lock(this->lock);
+		if (this->ike_sa == old)
+		{
+			this->ike_sa = new;
+		}
+		this->lock->unlock(this->lock);
+	}
+	return TRUE;
+}
+
 METHOD(job_t, destroy_job, void,
 	interface_job_t *this)
 {
@@ -510,6 +530,7 @@ METHOD(controller_t, initiate, status_t,
 		.listener = {
 			.public = {
 				.ike_state_change = _ike_state_change,
+				.ike_reestablish_pre = _ike_reestablish_pre,
 				.child_state_change = _child_state_change,
 			},
 			.logger = {
