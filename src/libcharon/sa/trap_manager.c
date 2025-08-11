@@ -809,6 +809,35 @@ METHOD(listener_t, child_state_change, bool,
 	}
 }
 
+METHOD(listener_t, ike_reestablish_pre, bool,
+	trap_listener_t *listener, ike_sa_t *old, ike_sa_t *new)
+{
+	private_trap_manager_t *this = listener->traps;
+	enumerator_t *enumerator;
+	acquire_t *acquire;
+
+	if (old->has_condition(old, COND_REDIRECTED))
+	{
+		/* if we get redirected during IKE_AUTH, we just migrate to the new SA.
+		 * we'd have to disable listening for child state changes otherwise (due
+		 * to task migration).  and if the initiation failed, the initial SA
+		 * couldn't be used anyway, so we can also just track the destruction of
+		 * of the new one in that case */
+		this->mutex->lock(this->mutex);
+		enumerator = this->acquires->create_enumerator(this->acquires);
+		while (enumerator->enumerate(enumerator, &acquire))
+		{
+			if (acquire->ike_sa == old)
+			{
+				acquire->ike_sa = new;
+			}
+		}
+		enumerator->destroy(enumerator);
+		this->mutex->unlock(this->mutex);
+	}
+	return TRUE;
+}
+
 METHOD(trap_manager_t, flush, void,
 	private_trap_manager_t *this)
 {
@@ -857,6 +886,7 @@ trap_manager_t *trap_manager_create(void)
 			.traps = this,
 			.listener = {
 				.ike_state_change = _ike_state_change,
+				.ike_reestablish_pre = _ike_reestablish_pre,
 				.child_state_change = _child_state_change,
 			},
 		},
