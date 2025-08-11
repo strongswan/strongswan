@@ -677,14 +677,15 @@ static void remove_entry(private_ike_sa_manager_t *this, entry_t *entry)
 }
 
 /**
- * Remove the entry at the current enumerator position.
+ * Remove the entry at the current enumerator position. This only works for a
+ * single concurrent thread.
  */
 static void remove_entry_at(private_enumerator_t *this)
 {
 	this->entry = NULL;
 	if (this->current)
 	{
-		table_item_t *current = this->current;
+		table_item_t *current = this->current, *prev;
 
 		ignore_result(ref_put(&this->manager->total_sa_count));
 		this->current = this->prev;
@@ -695,7 +696,22 @@ static void remove_entry_at(private_enumerator_t *this)
 		}
 		else
 		{
-			this->manager->ike_sa_table[this->row] = current->next;
+			/* we started from the beginning of the row, but while we waited
+			 * for the entry in flush(), one or more entries might have been
+			 * added, start from the beginning again in either case */
+			prev = this->manager->ike_sa_table[this->row];
+			if (prev != current)
+			{
+				while (prev->next != current)
+				{
+					prev = prev->next;
+				}
+				prev->next = current->next;
+			}
+			else
+			{
+				this->manager->ike_sa_table[this->row] = current->next;
+			}
 			unlock_single_segment(this->manager, this->segment);
 		}
 		free(current);
