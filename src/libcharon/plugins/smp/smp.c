@@ -741,7 +741,7 @@ METHOD(plugin_t, destroy, void,
 /*
  * Described in header file
  */
-plugin_t *smp_plugin_create()
+PLUGIN_DEFINE(smp)
 {
 	struct sockaddr_un unix_addr = { AF_UNIX, IPSEC_PIDDIR "/charon.xml"};
 	private_smp_t *this;

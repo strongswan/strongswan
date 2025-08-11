@@ -158,7 +158,7 @@ METHOD(plugin_t, destroy, void,
 /*
  * see header file
  */
-plugin_t *gmp_plugin_create()
+PLUGIN_DEFINE(gmp)
 {
 	private_gmp_plugin_t *this;
 

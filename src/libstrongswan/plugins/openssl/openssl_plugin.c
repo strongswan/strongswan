@@ -775,7 +775,7 @@ static int concat_ossl_providers(OSSL_PROVIDER *provider, void *cbdata)
 /*
  * see header file
  */
-plugin_t *openssl_plugin_create()
+PLUGIN_DEFINE(openssl)
 {
 	private_openssl_plugin_t *this;
 	int fips_mode;

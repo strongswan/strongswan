@@ -92,7 +92,7 @@ METHOD(plugin_t, destroy, void,
 /*
  * see header file
  */
-plugin_t *stroke_plugin_create()
+PLUGIN_DEFINE(stroke)
 {
 	private_stroke_plugin_t *this;
 

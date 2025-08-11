@@ -294,7 +294,7 @@ METHOD(plugin_t, destroy, void,
 /*
  * see header file
  */
-plugin_t *pkcs11_plugin_create()
+PLUGIN_DEFINE(pkcs11)
 {
 	private_pkcs11_plugin_t *this;
 

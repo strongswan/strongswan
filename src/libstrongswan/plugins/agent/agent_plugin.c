@@ -60,7 +60,7 @@ METHOD(plugin_t, destroy, void,
 /*
  * see header file
  */
-plugin_t *agent_plugin_create()
+PLUGIN_DEFINE(agent)
 {
 	private_agent_plugin_t *this;
 
