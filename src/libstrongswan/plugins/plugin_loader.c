@@ -46,6 +46,9 @@ typedef struct plugin_entry_t plugin_entry_t;
  * Statically registered constructors
  */
 static hashtable_t *plugin_constructors = NULL;
+
+#elif !defined(HAVE_DLADDR)
+#error Neither dynamic linking nor static plugin constructors are supported!
 #endif
 
 /**
@@ -373,13 +376,12 @@ static status_t create_plugin(private_plugin_loader_t *this, void *handle,
 	{
 		constructor = plugin_constructors->get(plugin_constructors, name);
 	}
-#elif defined(HAVE_DLADDR)
+#endif
+#ifdef HAVE_DLADDR
 	if (!constructor)
 	{
 		constructor = dlsym(handle, create);
 	}
-#else
-	#error Neither dynamic linking nor static plugin constructors are supported!
 #endif
 	if (!constructor)
 	{
