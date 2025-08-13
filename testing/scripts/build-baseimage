@@ -125,13 +125,13 @@ EOF
 execute_chroot "locale-gen"
 
 log_action "Downloading signing key for custom apt repo"
-execute_chroot "wget -q $BASEIMGEXTKEY -O /tmp/key"
+execute_chroot "wget -q $BASEIMGEXTKEY -O /tmp/strongswan.key"
 log_action "Installing signing key for custom apt repo"
-execute_chroot "apt-key add /tmp/key"
+execute_chroot "mv /tmp/strongswan.key /etc/apt/keyrings/"
 
 log_action "Enabling custom apt repo"
 cat > $LOOPDIR/etc/apt/sources.list.d/strongswan.list << EOF
-deb $BASEIMGEXTREPO $BASEIMGSUITE main
+deb [signed-by=/etc/apt/keyrings/strongswan.key] $BASEIMGEXTREPO $BASEIMGSUITE main
 EOF
 log_status $?
 
