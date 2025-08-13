@@ -195,7 +195,7 @@ do
 		execute_chroot "make SRCDIR=/root/strongswan BUILDDIR=/root/shared/build-strongswan QUICK_REBUILD=$QUICK_REBUILD -f /root/shared/build-strongswan/$r"
 	else
 		cp $RECPDIR/$r ${LOOPDIR}/root/shared/compile
-		execute_chroot "make SWANVERSION=$TARBALL -C /root/shared/compile -f $r"
+		execute_chroot "make SWANVERSION=$TARBALL BASEIMG=$BASEIMGSUITE -C /root/shared/compile -f $r"
 	fi
 done
 
