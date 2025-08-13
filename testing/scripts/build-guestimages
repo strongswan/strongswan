@@ -37,6 +37,7 @@ mkdir -p $LOOPDIR
 # just to be sure
 do_on_exit qemu-nbd -d $NBDEV
 do_on_exit umount $LOOPDIR
+do_on_exit umount $LOOPDIR/proc
 
 for host in $STRONGSWANHOSTS
 do
@@ -45,6 +46,7 @@ do
 	execute "qemu-nbd -c $NBDEV $IMGDIR/$host.$IMGEXT" 0
 	blockdev --rereadpt $NBDEV
 	execute "mount $NBDPARTITION $LOOPDIR" 0
+	execute "mount -t proc none $LOOPDIR/proc" 0
 	execute "cp -rf $HOSTSDIR/default/* $LOOPDIR" 0
 	execute "cp -rf $HOSTSDIR/${host}/etc $LOOPDIR" 0
 	execute_chroot "ldconfig" 0
@@ -92,6 +94,7 @@ do
 		done
 	fi
 	sync
+	execute "umount -l $LOOPDIR/proc" 0
 	execute "umount -l $LOOPDIR" 0
 	execute "qemu-nbd -d $NBDEV" 0
 	log_status 0
