@@ -23,12 +23,12 @@
 #
 #   make -j check TESTS_RUNNERS=tkm TESTS_TKM=1
 
-FROM debian:bookworm
+FROM debian:trixie
 
 ARG packages="autoconf automake bison build-essential ca-certificates ccache \
 flex git gperf libssl-dev libtool pkg-config \
-gnat gprbuild libahven11-dev libxmlada-schema12-dev libgmpada12-dev \
-libalog8-dev"
+gnat gprbuild libahven-dev libxmlada-schema-dev libgmpada-dev \
+libalog-dev"
 
 RUN apt-get update && \
   DEBIAN_FRONTEND=noninteractive apt-get install -qq -y \
@@ -48,8 +48,8 @@ RUN cd /tmp/recipes \
   && make -f 010_tkm.mk \
   && rm -rf /tmp/recipes
 
-ENV ADA_PROJECT_PATH /usr/local/ada/lib/gnat
-ENV PATH /usr/lib/ccache:$PATH
+ENV ADA_PROJECT_PATH=/usr/local/ada/lib/gnat
+ENV PATH=/usr/lib/ccache:$PATH
 
 COPY tkm/generate-config.sh /usr/local/share/tkm/
 COPY tests/tkm/host2host-initiator/hosts/moon/etc/tkm/tkm.conf /usr/local/share/tkm/
