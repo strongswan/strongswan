@@ -47,6 +47,7 @@ do
 	blockdev --rereadpt $NBDEV
 	execute "mount $NBDPARTITION $LOOPDIR" 0
 	execute "mount -t proc none $LOOPDIR/proc" 0
+	execute "mv $LOOPDIR/usr/local/sbin/ipsec $LOOPDIR/usr/local/sbin/ipsec.orig" 0
 	execute "cp -rf $HOSTSDIR/default/* $LOOPDIR" 0
 	execute "cp -rf $HOSTSDIR/${host}/etc $LOOPDIR" 0
 	execute_chroot "ldconfig" 0
