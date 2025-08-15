@@ -617,6 +617,7 @@ static char *whitelist[] = {
 	"OSSL_DECODER_CTX_new_for_pkey",
 	"OSSL_ENCODER_do_all_provided",
 	"OSSL_PROVIDER_try_load",
+	"OSSL_PROVIDER_try_load_ex",
 	"OSSL_PROVIDER_load",
 	"RAND_get0_private",
 	"RAND_get0_public",
