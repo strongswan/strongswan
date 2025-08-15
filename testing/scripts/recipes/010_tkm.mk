@@ -2,7 +2,11 @@
 
 PKG = tkm
 SRC = https://git.codelabs.ch/git/$(PKG).git
+ifeq (,$(filter $(BASEIMG),bullseye bookworm))
+REV = 85d49c9255360663c344ccf3175092524dc66eae
+else
 REV = v0.3
+endif
 
 export ADA_PROJECT_PATH=/usr/local/ada/lib/gnat
 
