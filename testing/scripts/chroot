@@ -68,4 +68,4 @@ echo
 fi
 
 export debian_chroot="$1"
-chroot $LOOPDIR /bin/bash -i
+chroot $LOOPDIR /bin/bash -l
