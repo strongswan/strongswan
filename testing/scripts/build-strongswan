@@ -115,6 +115,8 @@ case "$GUEST" in
 esac
 
 do_on_exit qemu-nbd -d $NBDEV
+# wait for disk to become ready with newer QEMU versions
+sleep 1
 blockdev --rereadpt $NBDEV
 
 log_action "Mounting $NBDPARTITION to $LOOPDIR"
