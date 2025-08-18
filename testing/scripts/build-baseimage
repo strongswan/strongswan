@@ -78,6 +78,9 @@ log_action "Connecting image to NBD device $NBDEV"
 execute "qemu-nbd -c $NBDEV $BASEIMG"
 do_on_exit qemu-nbd -d $NBDEV
 
+# wait for disk to become ready with newer QEMU versions
+sleep 1
+
 log_action "Partitioning disk"
 sfdisk /dev/nbd0 >>$LOGFILE 2>&1 << EOF
 ;

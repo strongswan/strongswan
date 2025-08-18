@@ -44,6 +44,8 @@ do
 	log_action "Creating guest image for $host"
 	execute "qemu-img create -b $ROOTIMG -f $IMGEXT -F $IMGEXT $IMGDIR/$host.$IMGEXT" 0
 	execute "qemu-nbd -c $NBDEV $IMGDIR/$host.$IMGEXT" 0
+	# wait for disk to become ready with newer QEMU versions
+	sleep 1
 	blockdev --rereadpt $NBDEV
 	execute "mount $NBDPARTITION $LOOPDIR" 0
 	execute "mount -t proc none $LOOPDIR/proc" 0
