@@ -962,13 +962,13 @@ CALLBACK(list_conns, vici_message_t*,
 				  ike_cfg->get_other_port(ike_cfg));
 
 		b->add_kv(b, "version", "%N", ike_version_names,
-			peer_cfg->get_ike_version(peer_cfg));
+				  peer_cfg->get_ike_version(peer_cfg));
 		b->add_kv(b, "reauth_time", "%u",
-			peer_cfg->get_reauth_time(peer_cfg, FALSE));
+				  peer_cfg->get_reauth_time(peer_cfg, FALSE));
 		b->add_kv(b, "rekey_time", "%u",
-			peer_cfg->get_rekey_time(peer_cfg, FALSE));
+				  peer_cfg->get_rekey_time(peer_cfg, FALSE));
 		b->add_kv(b, "unique", "%N", unique_policy_names,
-			peer_cfg->get_unique_policy(peer_cfg));
+				  peer_cfg->get_unique_policy(peer_cfg));
 
 		dpd_delay = peer_cfg->get_dpd(peer_cfg);
 		if (dpd_delay)
@@ -1640,14 +1640,14 @@ CALLBACK(stats, vici_message_t*,
 
 	b->begin_section(b, "workers");
 	b->add_kv(b, "total", "%d",
-		lib->processor->get_total_threads(lib->processor));
+			  lib->processor->get_total_threads(lib->processor));
 	b->add_kv(b, "idle", "%d",
-		lib->processor->get_idle_threads(lib->processor));
+			  lib->processor->get_idle_threads(lib->processor));
 	b->begin_section(b, "active");
 	for (i = 0; i < JOB_PRIO_MAX; i++)
 	{
 		b->add_kv(b, enum_to_name(job_priority_names, i), "%d",
-			lib->processor->get_working_threads(lib->processor, i));
+				  lib->processor->get_working_threads(lib->processor, i));
 	}
 	b->end_section(b);
 	b->end_section(b);
@@ -1656,12 +1656,12 @@ CALLBACK(stats, vici_message_t*,
 	for (i = 0; i < JOB_PRIO_MAX; i++)
 	{
 		b->add_kv(b, enum_to_name(job_priority_names, i), "%d",
-			lib->processor->get_job_load(lib->processor, i));
+				  lib->processor->get_job_load(lib->processor, i));
 	}
 	b->end_section(b);
 
 	b->add_kv(b, "scheduled", "%d",
-		lib->scheduler->get_job_load(lib->scheduler));
+			  lib->scheduler->get_job_load(lib->scheduler));
 
 	b->begin_section(b, "ikesas");
 	b->add_kv(b, "total", "%u",
