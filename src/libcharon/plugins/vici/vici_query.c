@@ -956,6 +956,11 @@ CALLBACK(list_conns, vici_message_t*,
 		tokens->destroy(tokens);
 		b->end_list(b);
 
+		b->add_kv(b, "local_port", "%u",
+				  ike_cfg->get_my_port(ike_cfg));
+		b->add_kv(b, "remote_port", "%u",
+				  ike_cfg->get_other_port(ike_cfg));
+
 		b->add_kv(b, "version", "%N", ike_version_names,
 			peer_cfg->get_ike_version(peer_cfg));
 		b->add_kv(b, "reauth_time", "%u",

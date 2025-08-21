@@ -882,6 +882,8 @@ _list-conns_ command.
 			remote_addrs = [
 				<list of valid remote IKE endpoint addresses>
 			]
+			local_port = <local IKE endpoint port>
+			remote_port = <remote IKE endpoint port>
 			version = <IKE version as string, IKEv1|IKEv2 or 0 for any>
 			reauth_time = <IKE_SA reauthentication interval in seconds>
 			rekey_time = <IKE_SA rekeying interval in seconds>
