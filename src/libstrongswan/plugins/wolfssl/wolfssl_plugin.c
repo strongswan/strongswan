@@ -532,7 +532,7 @@ METHOD(plugin_t, destroy, void,
 /*
  * Described in header
  */
-plugin_t *wolfssl_plugin_create()
+PLUGIN_DEFINE(wolfssl)
 {
 	private_wolfssl_plugin_t *this;
 	bool fips_mode;

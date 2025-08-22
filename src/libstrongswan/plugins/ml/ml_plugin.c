@@ -76,7 +76,7 @@ METHOD(plugin_t, destroy, void,
 /*
  * Described in header
  */
-plugin_t *ml_plugin_create()
+PLUGIN_DEFINE(ml)
 {
 	private_plugin_t *this;
 

@@ -391,7 +391,7 @@ METHOD(plugin_t, destroy, void,
 /*
  * Described in header
  */
-plugin_t *botan_plugin_create()
+PLUGIN_DEFINE(botan)
 {
 	private_botan_plugin_t *this;
 

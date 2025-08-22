@@ -75,7 +75,7 @@ METHOD(plugin_t, destroy, void,
 /*
  * see header file
  */
-plugin_t *mgf1_plugin_create()
+PLUGIN_DEFINE(mgf1)
 {
 	private_mgf1_plugin_t *this;
 

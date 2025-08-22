@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2014 Tobias Brunner
+ * Copyright (C) 2010-2025 Tobias Brunner
  * Copyright (C) 2007 Martin Willi
  *
  * Copyright (C) secunet Security Networks AG
@@ -46,6 +46,8 @@ typedef struct plugin_entry_t plugin_entry_t;
  * Statically registered constructors
  */
 static hashtable_t *plugin_constructors = NULL;
+#elif !defined(HAVE_DLADDR)
+#error Neither dynamic linking nor static plugin constructors are supported!
 #endif
 
 /**
@@ -373,13 +375,12 @@ static status_t create_plugin(private_plugin_loader_t *this, void *handle,
 	{
 		constructor = plugin_constructors->get(plugin_constructors, name);
 	}
-#elif defined(HAVE_DLADDR)
+#endif
+#ifdef HAVE_DLADDR
 	if (!constructor)
 	{
 		constructor = dlsym(handle, create);
 	}
-#else
-	#error Neither dynamic linking nor static plugin constructors are supported!
 #endif
 	if (!constructor)
 	{
@@ -410,6 +411,39 @@ static status_t create_plugin(private_plugin_loader_t *this, void *handle,
 	DBG2(DBG_LIB, "plugin '%s': loaded successfully", name);
 	return SUCCESS;
 }
+
+#ifdef HAVE_DLADDR
+/**
+ * Verify that the plugin version matches that of the daemon
+ */
+static bool verify_plugin_version(void *handle, char *name)
+{
+	char field[128];
+	char **version;
+
+	if (snprintf(field, sizeof(field), "%s_plugin_version",
+				 name) >= sizeof(field))
+	{
+		return FALSE;
+	}
+	translate(field, "-", "_");
+
+	version = dlsym(handle, field);
+	if (!version)
+	{
+		DBG1(DBG_LIB, "plugin '%s': failed to load - version field %s missing",
+			 name, field);
+		return FALSE;
+	}
+	if (strcmp(*version, VERSION))
+	{
+		DBG1(DBG_LIB, "plugin '%s': failed to load - plugin version %s doesn't "
+			 "match version %s", name, *version, VERSION);
+		return FALSE;
+	}
+	return TRUE;
+}
+#endif /* HAVE_DLADDR */
 
 /**
  * load a single plugin
@@ -475,6 +509,11 @@ static plugin_entry_t *load_plugin(private_plugin_loader_t *this, char *name,
 	if (handle == NULL)
 	{
 		DBG1(DBG_LIB, "plugin '%s' failed to load: %s", name, dlerror());
+		return NULL;
+	}
+	if (!verify_plugin_version(handle, name))
+	{
+		dlclose(handle);
 		return NULL;
 	}
 	switch (create_plugin(this, handle, name, create, TRUE, critical, &entry))

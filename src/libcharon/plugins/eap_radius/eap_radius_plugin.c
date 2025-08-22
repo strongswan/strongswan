@@ -346,7 +346,7 @@ METHOD(plugin_t, destroy, void,
 /*
  * see header file
  */
-plugin_t *eap_radius_plugin_create()
+PLUGIN_DEFINE(eap_radius)
 {
 	private_eap_radius_plugin_t *this;
 

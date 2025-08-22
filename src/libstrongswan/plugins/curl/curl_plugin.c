@@ -210,7 +210,7 @@ static void set_ssl_backend()
 /*
  * see header file
  */
-plugin_t *curl_plugin_create()
+PLUGIN_DEFINE(curl)
 {
 	CURLcode res;
 	private_curl_plugin_t *this;
