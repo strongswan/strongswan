@@ -2,6 +2,10 @@ name: Linux
 
 on: [push, pull_request]
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   # this test case does not actually test anything but tries to access system
   # directories that might be inaccessible on build hosts
