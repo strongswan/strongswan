@@ -28,7 +28,7 @@ build_botan()
 	git clone https://github.com/randombit/botan.git $BOTAN_DIR &&
 	cd $BOTAN_DIR &&
 	git checkout -qf $BOTAN_REV &&
-	./configure.py --amalgamation $BOTAN_CONFIG &&
+	./configure.py $BOTAN_CONFIG &&
 	make -j$(nproc) libs >/dev/null &&
 	sudo make install >/dev/null &&
 	sudo ldconfig || exit $?
@@ -253,10 +253,10 @@ botan)
 	CONFIG="--disable-defaults --enable-pki --enable-botan --enable-pem --enable-hmac --enable-x509 --enable-constraints --enable-drbg"
 	export TESTS_PLUGINS="test-vectors botan! pem hmac x509 constraints drbg"
 	DEPS=""
-	if [ "$LEAK_DETECTIVE" = "yes" ]; then
-		CONFIG="$CONFIG --enable-bfd-backtraces"
-		DEPS="$DEPS binutils-dev"
-	fi
+	#if [ "$LEAK_DETECTIVE" = "yes" ]; then
+		# CONFIG="$CONFIG --enable-bfd-backtraces"
+		# DEPS="$DEPS binutils-dev"
+	#fi
 	if test "$1" = "build-deps"; then
 		build_botan
 	fi
