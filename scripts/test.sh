@@ -21,8 +21,10 @@ build_botan()
 		BOTAN_CONFIG="--without-os-features=threads
 					  --disable-modules=locking_allocator"
 	fi
-	# disable some larger modules we don't need for the tests
+	# disable some larger modules we don't need for the tests and deprecated
+	# ones, except for MD5, which we need for TLS 1.0/1.1
 	BOTAN_CONFIG="$BOTAN_CONFIG --disable-modules=pkcs11,tls,x509,xmss
+				  --disable-deprecated-features --enable-modules=md5
 				  --prefix=$DEPS_PREFIX"
 
 	git clone https://github.com/randombit/botan.git $BOTAN_DIR &&
