@@ -115,14 +115,14 @@ METHOD(fetcher_t, fetch, status_t,
 		goto out;
 	}
 	curl_easy_setopt(this->curl, CURLOPT_ERRORBUFFER, error);
-	curl_easy_setopt(this->curl, CURLOPT_FAILONERROR, FALSE);
-	curl_easy_setopt(this->curl, CURLOPT_NOSIGNAL, TRUE);
+	curl_easy_setopt(this->curl, CURLOPT_FAILONERROR, (long)FALSE);
+	curl_easy_setopt(this->curl, CURLOPT_NOSIGNAL, (long)TRUE);
 	if (this->timeout)
 	{
 		curl_easy_setopt(this->curl, CURLOPT_TIMEOUT, this->timeout);
 	}
-	curl_easy_setopt(this->curl, CURLOPT_CONNECTTIMEOUT, CONNECT_TIMEOUT);
-	curl_easy_setopt(this->curl, CURLOPT_FOLLOWLOCATION, TRUE);
+	curl_easy_setopt(this->curl, CURLOPT_CONNECTTIMEOUT, (long)CONNECT_TIMEOUT);
+	curl_easy_setopt(this->curl, CURLOPT_FOLLOWLOCATION, (long)TRUE);
 	curl_easy_setopt(this->curl, CURLOPT_MAXREDIRS, this->redir);
 	curl_easy_setopt(this->curl, CURLOPT_WRITEFUNCTION, (void*)curl_cb);
 	curl_easy_setopt(this->curl, CURLOPT_WRITEDATA, &data);
