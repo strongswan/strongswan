@@ -1,8 +1,8 @@
 clone_depth: 50
 
 image:
-  - Visual Studio 2015
-  - Visual Studio 2017
+  #- Visual Studio 2015
+  #- Visual Studio 2017
   - Visual Studio 2019
 
 environment:
@@ -29,6 +29,10 @@ install:
       IF "%IMG%" == "2017" set OPENSSL=OpenSSL-v11
       IF "%IMG%" == "2019" set OPENSSL=OpenSSL-v111
       set OPENSSL_DIR=/c/%OPENSSL%-%TEST%
+      echo %OPENSSL_DIR%
+      echo C:\%OPENSSL%-%TEST%\bin\openssl.exe
+      dir C:\%OPENSSL%-%TEST%\
+      dir C:\%OPENSSL%-%TEST%\bin
       C:\%OPENSSL%-%TEST%\bin\openssl.exe version -a
   # newer versions of msys2 don't provide autotools or gperf via base-devel anymore
   - IF "%IMG%" == "2019" %MSYS_SH% --login -c ". /etc/profile && pacman --noconfirm -S --needed autotools gperf"
