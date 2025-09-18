@@ -115,6 +115,8 @@ case "$GUEST" in
 esac
 
 do_on_exit qemu-nbd -d $NBDEV
+# wait for disk to become ready with newer QEMU versions
+sleep 1
 blockdev --rereadpt $NBDEV
 
 log_action "Mounting $NBDPARTITION to $LOOPDIR"
@@ -195,7 +197,7 @@ do
 		execute_chroot "make SRCDIR=/root/strongswan BUILDDIR=/root/shared/build-strongswan QUICK_REBUILD=$QUICK_REBUILD -f /root/shared/build-strongswan/$r"
 	else
 		cp $RECPDIR/$r ${LOOPDIR}/root/shared/compile
-		execute_chroot "make SWANVERSION=$TARBALL -C /root/shared/compile -f $r"
+		execute_chroot "make SWANVERSION=$TARBALL BASEIMG=$BASEIMGSUITE -C /root/shared/compile -f $r"
 	fi
 done
 

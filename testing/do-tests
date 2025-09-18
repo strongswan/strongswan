@@ -59,11 +59,13 @@ function usage()
 cat << EOF
 Usage:
   ${0##*/} [-h] [-v|-t] [-i|-e] [TESTDIRS]
-    --help            (-h)  show usage information
-    --verbose         (-v)  show complete logs on errors (implies -t)
-    --timestamps      (-t)  show timestamps in console.log
-    --pre             (-i)  run pretest script only (single test only)
-    --post            (-e)  run posttest script only (single test only)
+    --help              (-h)  show usage information
+    --verbose           (-v)  show complete logs on errors (implies -t)
+    --timestamps        (-t)  show timestamps in console.log
+    --pre               (-i)  run pretest script only (single test only)
+    --post              (-e)  run posttest script only (single test only)
+    --no-leaks [daemon] (-n)  disable leak detective in commands (e.g. swanctl)
+                              and optionally the daemon as well
 
     TESTDIRS  list of test directories (relative to testing/tests).
               wildcards (*) are supported. default is to run all tests.
@@ -90,6 +92,13 @@ while [ $# -gt 0 ]; do
 		;;
 	-e|--post)
 		posttest_only=YES
+		;;
+	-n|--no-leaks)
+		export LEAK_DETECTIVE_DISABLE=1
+		if [[ "$2" =~ d(aemon)? ]]; then
+			export LEAK_DETECTIVE_DISABLE_DAEMON=1
+			shift
+		fi
 		;;
 	*)
 		TESTDIRS+=("$1")

@@ -22,6 +22,8 @@ mkdir -p $IMGDIR
 log_action "Connecting root image to NBD device $NBDEV"
 execute "qemu-nbd -c $NBDEV $ROOTIMG"
 do_on_exit qemu-nbd -d $NBDEV
+# wait for disk to become ready with newer QEMU versions
+sleep 1
 blockdev --rereadpt $NBDEV
 
 log_action "Mounting $NBDPARTITION to $LOOPDIR"
