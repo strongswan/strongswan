@@ -1034,6 +1034,57 @@ The _child-rekey_ event is issued when a CHILD_SA is rekeyed.
 		}
 	}
 
+### alert ###
+
+The _alert_ event is issued for specific error conditions. Some alerts can
+be associated with an IKE_SA; if so, the IKE_SA details are included under an
+_ike-sa_ property.
+
+	{
+		type = <alert type>
+		ike-sa = {
+			<IKE_SA config name> = {
+				<same data as in list-sas event, but without child-sas section>
+			}
+		}
+	}
+
+The _type_ property currently has one of the following fixed string values:
+
+  * _authorization-failed_: an authorization hook failed
+  * _cert-exceeded-path-len_: Certificate trustchain length exceeds limit
+  * _cert-expired_: Certificate rejected; it has expired
+  * _cert-no-issuer_:  Certificate rejected; no trusted issuer found
+  * _cert-policy-violation_: Certificate rejected; other policy violation
+  * _cert-revoked_: Certificate rejected; it has been revoked
+  * _cert-untrusted-root_: Certificate rejected; root not trusted
+  * _cert-validation-failed_: Certificate rejected: Validating status failed
+  * _half-open-timeout_: received half-open timeout before IKE_SA established
+  * _ike-sa-expired_: IKE_SA hit hard lifetime limit before it could be rekeyed
+  * _install-child-policy-failed_: Installation of IPsec Policy failed
+  * _install-child-sa-failed_: Installation of IPsec SAs failed
+  * _invalid-ike-spi_: received IKE message with invalid SPI
+  * _keep-on-child-sa-failure_: IKE_SA kept on failed child SA establishment
+  * _local-auth-failed_: local peer authentication failed (by us or by peer)
+  * _parse-error-body_: received IKE message with invalid body
+  * _parse-error-header_: received IKE message with invalid header
+  * _peer-addr-failed_: failed to resolve peer address
+  * _peer-auth-failed_: peer authentication failed
+  * _peer-init-unreachable_: peer did not respond to initial message
+  * _proposal-mismatch-child_: CHILD proposals do not match
+  * _proposal-mismatch-ike_: IKE proposals do not match
+  * _radius-not-responding_: a RADIUS server did not respond
+  * _retransmit-receive_: received a retransmit for a message
+  * _retransmit-send_: sending a retransmit for a message
+  * _retransmit-send-cleared_: received response for retransmitted request
+  * _retransmit-send-timeout_: sending retransmits timed out
+  * _shutdown-signal_: a shutdown signal has been received
+  * _ts-mismatch_: traffic selectors do not match
+  * _ts-narrowed_: traffic selectors have been narrowed (by us or by peer)
+  * _unique-keep_: IKE_SA deleted because of "keep" unique policy
+  * _unique-replace_: IKE_SA deleted because of "replace" unique policy
+  * _vip-failure_: allocating virtual IP failed
+
 # libvici C client library #
 
 libvici is the reference implementation of a C client library implementing
