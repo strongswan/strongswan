@@ -2490,6 +2490,10 @@ static void raise_alerts(private_child_create_t *this, notify_type_t type)
 			charon->bus->alert(charon->bus, ALERT_PROPOSAL_MISMATCH_CHILD, list);
 			list->destroy_offset(list, offsetof(proposal_t, destroy));
 			break;
+		case TS_UNACCEPTABLE:
+			charon->bus->alert(charon->bus, ALERT_TS_MISMATCH,
+							   this->tsi, this->tsr);
+			break;
 		default:
 			break;
 	}
