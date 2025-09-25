@@ -54,6 +54,7 @@ import android.widget.Spinner;
 import android.widget.TextView;
 
 import org.strongswan.android.R;
+import org.strongswan.android.data.ManagedVpnProfile;
 import org.strongswan.android.data.VpnProfile;
 import org.strongswan.android.data.VpnProfile.SelectedAppsHandling;
 import org.strongswan.android.data.VpnProfileDataSource;
@@ -817,7 +818,7 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 				alias = mProfile.getCertificateAlias();
 				getSupportActionBar().setTitle(mProfile.getName());
 
-				setReadOnly(mProfile.isReadOnly());
+				setReadOnly(mProfile);
 			}
 			else
 			{
@@ -882,8 +883,10 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 		}
 	}
 
-	private void setReadOnly(final boolean readOnly)
+	private void setReadOnly(final VpnProfile profile)
 	{
+		final boolean readOnly = profile.isReadOnly();
+
 		mManagedProfile.setVisibility(readOnly ? View.VISIBLE : View.GONE);
 
 		mName.setEnabled(!readOnly);
@@ -920,8 +923,12 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 
 		if (readOnly)
 		{
+			ManagedVpnProfile managedProfile = (ManagedVpnProfile)profile;
 			mSelectCert.setOnClickListener(null);
-			mSelectUserCert.setOnClickListener(null);
+			if (managedProfile.getUserCertificate() != null)
+			{
+				mSelectUserCert.setOnClickListener(null);
+			}
 		}
 	}
 
