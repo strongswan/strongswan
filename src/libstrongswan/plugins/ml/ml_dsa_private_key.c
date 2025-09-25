@@ -976,7 +976,8 @@ private_key_t *ml_dsa_private_key_gen(key_type_t type, va_list args)
 private_key_t *ml_dsa_private_key_load(key_type_t type, va_list args)
 {
 	private_private_key_t *this;
-	chunk_t priv = chunk_empty;
+	chunk_t priv = chunk_empty, seed = chunk_empty;
+	int asn1_type;
 
 	while (TRUE)
 	{
@@ -997,17 +998,6 @@ private_key_t *ml_dsa_private_key_load(key_type_t type, va_list args)
 	{
 		return NULL;
 	}
-	if (priv.len == ML_DSA_SEED_LEN + 2 &&
-		priv.ptr[0] == 0x80 && priv.ptr[1] == ML_DSA_SEED_LEN)
-	{
-		priv = chunk_skip(priv, 2);
-	}
-	if (priv.len != ML_DSA_SEED_LEN)
-	{
-		DBG1(DBG_LIB, "error: the size of the loaded ML-DSA private key seed is "
-					  "%u bytes instead of %d bytes", priv.len, ML_DSA_SEED_LEN);
-		return NULL;
-	}
 
 	this = create_instance(type);
 	if (!this)
@@ -1015,10 +1005,81 @@ private_key_t *ml_dsa_private_key_load(key_type_t type, va_list args)
 		return NULL;
 	}
 
-	if (!generate_keypair(this, chunk_clone(priv)))
+	if (priv.len == ML_DSA_SEED_LEN)
 	{
-		destroy(this);
-		return NULL;
+		asn1_type = ASN1_CONTEXT_S_0;
+	}
+	else
+	{
+		asn1_type = asn1_unwrap(&priv, &priv);
+	}
+
+	/* three supported ML-DSA private key formats */
+	switch(asn1_type)
+	{
+		/* private key in seed-only format */
+		case ASN1_CONTEXT_S_0:
+			seed = priv;
+			if (seed.len != ML_DSA_SEED_LEN ||
+			   !generate_keypair(this, chunk_clone(seed)))
+			{
+				DBG1(DBG_LIB, "failed to load ML-DSA private key seed");
+				destroy(this);
+				return NULL;
+			}
+			break;
+
+		/* private key in epanded format */
+		case ASN1_OCTET_STRING:
+			if (priv.len != this->params->privkey_len)
+			{
+				DBG1(DBG_LIB, "failed to load ML-DSA expanded private key");
+				destroy(this);
+				return NULL;
+			}
+			memcpy(this->privkey.ptr, priv.ptr, priv.len);
+			break;
+
+		/* private key in both seed and expanded format */
+		case ASN1_SEQUENCE:
+			if (priv.len < 2 || priv.ptr[0] != ASN1_OCTET_STRING ||
+				asn1_length(&priv) != ML_DSA_SEED_LEN)
+			{
+				DBG1(DBG_LIB, "failed to identify ML-DSA private key seed");
+				destroy(this);
+				return NULL;
+			}
+			seed = chunk_create(priv.ptr, ML_DSA_SEED_LEN);
+			if (!generate_keypair(this, chunk_clone(seed)))
+			{
+				DBG1(DBG_LIB, "failed to load ML-DSA private key seed");
+				destroy(this);
+				return NULL;
+			}
+			priv.ptr += ML_DSA_SEED_LEN;
+			priv.len -= ML_DSA_SEED_LEN;
+			if (priv.len < 2 || priv.ptr[0] != ASN1_OCTET_STRING ||
+				asn1_length(&priv) != this->params->privkey_len)
+			{
+				DBG1(DBG_LIB, "failed to identify ML-DSA expanded private key");
+				destroy(this);
+				return NULL;
+			}
+			if (!chunk_equals(priv, this->privkey))
+			{
+				DBG1(DBG_LIB, "loaded expanded private key is not derived "
+							  "from loaded seed");
+				destroy(this);
+				return NULL;
+			}
+			break;
+
+		/* invalid private key format */
+		case ASN1_INVALID:
+		default:
+			DBG1(DBG_LIB, "unknown ML-DSA private key format");
+			destroy(this);
+			return NULL;
 	}
 
 	return &this->public;
