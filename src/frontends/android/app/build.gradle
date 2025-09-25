@@ -49,6 +49,7 @@ dependencies {
     implementation 'androidx.core:core:1.17.0'
     implementation 'androidx.lifecycle:lifecycle-process:2.9.4'
     implementation 'androidx.preference:preference:1.2.1'
+    implementation 'androidx.localbroadcastmanager:localbroadcastmanager:1.1.0'
     implementation 'com.google.android.material:material:1.13.0'
     testImplementation 'junit:junit:4.13.2'
     testImplementation 'org.assertj:assertj-core:3.27.6'
