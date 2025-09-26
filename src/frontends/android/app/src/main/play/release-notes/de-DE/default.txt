@@ -1,18 +1,11 @@
+# 2.6.0 #
+
+- Erlaubt die Vorauswahl eines Benutzer-Zertifikats via Alias in verwalteten Profilen
+- Erlaubt die Auswahl von Benutzer-Zertifikaten in verwalteten Profilen, die kein eigenes Zertifikat installieren
+- Fixt das Lesen von Split-Tunneling Settings in verwalteten Profilen
+- Anpassungen für die randlose Anzeige, welche erzwungen wird, wenn Android 16 als Ziel-SDK verwendet wird
+- Ziel-SDK auf Android 16 erhöht
+
 # 2.5.6 #
 
 - Unterstützt benutzerdefinierte HTTP Proxy-Server (Android 10+)
-
-# 2.5.5 #
-
-- Fixt den Start von verwalteten Profilen als Always-on VPN
-
-# 2.5.4 #
-
-- Fixt Probleme beim Wiederherstellen der Verbindung
-
-# 2.5.3 #
-
-- Unterstützt die Verteilung von Passwörtern in verwalteten Profilen
-- Unterstützt den Import von Profil-Dateien mit Passwörtern
-- Fixt einen Crash beim Ändern des Passworts von verwalteten Profilen
-- Fixt einen Crash beim Importieren eines bereit existierenden Profils
