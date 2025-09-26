@@ -82,6 +82,42 @@ ENUM(vici_counter_type_names,
 	"info-out-resp",
 );
 
+ENUM(alert_names, ALERT_RADIUS_NOT_RESPONDING, ALERT_CERT_POLICY_VIOLATION,
+	"radius-not-responding",
+	"shutdown-signal",
+	"local-auth-failed",
+	"peer-auth-failed",
+	"peer-addr-failed",
+	"peer-init-unreachable",
+	"invalid-ike-spi",
+	"parse-error-header",
+	"parse-error-body",
+	"retransmit-send",
+	"retransmit-send-cleared",
+	"retransmit-send-timeout",
+	"retransmit-receive",
+	"half-open-timeout",
+	"proposal-mismatch-ike",
+	"proposal-mismatch-child",
+	"ts-mismatch",
+	"ts-narrowed",
+	"install-child-sa-failed",
+	"install-child-policy-failed",
+	"unique-replace",
+	"unique-keep",
+	"keep-on-child-sa-failure",
+	"vip-failure",
+	"authorization-failed",
+	"ike-sa-expired",
+	"cert-expired",
+	"cert-revoked",
+	"cert-validation-failed",
+	"cert-no-issuer",
+	"cert-untrusted-root",
+	"cert-exceeded-path-len",
+	"cert-policy-violation",
+);
+
 typedef struct private_vici_query_t private_vici_query_t;
 
 /**
@@ -1778,6 +1814,7 @@ static void manage_commands(private_vici_query_t *this, bool reg)
 	this->dispatcher->manage_event(this->dispatcher, "ike-update", reg);
 	this->dispatcher->manage_event(this->dispatcher, "child-updown", reg);
 	this->dispatcher->manage_event(this->dispatcher, "child-rekey", reg);
+	this->dispatcher->manage_event(this->dispatcher, "alert", reg);
 	manage_command(this, "list-sas", list_sas, reg);
 	manage_command(this, "list-policies", list_policies, reg);
 	manage_command(this, "list-conns", list_conns, reg);
@@ -1957,6 +1994,32 @@ METHOD(listener_t, child_rekey, bool,
 	return TRUE;
 }
 
+METHOD(listener_t, alert, bool,
+	private_vici_query_t *this, ike_sa_t *ike_sa, alert_t alert, va_list args)
+{
+	vici_builder_t *b;
+
+	if (!this->dispatcher->has_event_listeners(this->dispatcher, "alert"))
+	{
+		return TRUE;
+	}
+
+	b = vici_builder_create();
+	b->add_kv(b, "type", "%N", alert_names, alert);
+	if (ike_sa)
+	{
+		b->begin_section(b, "ike-sa");
+		b->begin_section(b, ike_sa->get_name(ike_sa));
+		list_ike(this, b, ike_sa, time_monotonic(NULL));
+		b->end_section(b);
+		b->end_section(b);
+	}
+
+	this->dispatcher->raise_event(this->dispatcher, "alert", 0, b->finalize(b));
+
+	return TRUE;
+}
+
 METHOD(vici_query_t, destroy, void,
 	private_vici_query_t *this)
 {
@@ -1974,6 +2037,7 @@ vici_query_t *vici_query_create(vici_dispatcher_t *dispatcher)
 	INIT(this,
 		.public = {
 			.listener = {
+				.alert = _alert,
 				.ike_updown = _ike_updown,
 				.ike_rekey = _ike_rekey,
 				.ike_update = _ike_update,
