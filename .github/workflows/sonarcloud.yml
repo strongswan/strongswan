@@ -44,11 +44,11 @@ jobs:
           sudo apt-get install -qq ccache
           echo "PATH=/usr/lib/ccache:$PATH" >> $GITHUB_ENV
           ccache -z
-      - uses: SonarSource/sonarqube-scan-action/install-build-wrapper@v5.3.1
+      - uses: SonarSource/sonarqube-scan-action/install-build-wrapper@v6.0.0
       - run: |
           echo "BUILD_WRAPPER_OUT_DIR=$HOME/bw-output" >> $GITHUB_ENV
       - uses: ./.github/actions/default
-      - uses: SonarSource/sonarqube-scan-action@v5.3.1
+      - uses: SonarSource/sonarqube-scan-action@v6.0.0
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         with:
