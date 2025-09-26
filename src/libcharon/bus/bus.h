@@ -124,7 +124,7 @@ enum alert_t {
 	/** traffic selectors do not match, arguments are two linked_list_t
 	 *  containing traffic_selector_t for initiator and for responder */
 	ALERT_TS_MISMATCH,
-	/** traffic selectors have been narrowed by the peer, arguments are
+	/** traffic selectors have been narrowed by us or the peer, arguments are
 	 *  an int (TRUE for local TS), a linked_list_t* (final TS list), and the
 	 *  child_cfg_t*. */
 	ALERT_TS_NARROWED,
