@@ -230,6 +230,8 @@
     <string name="cancel_retry">取消重试</string>
     <string name="power_whitelist_title">禁用电池优化</string>
     <string name="power_whitelist_text">请确认下一个对话框，将应用程序添加到设备的电源白名单中，这样它就可以忽略电池优化，并准确地安排NAT保持有效和重新键入，以便在建立VPN时始终保持可访问性。</string>
+    <string name="certificate_required_title">User certificate required</string>
+    <string name="certificate_required_text">Please edit the VPN profile to select one.</string>
 
     <!-- Quick Settings tile -->
     <string name="tile_default">切换VPN</string>

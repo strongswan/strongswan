@@ -70,6 +70,7 @@ public class VpnProfileControlActivity extends AppCompatActivity
 	private static final String WAITING_FOR_RESULT = "WAITING_FOR_RESULT";
 	private static final String PROFILE_NAME = "PROFILE_NAME";
 	private static final String PROFILE_REQUIRES_PASSWORD = "REQUIRES_PASSWORD";
+	private static final String PROFILE_CERTIFICATE_MISSING = "CERTIFICATE_MISSING";
 	private static final String PROFILE_RECONNECT = "RECONNECT";
 	private static final String PROFILE_DISCONNECT = "DISCONNECT";
 	private static final String DIALOG_TAG = "Dialog";
@@ -332,6 +333,8 @@ public class VpnProfileControlActivity extends AppCompatActivity
 		profileInfo.putString(VpnProfileDataSource.KEY_USERNAME, profile.getUsername());
 		profileInfo.putString(VpnProfileDataSource.KEY_PASSWORD, profile.getPassword());
 		profileInfo.putBoolean(PROFILE_REQUIRES_PASSWORD, profile.getVpnType().has(VpnTypeFeature.USER_PASS));
+		profileInfo.putBoolean(PROFILE_CERTIFICATE_MISSING, profile.getVpnType().has(VpnTypeFeature.CERTIFICATE) &&
+							   profile.getUserCertificateAlias() == null);
 		profileInfo.putString(PROFILE_NAME, profile.getName());
 
 		removeFragmentByTag(DIALOG_TAG);
@@ -355,6 +358,13 @@ public class VpnProfileControlActivity extends AppCompatActivity
 	 */
 	private void startVpnProfile(Bundle profileInfo)
 	{
+		if (profileInfo.getBoolean(PROFILE_CERTIFICATE_MISSING))
+		{
+			CertificateRequiredDialog dialog = new CertificateRequiredDialog();
+			dialog.setArguments(profileInfo);
+			dialog.show(getSupportFragmentManager(), DIALOG_TAG);
+			return;
+		}
 		if (profileInfo.getBoolean(PROFILE_REQUIRES_PASSWORD) &&
 			profileInfo.getString(VpnProfileDataSource.KEY_PASSWORD) == null)
 		{
@@ -612,6 +622,36 @@ public class VpnProfileControlActivity extends AppCompatActivity
 				}
 			});
 			return adb.create();
+		}
+
+		@Override
+		public void onCancel(DialogInterface dialog)
+		{
+			getActivity().finish();
+		}
+	}
+
+	/**
+	 * Class that displays a dialog warning about a missing certificate.
+	 */
+	public static class CertificateRequiredDialog extends AppCompatDialogFragment
+	{
+		@Override
+		public Dialog onCreateDialog(Bundle savedInstanceState)
+		{
+			final Bundle profileInfo = getArguments();
+
+			AlertDialog.Builder builder = new AlertDialog.Builder(getActivity())
+				.setTitle(R.string.certificate_required_title)
+				.setMessage(R.string.certificate_required_text)
+				.setNegativeButton(android.R.string.cancel, (dialog, which) -> getActivity().finish())
+				.setPositiveButton(R.string.edit_profile, (dialog, which) -> {
+					Intent editIntent = new Intent(getActivity(), VpnProfileDetailActivity.class);
+					editIntent.putExtra(VpnProfileDataSource.KEY_UUID, profileInfo.getString(VpnProfileDataSource.KEY_UUID));
+					startActivity(editIntent);
+					getActivity().finish();
+				});
+			return builder.create();
 		}
 
 		@Override

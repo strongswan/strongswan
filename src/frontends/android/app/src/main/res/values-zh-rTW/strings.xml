@@ -230,6 +230,8 @@
     <string name="cancel_retry">Cancel retry</string>
     <string name="power_whitelist_title">Disable battery optimizations</string>
     <string name="power_whitelist_text">Please confirm the next dialog to add the app to the device\'s power whitelist so it can ignore battery optimizations and schedule NAT keep-alives and rekeyings accurately in order to constantly keep reachable while the VPN is established.</string>
+    <string name="certificate_required_title">User certificate required</string>
+    <string name="certificate_required_text">Please edit the VPN profile to select one.</string>
 
     <!-- Quick Settings tile -->
     <string name="tile_default">Toggle VPN</string>
