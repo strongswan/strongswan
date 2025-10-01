@@ -279,7 +279,7 @@
 
             <restriction
                 android:description="@string/managed_config_split_tunneling_bundle_description"
-                android:key="split_tunnelling"
+                android:key="split_tunneling"
                 android:restrictionType="bundle"
                 android:title="@string/managed_config_split_tunneling_bundle_title">
 
