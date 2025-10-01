@@ -158,7 +158,7 @@
     <string name="alert_text_no_subnets">Bitte geben Sie mit Leerzeichen getrennte, gültige Subnetzte und/oder IP-Adressen ein</string>
     <string name="alert_text_no_ips">Bitte geben Sie mit Leerzeichen getrennte, gültige IP-Adressen ein</string>
     <string name="alert_text_no_proposal">Bitte geben Sie eine mit Bindestrichen getrennte, gültige Liste von Algorithmen ein</string>
-    <string name="alert_text_vpn_profile_read_only">Dieses Profil wird von Ihrem Administrator verwaltet und kann nicht bearbeitet werden. Nur das Passwort kann geändert werden</string>
+    <string name="alert_text_vpn_profile_read_only">Dieses Profil wird von Ihrem Administrator verwaltet und kann nicht bearbeitet werden. Nur das Passwort bzw. Benutzer-Zertifikat kann geändert werden</string>
     <string name="tnc_notice_title">EAP-TNC kann Ihre Privatsphäre beeinträchtigen</string>
     <string name="tnc_notice_subtitle">Gerätedaten werden an den Server-Betreiber gesendet</string>
     <string name="tnc_notice_details"><![CDATA[<p>Trusted Network Connect (TNC) erlaubt Server-Betreibern den Gesundheitszustand von Endgeräten zu prüfen.</p><p>Dazu kann der Betreiber Daten verlangen, wie etwa eine eindeutige Identifikationsnummer, eine Liste der installierten Pakete, Systemeinstellungen oder kryptografische Prüfsummen von Dateien.</p><b>Solche Daten werden nur übermittelt nachdem die Identität des Servers geprüft wurde.</b>]]></string>
@@ -234,6 +234,8 @@
     <string name="cancel_retry">Wiederholen abbrechen</string>
     <string name="power_whitelist_title">Akku-Optimierung deaktivieren</string>
     <string name="power_whitelist_text">Bitte den nächsten Dialog bestätigen, um die App auf die weisse Liste für Akku-Optimierung zu setzen, so dass sie NAT keepalives und Rekeyings zeitlich korrekt planen kann, um konstant erreichbar zu bleiben während die VPN-Verbindung besteht.</string>
+    <string name="certificate_required_title">Benutzer-Zertifikat benötigt</string>
+    <string name="certificate_required_text">Bitte bearbeiten Sie das VPN Profil, um eines auszuwählen.</string>
 
     <!-- Quick Settings tile -->
     <string name="tile_default">VPN umschalten</string>

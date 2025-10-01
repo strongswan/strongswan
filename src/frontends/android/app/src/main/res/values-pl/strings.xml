@@ -160,7 +160,7 @@
     <string name="alert_text_no_subnets">Please enter valid subnets and/or IP addresses, separated by spaces</string>
     <string name="alert_text_no_ips">Please enter valid IP addresses, separated by spaces</string>
     <string name="alert_text_no_proposal">Please enter a valid list of algorithms, separated by hyphens</string>
-    <string name="alert_text_vpn_profile_read_only">This VPN profile is managed by your administrator and can\'t be modified. You can only change the password</string>
+    <string name="alert_text_vpn_profile_read_only">This VPN profile is managed by your administrator and can\'t be modified. You can only change the password or user certificate</string>
     <string name="tnc_notice_title">EAP-TNC may affect your privacy</string>
     <string name="tnc_notice_subtitle">Device data is sent to the server operator</string>
     <string name="tnc_notice_details"><![CDATA[<p>Trusted Network Connect (TNC) allows server operators to assess the health of a client device.</p><p>For that purpose the server operator may request data such as a unique identifier, a list of installed packages, system settings, or cryptographic checksums of files.</p><b>Any data will be sent only after verifying the server\'s identity.</b>]]></string>
@@ -236,6 +236,8 @@
     <string name="cancel_retry">Cancel retry</string>
     <string name="power_whitelist_title">Disable battery optimizations</string>
     <string name="power_whitelist_text">Please confirm the next dialog to add the app to the device\'s power whitelist so it can ignore battery optimizations and schedule NAT keep-alives and rekeyings accurately in order to constantly keep reachable while the VPN is established.</string>
+    <string name="certificate_required_title">User certificate required</string>
+    <string name="certificate_required_text">Please edit the VPN profile to select one.</string>
 
     <!-- Quick Settings tile -->
     <string name="tile_default">Toggle VPN</string>

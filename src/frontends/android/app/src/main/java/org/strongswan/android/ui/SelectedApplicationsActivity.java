@@ -26,6 +26,7 @@ import androidx.activity.OnBackPressedCallback;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.view.WindowCompat;
 import androidx.fragment.app.FragmentManager;
 
 public class SelectedApplicationsActivity extends AppCompatActivity
@@ -37,6 +38,8 @@ public class SelectedApplicationsActivity extends AppCompatActivity
 	protected void onCreate(@Nullable Bundle savedInstanceState)
 	{
 		super.onCreate(savedInstanceState);
+		WindowCompat.enableEdgeToEdge(getWindow());
+		WindowCompat.setDecorFitsSystemWindows(getWindow(), true);
 
 		ActionBar actionBar = getSupportActionBar();
 		actionBar.setDisplayHomeAsUpEnabled(true);

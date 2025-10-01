@@ -30,6 +30,7 @@ import android.widget.ListView;
 
 import org.strongswan.android.R;
 import org.strongswan.android.logic.CharonVpnService;
+import org.strongswan.android.utils.Utils;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -80,6 +81,8 @@ public class LogFragment extends Fragment
 		mLogAdapter = new LogAdapter(getActivity());
 		mLog = view.findViewById(R.id.log);
 		mLog.setAdapter(mLogAdapter);
+
+		Utils.applyWindowInsetsAsPaddingForLists(mLog);
 
 		mScrollPosition = -1;
 		if (savedInstanceState != null)

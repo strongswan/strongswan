@@ -48,6 +48,7 @@ import org.strongswan.android.data.VpnProfileSource;
 import org.strongswan.android.logic.StrongSwanApplication;
 import org.strongswan.android.ui.adapter.VpnProfileAdapter;
 import org.strongswan.android.utils.Constants;
+import org.strongswan.android.utils.Utils;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -60,7 +61,6 @@ import java.util.UUID;
 import androidx.annotation.NonNull;
 import androidx.core.view.MenuProvider;
 import androidx.fragment.app.Fragment;
-import androidx.lifecycle.Lifecycle;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 public class VpnProfileListFragment extends Fragment implements MenuProvider
@@ -149,6 +149,8 @@ public class VpnProfileListFragment extends Fragment implements MenuProvider
 		mListView.setEmptyView(view.findViewById(R.id.profile_list_empty));
 		mListView.setOnItemClickListener(mVpnProfileClicked);
 
+		Utils.applyWindowInsetsAsPaddingForLists(mListView);
+
 		if (!mReadOnly)
 		{
 			requireActivity().addMenuProvider(this, getViewLifecycleOwner());
@@ -197,7 +199,10 @@ public class VpnProfileListFragment extends Fragment implements MenuProvider
 	public void onSaveInstanceState(Bundle outState)
 	{
 		super.onSaveInstanceState(outState);
-		outState.putIntegerArrayList(SELECTED_KEY, new ArrayList<>(mSelected));
+		if (!mReadOnly)
+		{
+			outState.putIntegerArrayList(SELECTED_KEY, new ArrayList<>(mSelected));
+		}
 	}
 
 	@Override

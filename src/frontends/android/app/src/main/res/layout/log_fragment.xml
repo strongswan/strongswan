@@ -14,23 +14,24 @@
     or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
     for more details.
 -->
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical" >
+    android:paddingBottom="0dp"
+    android:paddingTop="5dp"
+    android:paddingStart="5dp"
+    android:paddingEnd="5dp" >
 
     <ListView
         android:id="@+id/log"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_margin="10dp"
         android:dividerHeight="0dp"
         android:divider="@null"
         android:fadeScrollbars="false"
         android:scrollbarFadeDuration="0"
         android:scrollbarAlwaysDrawVerticalTrack="true"
-        android:transcriptMode="normal">
+        android:transcriptMode="normal"
+        android:clipToPadding="false" />
 
-    </ListView>
-
-</LinearLayout>
+</FrameLayout>

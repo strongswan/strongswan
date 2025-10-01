@@ -38,6 +38,7 @@ public class ManagedVpnProfile extends VpnProfile
 	private static final String KEY_REMOTE_REVOCATION_CRL_FLAG = "remote_revocation_crl";
 	private static final String KEY_REMOTE_REVOCATION_OCSP_FLAG = "remote_revocation_ocsp";
 	private static final String KEY_REMOTE_REVOCATION_STRICT_FLAG = "remote_revocation_strict";
+	private static final String KEY_LOCAL_USER_CERTIFICATE_ALIAS = "user_certificate_alias";
 	private static final String KEY_LOCAL_RSA_PSS_FLAG = "local_rsa_pss";
 
 	private static final String KEY_SPLIT_TUNNELLING_BLOCK_IPV4_FLAG = "split_tunnelling_block_ipv4";
@@ -151,6 +152,10 @@ public class ManagedVpnProfile extends VpnProfile
 		{
 			userCertificate = new ManagedUserCertificate(uuid.toString(), userCertificateData, userCertificatePassword);
 			setUserCertificateAlias(userCertificate.getAlias());
+		}
+		else
+		{
+			setUserCertificateAlias(getString(local, KEY_LOCAL_USER_CERTIFICATE_ALIAS));
 		}
 
 		flags = addPositiveFlag(flags, local, KEY_LOCAL_RSA_PSS_FLAG, VpnProfile.FLAGS_RSA_PSS);

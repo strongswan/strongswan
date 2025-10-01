@@ -1,16 +1,16 @@
 apply plugin: 'com.android.application'
 
 android {
-    namespace 'org.strongswan.android'
+    namespace = 'org.strongswan.android'
 
     defaultConfig {
         applicationId "org.strongswan.android"
-        compileSdk 34
+        compileSdk = 36
         minSdkVersion 21
-        targetSdkVersion 34
+        targetSdkVersion 36
 
-        versionCode 91
-        versionName "2.5.6"
+        versionCode 94
+        versionName "2.6.0"
 
         externalNativeBuild {
             ndkBuild {
@@ -19,7 +19,7 @@ android {
         }
     }
 
-    ndkVersion "27.2.12479018"
+    ndkVersion = "27.3.13750724"
 
     externalNativeBuild {
         ndkBuild {
@@ -46,10 +46,12 @@ android {
 
 dependencies {
     implementation 'androidx.appcompat:appcompat:1.7.1'
-    implementation 'androidx.lifecycle:lifecycle-process:2.9.1'
+    implementation 'androidx.core:core:1.17.0'
+    implementation 'androidx.lifecycle:lifecycle-process:2.9.4'
     implementation 'androidx.preference:preference:1.2.1'
-    implementation 'com.google.android.material:material:1.12.0'
+    implementation 'androidx.localbroadcastmanager:localbroadcastmanager:1.1.0'
+    implementation 'com.google.android.material:material:1.13.0'
     testImplementation 'junit:junit:4.13.2'
-    testImplementation 'org.assertj:assertj-core:3.24.2'
-    testImplementation 'org.mockito:mockito-core:5.8.0'
+    testImplementation 'org.assertj:assertj-core:3.27.6'
+    testImplementation 'org.mockito:mockito-core:5.20.0'
 }
