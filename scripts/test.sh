@@ -388,18 +388,19 @@ macos)
 	# use the same options as in the Homebrew Formula
 	CONFIG="--disable-defaults --enable-charon --enable-cmd --enable-constraints
 			--enable-curl --enable-eap-gtc --enable-eap-identity
-			--enable-eap-md5 --enable-eap-mschapv2 --enable-farp --enable-ikev1
-			--enable-ikev2 --enable-kernel-libipsec --enable-kernel-pfkey
+			--enable-eap-md5 --enable-eap-mschapv2 --enable-eap-peap
+			--enable-dhcp --enable-farp --enable-ikev1 --enable-ikev2
+			--enable-kernel-libipsec --enable-kernel-pfkey
 			--enable-kernel-pfroute --enable-nonce --enable-openssl
 			--enable-osx-attr --enable-pem --enable-pgp --enable-pkcs1
-			--enable-pkcs8 --enable-pki --enable-pubkey --enable-revocation
-			--enable-socket-default --enable-sshkey --enable-stroke
-			--enable-swanctl --enable-unity --enable-updown
-			--enable-x509 --enable-xauth-generic"
-	DEPS="automake autoconf libtool bison gperf pkgconf openssl@1.1 curl"
+			--enable-pkcs8 --enable-pkcs11 --enable-pki --enable-pubkey
+			--enable-revocation --enable-socket-default --enable-sshkey
+			--enable-stroke --enable-swanctl --enable-unity --enable-updown
+			--enable-x509 --enable-xauth-generic --enable-drbg"
+	DEPS="automake autoconf libtool bison gperf pkgconf openssl@3 curl"
 	BREW_PREFIX=$(brew --prefix)
 	export PATH=$BREW_PREFIX/opt/bison/bin:$PATH
-	for pkg in openssl@1.1 curl
+	for pkg in openssl@3 curl
 	do
 		PKG_CONFIG_PATH=$BREW_PREFIX/opt/$pkg/lib/pkgconfig:$PKG_CONFIG_PATH
 		CPPFLAGS="-I$BREW_PREFIX/opt/$pkg/include $CPPFLAGS"
