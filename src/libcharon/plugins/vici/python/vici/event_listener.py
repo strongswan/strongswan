@@ -1,6 +1,10 @@
 from functools import wraps
 
 
+class StopListening(Exception):
+    """Exception that may be raised to stop listening for events."""
+
+
 class EventListener(object):
     def __init__(self, session=None):
         """Create an event listener instance, which provides decorator methods
@@ -30,7 +34,8 @@ class EventListener(object):
         """Decorator to mark a function as a listener for specific events.
 
         The decorated function is expected to receive the name of the event and
-        the data as arguments.
+        the data as arguments. It may raise :class:`~StopListening` to stop
+        listening and let :func:`~listen()` return.
 
         :param events: events to register and call decorated function for
         :type events: list
@@ -48,8 +53,12 @@ class EventListener(object):
 
     def on_disconnected(self):
         """Decorator to mark a function as a listener for when the daemon
-        disconnects the vici session. This listener instance is passed to the
-        decorated function.
+        disconnects the vici session.
+
+        This listener instance is passed to the decorated function, which may
+        be used to set a new session and continue listening. If no session is
+        set, :func:`~listen()` will return after the decorated function has
+        been called.
 
         :return: decorator function
         :rtype: any
@@ -66,20 +75,27 @@ class EventListener(object):
     def listen(self):
         """Dispatch events registered via decorators of this instance.
 
-        This method does not return unless the daemon disconnects or an
-        exception occurs.
-
         An active session has to be set before calling this. After getting
-        disconnected, a new session may be set via :func:`~set_session()`
-        before calling this again.
+        disconnected, a new session may be set via :func:`~set_session()` in
+        a function decorated with :func:`~on_disconnected()` to resume
+        listening for events.
+
+        This method does not return unless :class:`~StopListening` or an
+        unexpected exception is raised or if the current session is disonnected
+        and no new session is set in a listener.
         """
-        try:
-            if self.session is None:
-                return
-            for label, event in self.session.listen(self.event_map.keys()):
-                name = label.decode()
-                if name in self.event_map:
-                    self.event_map[name](name, event)
-        except IOError as e:
-            for func in self.disconnect_list:
-                func(self)
+        while True:
+            try:
+                if self.session is None:
+                    break
+                for label, event in self.session.listen(self.event_map.keys()):
+                    name = label.decode()
+                    if name in self.event_map:
+                        self.event_map[name](name, event)
+            except IOError as e:
+                self.session = None
+                for func in self.disconnect_list:
+                    func(self)
+                continue
+            except StopListening:
+                break
