@@ -1,4 +1,7 @@
 from functools import wraps
+import inspect
+
+from .protocol import RECV_TIMEOUT_DEFAULT
 
 
 class StopListening(Exception):
@@ -19,6 +22,7 @@ class EventListener(object):
         """
         self.event_map = {}
         self.disconnect_list = []
+        self.timeout_list = []
         self.session = session
 
     def set_session(self, session):
@@ -72,7 +76,30 @@ class EventListener(object):
             return wrapper
         return decorator
 
-    def listen(self):
+    def on_timeout(self):
+        """Decorator to mark a function as a listener for when a timeout occurs
+        while waiting for events. Only has an effect if :func:`~listen()` is
+        called with a timeout.
+
+        The decorated function may either take no or two arguments (both will be
+        set to `None`). So this may be applied to a function that's also
+        decorated with :func:`~on_events()`. It may raise
+        :class:`~StopListening` to stop listening and let :func:`~listen()`
+        return.
+
+        :return: decorator function
+        :rtype: any
+        """
+        def decorator(func):
+            self.timeout_list.append(func)
+
+            @wraps(func)
+            def wrapper(*args, **kwargs):
+                return func(*args, **kwargs)
+            return wrapper
+        return decorator
+
+    def listen(self, timeout=RECV_TIMEOUT_DEFAULT):
         """Dispatch events registered via decorators of this instance.
 
         An active session has to be set before calling this. After getting
@@ -83,12 +110,28 @@ class EventListener(object):
         This method does not return unless :class:`~StopListening` or an
         unexpected exception is raised or if the current session is disconnected
         and no new session is set in a listener.
+
+        The optional timeout allows calling functions decorated with
+        :func:`~on_timeout()` if no event has been received for that time. Which
+        may be used to abort listening or perform periodic tasks while
+        continuing to listen for events.
+
+        :param timeout: timeout to wait for events, in fractions of a second
+        :type timeout: float
         """
         while True:
             try:
                 if self.session is None:
                     break
-                for label, event in self.session.listen(self.event_map.keys()):
+                for label, event in self.session.listen(self.event_map.keys(),
+                                                        timeout):
+                    if label is None and event is None:
+                        for func in self.timeout_list:
+                            if len(inspect.signature(func).parameters) > 0:
+                                func(label, event)
+                            else:
+                                func()
+                        continue
                     name = label.decode()
                     if name in self.event_map:
                         self.event_map[name](name, event)
