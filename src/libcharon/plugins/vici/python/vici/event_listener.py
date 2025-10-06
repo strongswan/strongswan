@@ -46,13 +46,16 @@ class EventListener(object):
         :return: decorator function
         :rtype: any
         """
+
         def decorator(func):
             self.event_map.update({event: func for event in events})
 
             @wraps(func)
             def wrapper(*args, **kwargs):
                 return func(*args, **kwargs)
+
             return wrapper
+
         return decorator
 
     def on_disconnected(self):
@@ -67,13 +70,16 @@ class EventListener(object):
         :return: decorator function
         :rtype: any
         """
+
         def decorator(func):
             self.disconnect_list.append(func)
 
             @wraps(func)
             def wrapper(*args, **kwargs):
                 return func(*args, **kwargs)
+
             return wrapper
+
         return decorator
 
     def on_timeout(self):
@@ -90,13 +96,16 @@ class EventListener(object):
         :return: decorator function
         :rtype: any
         """
+
         def decorator(func):
             self.timeout_list.append(func)
 
             @wraps(func)
             def wrapper(*args, **kwargs):
                 return func(*args, **kwargs)
+
             return wrapper
+
         return decorator
 
     def listen(self, timeout=RECV_TIMEOUT_DEFAULT):
