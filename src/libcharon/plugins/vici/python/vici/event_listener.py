@@ -146,6 +146,8 @@ class EventListener(object):
                         self.event_map[name](name, event)
             except IOError:
                 self.session = None
+                if not self.disconnect_list:
+                    raise
                 for func in self.disconnect_list:
                     func(self)
                 continue
