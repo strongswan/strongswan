@@ -1,6 +1,6 @@
 # 2.6.0 #
 
-- Allow pre-selecting a user certificate via alias in managed profiles
+- Allow preselecting a user certificate via alias in managed profiles
 - Allow selecting a user certificate for managed profiles that don't install their own certificate
 - Fix reading split-tunneling settings in managed profiles
 - Adapt to edge-to-edge display, which becomes mandatory when targeting Android 16

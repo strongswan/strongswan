@@ -151,7 +151,7 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 
 	/*
 	 * creation of first CHILD SA:
-	 * no nonce and no ke contexts because the ones from the IKE SA are re-used
+	 * no nonce and no ke contexts because the ones from the IKE SA are reused
 	 */
 	nonce_loc_id = tkm->chunk_map->get_id(tkm->chunk_map, nonce_loc);
 	if (nonce_loc_id == 0 && esa.ke_ids.size == 0)
