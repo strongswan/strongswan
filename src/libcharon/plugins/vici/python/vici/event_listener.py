@@ -117,8 +117,8 @@ class EventListener(object):
         listening for events.
 
         This method does not return unless :class:`~StopListening` or an
-        unexpected exception is raised or if the current session is disonnected
-        and no new session is set in a listener.
+        unexpected exception is raised or if the current session is
+        disconnected and no new session is set in a listener.
 
         The optional timeout allows calling functions decorated with
         :func:`~on_timeout()` if no event has been received for that time. Which
