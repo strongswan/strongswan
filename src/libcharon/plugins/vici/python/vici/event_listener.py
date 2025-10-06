@@ -144,7 +144,7 @@ class EventListener(object):
                     name = label.decode()
                     if name in self.event_map:
                         self.event_map[name](name, event)
-            except IOError as e:
+            except IOError:
                 self.session = None
                 for func in self.disconnect_list:
                     func(self)
