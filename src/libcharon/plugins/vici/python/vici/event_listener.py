@@ -118,11 +118,13 @@ class EventListener(object):
 
         :param timeout: timeout to wait for events, in fractions of a second
         :type timeout: float
+        :return: True if StopListening was raised, False if no session available
+        :rtype: bool
         """
         while True:
             try:
                 if self.session is None:
-                    break
+                    return False
                 for label, event in self.session.listen(self.event_map.keys(),
                                                         timeout):
                     if label is None and event is None:
@@ -141,4 +143,4 @@ class EventListener(object):
                     func(self)
                 continue
             except StopListening:
-                break
+                return True
