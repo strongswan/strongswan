@@ -1897,18 +1897,6 @@ METHOD(ike_sa_t, rekey_child_sa, status_t,
 	return this->task_manager->initiate(this->task_manager);
 }
 
-METHOD(ike_sa_t, delete_child_sa, status_t,
-	private_ike_sa_t *this, protocol_id_t protocol, uint32_t spi, bool expired)
-{
-	if (this->state == IKE_PASSIVE)
-	{
-		return INVALID_STATE;
-	}
-	this->task_manager->queue_child_delete(this->task_manager,
-										   protocol, spi, expired);
-	return this->task_manager->initiate(this->task_manager);
-}
-
 METHOD(ike_sa_t, destroy_child_sa, status_t,
 	private_ike_sa_t *this, protocol_id_t protocol, uint32_t spi)
 {
@@ -1930,6 +1918,23 @@ METHOD(ike_sa_t, destroy_child_sa, status_t,
 	}
 	enumerator->destroy(enumerator);
 	return status;
+}
+
+METHOD(ike_sa_t, delete_child_sa, status_t,
+	private_ike_sa_t *this, protocol_id_t protocol, uint32_t spi, bool expired)
+{
+	if (this->state == IKE_PASSIVE)
+	{
+		if (expired)
+		{	/* make sure the SA is removed if the notification from the active
+			 * node was missed somehow */
+			destroy_child_sa(this, protocol, spi);
+		}
+		return INVALID_STATE;
+	}
+	this->task_manager->queue_child_delete(this->task_manager,
+										   protocol, spi, expired);
+	return this->task_manager->initiate(this->task_manager);
 }
 
 METHOD(ike_sa_t, delete_, status_t,
