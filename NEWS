@@ -1,3 +1,34 @@
+strongswan-6.0.3
+----------------
+
+- The new `alert` event for vici is raised for certain error conditions.
+
+- Only plugins with matching version number are loaded by programs.
+
+- IKE SAs redirected during IKE_AUTH are now properly tracked by controller and
+  trap-manager.
+
+- Fallback to the IKE identity for clients that don't provide an EAP-Identity to
+  fix a regression in 6.0.2.
+
+- Detecting unwrapped CKA_EC_POINTs has been improved in the pkcs11 plugin.
+
+- The whitelist plugin uses non-blocking I/O to avoid issues with clients that
+  stay connected for a long time.  The buffer size for IDs was increased to 256.
+
+- The certexpire plugins also uses 256 bytes for its identity buffer.
+
+- Convenient decorators for event handling are provided by the Python bindings
+  for vici.
+
+- The openssl plugin also supports Ed25519 via AWS-LC.  It also loads EdDSA keys
+  from PKCS#12 containers.
+
+- The testing environment is now based on Debian 13 (trixie), by default.
+
+- Support for MD2 has been removed.
+
+
 strongswan-6.0.2
 ----------------
 
