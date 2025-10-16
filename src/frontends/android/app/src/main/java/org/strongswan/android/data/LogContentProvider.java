@@ -20,6 +20,8 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.strongswan.android.logic.CharonVpnService;
@@ -85,28 +87,33 @@ public class LogContentProvider extends ContentProvider
 	{
 		/* this is called by apps to find out the name and size of the file.
 		 * since we only provide a single file this is simple to implement */
-		if (projection == null || projection.length < 1)
+		if (projection == null)
 		{
-			return null;
+			projection = new String[]{ OpenableColumns.DISPLAY_NAME, OpenableColumns.SIZE };
 		}
 		Long timestamp = mUris.get(uri);
 		if (timestamp == null)
 		{	/* don't check the validity as this information is not really private */
 			return null;
 		}
-		MatrixCursor cursor = new MatrixCursor(projection, 1);
-		if (OpenableColumns.DISPLAY_NAME.equals(cursor.getColumnName(0)))
+		List<String> cols = new ArrayList<>();
+		List<Object> vals = new ArrayList<>();
+		for (String col : projection)
 		{
-			cursor.newRow().add(CharonVpnService.LOG_FILE);
+			if (OpenableColumns.DISPLAY_NAME.equals(col))
+			{
+				cols.add(OpenableColumns.DISPLAY_NAME);
+				vals.add(CharonVpnService.LOG_FILE);
+			}
+			else if (OpenableColumns.SIZE.equals(col))
+			{
+				cols.add(OpenableColumns.SIZE);
+				vals.add(mLogFile.length());
+			}
 		}
-		else if (OpenableColumns.SIZE.equals(cursor.getColumnName(0)))
-		{
-			cursor.newRow().add(mLogFile.length());
-		}
-		else
-		{
-			return null;
-		}
+
+		MatrixCursor cursor = new MatrixCursor(cols.toArray(new String[0]), 1);
+		cursor.addRow(vals.toArray());
 		return cursor;
 	}
 
