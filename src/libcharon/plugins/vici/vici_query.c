@@ -53,6 +53,7 @@
 
 #include <daemon.h>
 #include <asn1/asn1.h>
+#include <collections/hashtable.h>
 #include <credentials/certificates/certificate.h>
 #include <credentials/certificates/x509.h>
 #include <counters_query.h>
@@ -466,6 +467,67 @@ static void list_vips(private_vici_query_t *this, vici_builder_t *b,
 }
 
 /**
+ * List attributes
+ */
+static void list_attributes(private_vici_query_t *this, vici_builder_t *b,
+							ike_sa_t *ike_sa)
+{
+	enumerator_t *enumerator;
+	configuration_attribute_type_t type;
+	chunk_t data;
+	bool handled;
+	hashtable_t *attrs;
+	array_t *list;
+	char buf[BUF_LEN];
+	void *type_ptr;
+	int i;
+
+	attrs = hashtable_create(hashtable_hash_ptr, hashtable_equals_ptr, 8);
+
+	enumerator = ike_sa->create_attribute_enumerator(ike_sa);
+	while (enumerator->enumerate(enumerator, &type, &data, &handled))
+	{
+		if (type == INTERNAL_IP4_ADDRESS || type == INTERNAL_IP6_ADDRESS)
+		{	/* we pass these already in separate lists */
+			continue;
+		}
+		list = attrs->get(attrs, (void*)(uintptr_t)type);
+		if (!list)
+		{
+			list = array_create(sizeof(chunk_t), 0);
+			attrs->put(attrs, (void*)(uintptr_t)type, list);
+		}
+		array_insert(list, ARRAY_TAIL, &data);
+	}
+	enumerator->destroy(enumerator);
+
+	if (!attrs->get_count(attrs))
+	{
+		return;
+	}
+
+	b->begin_section(b, "received-attrs");
+
+	enumerator = attrs->create_enumerator(attrs);
+	while (enumerator->enumerate(enumerator, &type_ptr, &list))
+	{
+		snprintf(buf, sizeof(buf), "%u", (uintptr_t)type_ptr);
+		b->begin_list(b, buf);
+		for (i = 0; i < array_count(list); i++)
+		{
+			array_get(list, i, &data);
+			b->add(b, VICI_LIST_ITEM, data);
+		}
+		b->end_list(b);
+	}
+	enumerator->destroy(enumerator);
+
+	b->end_section(b);
+
+	attrs->destroy_function(attrs, (void*)array_destroy);
+}
+
+/**
  * List details of an IKE_SA
  */
 static void list_ike(private_vici_query_t *this, vici_builder_t *b,
@@ -582,6 +644,8 @@ static void list_ike(private_vici_query_t *this, vici_builder_t *b,
 
 	list_vips(this, b, ike_sa, TRUE, "local-vips");
 	list_vips(this, b, ike_sa, FALSE, "remote-vips");
+
+	list_attributes(this, b, ike_sa);
 
 	list_task_queue(this, b, ike_sa, TASK_QUEUE_QUEUED, "tasks-queued");
 	list_task_queue(this, b, ike_sa, TASK_QUEUE_ACTIVE, "tasks-active");
