@@ -686,7 +686,7 @@ static inline bool valid_ec_point_type_and_len(u_char type, size_t len)
 			/* fall-through */
 		case 0x02:
 		case 0x03:
-			/* uncompressed points */
+			/* compressed points */
 			return len > min_len && (len % min_multiple) == 0;
 		default:
 			return FALSE;
