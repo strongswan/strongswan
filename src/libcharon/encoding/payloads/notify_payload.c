@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2023 Tobias Brunner
+ * Copyright (C) 2006-2025 Tobias Brunner
  * Copyright (C) 2005-2010 Martin Willi
  * Copyright (C) 2006 Daniel Roethlisberger
  * Copyright (C) 2005 Jan Hutter
@@ -136,7 +136,7 @@ ENUM_NEXT(notify_type_names, UNITY_LOAD_BALANCE, UNITY_LOAD_BALANCE, DPD_R_U_THE
 	"UNITY_LOAD_BALANCE");
 ENUM_NEXT(notify_type_names, USE_BEET_MODE, USE_BEET_MODE, UNITY_LOAD_BALANCE,
 	"USE_BEET_MODE");
-ENUM_NEXT(notify_type_names, ME_MEDIATION, RADIUS_ATTRIBUTE, USE_BEET_MODE,
+ENUM_NEXT(notify_type_names, ME_MEDIATION, CHILD_SA_PFS_INFO_SUPPORTED, USE_BEET_MODE,
 	"ME_MEDIATION",
 	"ME_ENDPOINT",
 	"ME_CALLBACK",
@@ -144,8 +144,9 @@ ENUM_NEXT(notify_type_names, ME_MEDIATION, RADIUS_ATTRIBUTE, USE_BEET_MODE,
 	"ME_CONNECTKEY",
 	"ME_CONNECTAUTH",
 	"ME_RESPONSE",
-	"RADIUS_ATTRIBUTE");
-ENUM_END(notify_type_names, RADIUS_ATTRIBUTE);
+	"RADIUS_ATTRIBUTE",
+	"CHILD_SA_PFS_INFO_SUPPORTED");
+ENUM_END(notify_type_names, CHILD_SA_PFS_INFO_SUPPORTED);
 
 
 ENUM_BEGIN(notify_type_short_names, UNSUPPORTED_CRITICAL_PAYLOAD, UNSUPPORTED_CRITICAL_PAYLOAD,
@@ -259,7 +260,7 @@ ENUM_NEXT(notify_type_short_names, UNITY_LOAD_BALANCE, UNITY_LOAD_BALANCE, DPD_R
 	"UNITY_LB");
 ENUM_NEXT(notify_type_short_names, USE_BEET_MODE, USE_BEET_MODE, UNITY_LOAD_BALANCE,
 	"BEET_MODE");
-ENUM_NEXT(notify_type_short_names, ME_MEDIATION, RADIUS_ATTRIBUTE, USE_BEET_MODE,
+ENUM_NEXT(notify_type_short_names, ME_MEDIATION, CHILD_SA_PFS_INFO_SUPPORTED, USE_BEET_MODE,
 	"ME_MED",
 	"ME_EP",
 	"ME_CB",
@@ -267,8 +268,9 @@ ENUM_NEXT(notify_type_short_names, ME_MEDIATION, RADIUS_ATTRIBUTE, USE_BEET_MODE
 	"ME_CKEY",
 	"ME_CAUTH",
 	"ME_R",
-	"RADIUS");
-ENUM_END(notify_type_short_names, RADIUS_ATTRIBUTE);
+	"RADIUS",
+	"CHILD_PFS_SUP");
+ENUM_END(notify_type_short_names, CHILD_SA_PFS_INFO_SUPPORTED);
 
 
 typedef struct private_notify_payload_t private_notify_payload_t;
