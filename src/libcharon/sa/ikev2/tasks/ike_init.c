@@ -483,6 +483,11 @@ static bool build_payloads(private_ike_init_t *this, message_t *message)
 		message->add_notify(message, FALSE, INTERMEDIATE_EXCHANGE_SUPPORTED,
 							chunk_empty);
 	}
+	if (initiator_or_extension(this, EXT_CHILD_SA_PFS_INFO))
+	{
+		message->add_notify(message, FALSE, CHILD_SA_PFS_INFO_SUPPORTED,
+							chunk_empty);
+	}
 	return TRUE;
 }
 
@@ -747,6 +752,13 @@ static void process_payloads(private_ike_init_t *this, message_t *message)
 						{
 							this->ike_sa->enable_extension(this->ike_sa,
 														   EXT_IKE_INTERMEDIATE);
+						}
+						break;
+					case CHILD_SA_PFS_INFO_SUPPORTED:
+						if (!this->old_sa)
+						{
+							this->ike_sa->enable_extension(this->ike_sa,
+														   EXT_CHILD_SA_PFS_INFO);
 						}
 						break;
 					default:
