@@ -52,6 +52,15 @@ charon.check_current_path = no
 	connectivity.  It will also trigger a MOBIKE update if NAT mappings were
 	removed during the downtime.
 
+charon.child_sa_pfs_info = yes
+	Whether to support negotiating KE methods during the IKE_AUTH exchange to
+	reveal config mismatches that affect the rekeying of the initial Child SA.
+
+	Whether to support negotiating KE methods during the IKE_AUTH exchange. The
+	selected KE methods are not used for the key derivation of the initial Child
+	SA. But the negotiation will reveal configuration mismatches that cause a
+	later rekeying to fail.
+
 charon.cisco_flexvpn = no
 	Send the Cisco FlexVPN vendor ID payload (IKEv2 only).
 

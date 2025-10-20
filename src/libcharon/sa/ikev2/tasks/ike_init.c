@@ -140,6 +140,11 @@ struct private_ike_init_t {
 	bool signature_authentication;
 
 	/**
+	 * Whether to support KE negotiation during IKE_AUTH per draft-ietf-ipsecme-child-pfs-info
+	 */
+	bool child_sa_pfs_info;
+
+	/**
 	 * Whether to follow IKEv2 redirects as per RFC 5685
 	 */
 	bool follow_redirects;
@@ -483,6 +488,12 @@ static bool build_payloads(private_ike_init_t *this, message_t *message)
 		message->add_notify(message, FALSE, INTERMEDIATE_EXCHANGE_SUPPORTED,
 							chunk_empty);
 	}
+	if (this->child_sa_pfs_info &&
+		initiator_or_extension(this, EXT_CHILD_SA_PFS_INFO))
+	{
+		message->add_notify(message, FALSE, CHILD_SA_PFS_INFO_SUPPORTED,
+							chunk_empty);
+	}
 	return TRUE;
 }
 
@@ -747,6 +758,13 @@ static void process_payloads(private_ike_init_t *this, message_t *message)
 						{
 							this->ike_sa->enable_extension(this->ike_sa,
 														   EXT_IKE_INTERMEDIATE);
+						}
+						break;
+					case CHILD_SA_PFS_INFO_SUPPORTED:
+						if (!this->old_sa && this->child_sa_pfs_info)
+						{
+							this->ike_sa->enable_extension(this->ike_sa,
+														   EXT_CHILD_SA_PFS_INFO);
 						}
 						break;
 					default:
@@ -1535,6 +1553,8 @@ ike_init_t *ike_init_create(ike_sa_t *ike_sa, bool initiator, ike_sa_t *old_sa)
 		.old_sa = old_sa,
 		.signature_authentication = lib->settings->get_bool(lib->settings,
 								"%s.signature_authentication", TRUE, lib->ns),
+		.child_sa_pfs_info = lib->settings->get_bool(lib->settings,
+								"%s.child_sa_pfs_info", TRUE, lib->ns),
 		.follow_redirects = lib->settings->get_bool(lib->settings,
 								"%s.follow_redirects", TRUE, lib->ns),
 	);
