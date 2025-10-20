@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2023 Tobias Brunner
+ * Copyright (C) 2006-2025 Tobias Brunner
  * Copyright (C) 2005-2010 Martin Willi
  * Copyright (C) 2006 Daniel Roethlisberger
  * Copyright (C) 2005 Jan Hutter
@@ -145,7 +145,9 @@ ENUM_NEXT(notify_type_names, ME_MEDIATION, RADIUS_ATTRIBUTE, USE_BEET_MODE,
 	"ME_CONNECTAUTH",
 	"ME_RESPONSE",
 	"RADIUS_ATTRIBUTE");
-ENUM_END(notify_type_names, RADIUS_ATTRIBUTE);
+ENUM_NEXT(notify_type_names, CHILD_SA_PFS_INFO_SUPPORTED, CHILD_SA_PFS_INFO_SUPPORTED, RADIUS_ATTRIBUTE,
+	"CHILD_SA_PFS_INFO_SUPPORTED");
+ENUM_END(notify_type_names, CHILD_SA_PFS_INFO_SUPPORTED);
 
 
 ENUM_BEGIN(notify_type_short_names, UNSUPPORTED_CRITICAL_PAYLOAD, UNSUPPORTED_CRITICAL_PAYLOAD,
@@ -268,7 +270,9 @@ ENUM_NEXT(notify_type_short_names, ME_MEDIATION, RADIUS_ATTRIBUTE, USE_BEET_MODE
 	"ME_CAUTH",
 	"ME_R",
 	"RADIUS");
-ENUM_END(notify_type_short_names, RADIUS_ATTRIBUTE);
+ENUM_NEXT(notify_type_short_names, CHILD_SA_PFS_INFO_SUPPORTED, CHILD_SA_PFS_INFO_SUPPORTED, RADIUS_ATTRIBUTE,
+	"CHILD_PFS_SUP");
+ENUM_END(notify_type_short_names, CHILD_SA_PFS_INFO_SUPPORTED);
 
 
 typedef struct private_notify_payload_t private_notify_payload_t;
