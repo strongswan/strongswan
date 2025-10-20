@@ -336,6 +336,17 @@ static bool send_use_ppk(private_ike_init_t *this)
 }
 
 /**
+ * Check that we are either initiator or we respond to one that supports the
+ * given extension.
+ */
+static inline bool initiator_or_extension(private_ike_init_t *this,
+										  ike_extension_t ext)
+{
+	return this->initiator ||
+		   this->ike_sa->supports_extension(this->ike_sa, ext);
+}
+
+/**
  * build the payloads for the message
  */
 static bool build_payloads(private_ike_init_t *this, message_t *message)
@@ -414,30 +425,26 @@ static bool build_payloads(private_ike_init_t *this, message_t *message)
 	nonce_payload->set_nonce(nonce_payload, this->my_nonce);
 	message->add_payload(message, (payload_t*)nonce_payload);
 
-	/* negotiate fragmentation if we are not rekeying */
-	if (!this->old_sa &&
-		 ike_cfg->fragmentation(ike_cfg) != FRAGMENTATION_NO)
+	/* if we are rekeying, we are done as we don't negotiate any extensions */
+	if (this->old_sa)
 	{
-		if (this->initiator ||
-			this->ike_sa->supports_extension(this->ike_sa,
-											 EXT_IKE_FRAGMENTATION))
-		{
-			message->add_notify(message, FALSE, FRAGMENTATION_SUPPORTED,
-								chunk_empty);
-		}
+		return TRUE;
+	}
+
+	if (ike_cfg->fragmentation(ike_cfg) != FRAGMENTATION_NO &&
+		initiator_or_extension(this, EXT_IKE_FRAGMENTATION))
+	{
+		message->add_notify(message, FALSE, FRAGMENTATION_SUPPORTED,
+							chunk_empty);
 	}
 	/* submit supported hash algorithms for signature authentication */
-	if (!this->old_sa && this->signature_authentication)
+	if (this->signature_authentication &&
+		initiator_or_extension(this, EXT_SIGNATURE_AUTH))
 	{
-		if (this->initiator ||
-			this->ike_sa->supports_extension(this->ike_sa,
-											 EXT_SIGNATURE_AUTH))
-		{
-			send_supported_hash_algorithms(this, message);
-		}
+		send_supported_hash_algorithms(this, message);
 	}
 	/* notify other peer if we support redirection */
-	if (!this->old_sa && this->initiator && this->follow_redirects)
+	if (this->initiator && this->follow_redirects)
 	{
 		identification_t *gateway;
 		host_t *from;
@@ -460,26 +467,21 @@ static bool build_payloads(private_ike_init_t *this, message_t *message)
 		}
 	}
 	/* notify the peer if we want to use/support PPK */
-	if (!this->old_sa && send_use_ppk(this))
+	if (send_use_ppk(this))
 	{
 		message->add_notify(message, FALSE, USE_PPK, chunk_empty);
 	}
-	/* notify the peer if we accept childless IKE_SAs */
-	if (!this->old_sa && !this->initiator &&
-		 ike_cfg->childless(ike_cfg) != CHILDLESS_NEVER)
+	/* notify the initiator if we accept childless IKE_SAs */
+	if (!this->initiator && ike_cfg->childless(ike_cfg) != CHILDLESS_NEVER)
 	{
 		message->add_notify(message, FALSE, CHILDLESS_IKEV2_SUPPORTED,
 							chunk_empty);
 	}
-	if (!this->old_sa && additional_ke)
+	if (additional_ke &&
+		initiator_or_extension(this, EXT_IKE_INTERMEDIATE))
 	{
-		if (this->initiator ||
-			this->ike_sa->supports_extension(this->ike_sa,
-											 EXT_IKE_INTERMEDIATE))
-		{
-			message->add_notify(message, FALSE, INTERMEDIATE_EXCHANGE_SUPPORTED,
-								chunk_empty);
-		}
+		message->add_notify(message, FALSE, INTERMEDIATE_EXCHANGE_SUPPORTED,
+							chunk_empty);
 	}
 	return TRUE;
 }
