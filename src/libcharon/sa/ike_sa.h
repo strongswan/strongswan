@@ -178,6 +178,11 @@ enum ike_extension_t {
 	EXT_IKE_INTERMEDIATE = (1<<17),
 
 	/**
+	 * Child SA KE negotiation during IKE_AUTH, draft-ietf-ipsecme-child-pfs-info
+	 */
+	EXT_CHILD_SA_PFS_INFO = (1<<18),
+
+	/**
 	 * MSB marker to separate private extensions
 	 */
 	EXT_PRIVATE_MARKER = (1<<31),
