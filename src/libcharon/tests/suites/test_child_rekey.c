@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2022 Tobias Brunner
+ * Copyright (C) 2016-2025 Tobias Brunner
  *
  * Copyright (C) secunet Security Networks AG
  *
@@ -251,6 +251,126 @@ START_TEST(test_regular_multi_ke)
 }
 END_TEST
 
+
+/**
+ * CHILD_SA rekey where the responder does not agree with the DH group selected
+ * by the initiator.  However, because they negotiate the KE methods during
+ * IKE_AUTH, the rekeying initiated by the original initiator can be completed
+ * without INVALID_KE_PAYLOAD notify.  If it's initiated by the original
+ * responder that's currently not the case as the responder strictly prefers
+ * its own configuration.
+ */
+START_TEST(test_regular_ke_mismatch)
+{
+	exchange_test_sa_conf_t conf = {
+		.initiator = {
+			.esp = "aes128-sha256-modp2048-modp3072",
+		},
+		.responder = {
+			.esp = "aes128-sha256-modp3072-modp2048",
+		},
+	};
+	ike_sa_t *a, *b;
+	uint32_t spi_a = _i+1, spi_b = 2-_i, spi_i = 3, spi_r = 4;
+
+	assert_track_sas_start();
+
+	if (_i)
+	{	/* responder rekeys the CHILD_SA (SPI 2) */
+		assert_notify(IN, CHILD_SA_PFS_INFO_SUPPORTED);
+		exchange_test_helper->establish_sa(exchange_test_helper,
+										   &b, &a, &conf);
+	}
+	else
+	{	/* initiator rekeys the CHILD_SA (SPI 1) */
+		assert_notify(IN, CHILD_SA_PFS_INFO_SUPPORTED);
+		exchange_test_helper->establish_sa(exchange_test_helper,
+										   &a, &b, &conf);
+	}
+	initiate_rekey(a, spi_a);
+	assert_ipsec_sas_installed(a, spi_a, spi_b);
+
+	/* this should never get called as this results in a successful rekeying */
+	assert_hook_not_called(child_updown);
+
+	if (_i)
+	{
+		/* CREATE_CHILD_SA { N(REKEY_SA), SA, Ni, [KEi,] TSi, TSr } --> */
+		assert_hook_not_called(child_rekey);
+		assert_notify(IN, REKEY_SA);
+		exchange_test_helper->process_message(exchange_test_helper, b, NULL);
+		assert_child_sa_state(b, spi_b, CHILD_INSTALLED);
+		assert_child_sa_count(b, 1);
+		assert_ipsec_sas_installed(b, spi_a, spi_b);
+		assert_hook();
+
+		/* <-- CREATE_CHILD_SA { N(INVAL_KE) } */
+		assert_hook_not_called(child_rekey);
+		assert_single_notify(IN, INVALID_KE_PAYLOAD);
+		exchange_test_helper->process_message(exchange_test_helper, a, NULL);
+		assert_child_sa_state(a, spi_a, CHILD_REKEYING);
+		assert_child_sa_count(a, 1);
+		assert_ipsec_sas_installed(a, spi_a, spi_b);
+		assert_hook();
+
+		spi_i = spi_r++;
+	}
+
+	/* CREATE_CHILD_SA { N(REKEY_SA), SA, Ni, [KEi,] TSi, TSr } --> */
+	assert_hook_not_called(child_rekey);
+	assert_notify(IN, REKEY_SA);
+	assert_no_notify(OUT, INVALID_KE_PAYLOAD);
+	exchange_test_helper->process_message(exchange_test_helper, b, NULL);
+	assert_child_sa_state(b, spi_b, CHILD_REKEYED, CHILD_OUTBOUND_INSTALLED);
+	assert_child_sa_state(b, spi_r, CHILD_INSTALLED, CHILD_OUTBOUND_REGISTERED);
+	assert_ipsec_sas_installed(b, spi_a, spi_b, spi_r);
+	assert_hook();
+
+	/* <-- CREATE_CHILD_SA { SA, Nr, [KEr,] TSi, TSr } */
+	assert_hook_rekey(child_rekey, spi_a, spi_i);
+	assert_no_notify(IN, REKEY_SA);
+	exchange_test_helper->process_message(exchange_test_helper, a, NULL);
+	assert_child_sa_state(a, spi_a, CHILD_DELETING, CHILD_OUTBOUND_NONE);
+	assert_child_sa_state(a, spi_i, CHILD_INSTALLED, CHILD_OUTBOUND_INSTALLED);
+	assert_ipsec_sas_installed(a, spi_a, spi_i, spi_r);
+	assert_hook();
+
+	/* INFORMATIONAL { D } --> */
+	assert_hook_rekey(child_rekey, spi_b, spi_r);
+	assert_single_payload(IN, PLV2_DELETE);
+	exchange_test_helper->process_message(exchange_test_helper, b, NULL);
+	assert_child_sa_state(b, spi_b, CHILD_DELETED, CHILD_OUTBOUND_NONE);
+	assert_child_sa_state(b, spi_r, CHILD_INSTALLED, CHILD_OUTBOUND_INSTALLED);
+	assert_child_sa_count(b, 2);
+	assert_ipsec_sas_installed(b, spi_b, spi_i, spi_r);
+	assert_hook();
+	/* <-- INFORMATIONAL { D } */
+	assert_hook_not_called(child_rekey);
+	assert_single_payload(IN, PLV2_DELETE);
+	exchange_test_helper->process_message(exchange_test_helper, a, NULL);
+	assert_child_sa_state(a, spi_a, CHILD_DELETED, CHILD_OUTBOUND_NONE);
+	assert_child_sa_state(a, spi_i, CHILD_INSTALLED);
+	assert_child_sa_count(a, 2);
+	assert_ipsec_sas_installed(a, spi_a, spi_i, spi_r);
+	assert_hook();
+
+	/* simulate the execution of the scheduled jobs */
+	destroy_rekeyed(a, spi_a);
+	assert_child_sa_count(a, 1);
+	assert_ipsec_sas_installed(a, spi_i, spi_r);
+	destroy_rekeyed(b, spi_b);
+	assert_child_sa_count(b, 1);
+	assert_ipsec_sas_installed(b, spi_i, spi_r);
+
+	/* child_updown */
+	assert_hook();
+	assert_track_sas(2, 2);
+
+	call_ikesa(a, destroy);
+	call_ikesa(b, destroy);
+}
+END_TEST
+
 /**
  * CHILD_SA rekey where the responder does not agree with the DH group selected
  * by the initiator, either initiated by the original initiator or responder of
@@ -268,6 +388,10 @@ START_TEST(test_regular_ke_invalid)
 	};
 	ike_sa_t *a, *b;
 	uint32_t spi_a = _i+1, spi_b = 2-_i;
+
+	/* disable KE negotiation during IKE_AUTH, which prevents this mismatch */
+	lib->settings->set_bool(lib->settings, "%s.child_sa_pfs_info",
+							FALSE, lib->ns);
 
 	assert_track_sas_start();
 
@@ -431,6 +555,10 @@ START_TEST(test_regular_ke_invalid_multi_ke)
 	};
 	ike_sa_t *a, *b;
 	uint32_t spi_a = _i+1, spi_b = 2-_i;
+
+	/* disable KE negotiation during IKE_AUTH, which prevents this mismatch */
+	lib->settings->set_bool(lib->settings, "%s.child_sa_pfs_info",
+							FALSE, lib->ns);
 
 	assert_track_sas_start();
 
@@ -3202,7 +3330,7 @@ START_TEST(test_collision_delayed_request_multi_ke)
 END_TEST
 
 /**
- * Both peers initiate the CHILD_SA reekying concurrently but the proposed DH
+ * Both peers initiate the CHILD_SA rekeying concurrently but the proposed DH
  * groups are not the same after handling the INVALID_KE_PAYLOAD they should
  * still handle the collision properly depending on the nonces.
  */
@@ -3217,6 +3345,10 @@ START_TEST(test_collision_ke_invalid)
 		},
 	};
 	ike_sa_t *a, *b;
+
+	/* disable KE negotiation during IKE_AUTH, which prevents this mismatch */
+	lib->settings->set_bool(lib->settings, "%s.child_sa_pfs_info",
+							FALSE, lib->ns);
 
 	assert_track_sas_start();
 
@@ -3457,6 +3589,10 @@ START_TEST(test_collision_ke_invalid_delayed_retry)
 	};
 	ike_sa_t *a, *b;
 	message_t *msg;
+
+	/* disable KE negotiation during IKE_AUTH, which prevents this mismatch */
+	lib->settings->set_bool(lib->settings, "%s.child_sa_pfs_info",
+							FALSE, lib->ns);
 
 	assert_track_sas_start();
 
@@ -4419,6 +4555,7 @@ Suite *child_rekey_suite_create()
 	tc = tcase_create("regular");
 	tcase_add_loop_test(tc, test_regular, 0, 2);
 	tcase_add_loop_test(tc, test_regular_multi_ke, 0, 2);
+	tcase_add_loop_test(tc, test_regular_ke_mismatch, 0, 2);
 	tcase_add_loop_test(tc, test_regular_ke_invalid, 0, 2);
 	tcase_add_loop_test(tc, test_regular_ke_invalid_multi_ke, 0, 2);
 	tcase_add_test(tc, test_regular_responder_ignore_soft_expire);

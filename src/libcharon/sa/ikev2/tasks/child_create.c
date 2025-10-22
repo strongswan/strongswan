@@ -188,6 +188,18 @@ struct private_child_create_t {
 	bool ke_failed;
 
 	/**
+	 * How to handle key exchange methods
+	 */
+	enum {
+		/** Ignore KE methods and don't derive a key */
+		KE_SKIP = 0,
+		/** Negotiate KE methods during the exchange */
+		KE_NEGOTIATE_METHODS = 1,
+		/** Establish a key if KE methods are selected */
+		KE_ESTABLISH_KEY = 2,
+	} ke_handling;
+
+	/**
 	 * Link value for current key exchange
 	 */
 	chunk_t link;
@@ -888,7 +900,7 @@ static status_t install_child_sa(private_child_create_t *this)
 /**
  * Select a proposal
  */
-static bool select_proposal(private_child_create_t *this, bool no_ke)
+static bool select_proposal(private_child_create_t *this)
 {
 	proposal_selection_flag_t flags = 0;
 
@@ -898,7 +910,7 @@ static bool select_proposal(private_child_create_t *this, bool no_ke)
 		return FALSE;
 	}
 
-	if (no_ke)
+	if (!(this->ke_handling & KE_NEGOTIATE_METHODS))
 	{
 		flags |= PROPOSAL_SKIP_KE;
 	}
@@ -1245,8 +1257,9 @@ static void determine_key_exchanges(private_child_create_t *this)
 	uint16_t alg;
 	int i = 1;
 
-	if (!this->proposal->get_algorithm(this->proposal, t, &alg, NULL))
-	{	/* no PFS */
+	if (!(this->ke_handling & KE_ESTABLISH_KEY) ||
+		!this->proposal->get_algorithm(this->proposal, t, &alg, NULL))
+	{	/* no key establishment or no PFS */
 		return;
 	}
 
@@ -1308,6 +1321,13 @@ static void process_ke_payload(private_child_create_t *this, ke_payload_t *ke)
 	key_exchange_method_t method = this->key_exchanges[this->ke_index].method;
 	key_exchange_method_t received = ke->get_key_exchange_method(ke);
 
+	if (!(this->ke_handling & KE_ESTABLISH_KEY))
+	{
+		DBG1(DBG_IKE, "ignore unexpected KE payload with method %N",
+			 key_exchange_method_names, received);
+		return;
+	}
+
 	/* the proposal is selected after processing the KE payload, so this is
 	 * only relevant for additional key exchanges */
 	if (method && method != received)
@@ -1360,6 +1380,11 @@ static void process_ke_payload(private_child_create_t *this, ke_payload_t *ke)
 static bool check_ke_method(private_child_create_t *this, uint16_t *req)
 {
 	uint16_t alg;
+
+	if (!(this->ke_handling & KE_ESTABLISH_KEY))
+	{
+		return TRUE;
+	}
 
 	if (!this->proposal->has_transform(this->proposal, KEY_EXCHANGE_METHOD,
 									   this->ke_method))
@@ -1711,20 +1736,10 @@ static void prepare_proposed_ts(private_child_create_t *this)
 METHOD(task_t, build_i, status_t,
 	private_child_create_t *this, message_t *message)
 {
-	bool no_ke = TRUE;
-
 	switch (message->get_exchange_type(message))
 	{
 		case IKE_SA_INIT:
 			return get_nonce(message, &this->my_nonce);
-		case CREATE_CHILD_SA:
-			if (!generate_nonce(this))
-			{
-				message->set_exchange_type(message, EXCHANGE_TYPE_UNDEFINED);
-				return SUCCESS;
-			}
-			no_ke = FALSE;
-			break;
 		case IKE_AUTH:
 			switch (defer_child_sa(this))
 			{
@@ -1739,8 +1754,23 @@ METHOD(task_t, build_i, status_t,
 					/* just continue to establish the CHILD_SA */
 					break;
 			}
+			/* negotiate KE methods if supported but don't establish a key */
+			if (this->ike_sa->supports_extension(this->ike_sa,
+												 EXT_CHILD_SA_PFS_INFO))
+			{
+				this->ke_handling = KE_NEGOTIATE_METHODS;
+			}
 			/* send only in the first request, not in subsequent rounds */
 			this->public.task.build = (void*)return_need_more;
+			break;
+		case CREATE_CHILD_SA:
+			if (!generate_nonce(this))
+			{
+				message->set_exchange_type(message, EXCHANGE_TYPE_UNDEFINED);
+				return SUCCESS;
+			}
+			/* establish a key if KE methods are selected */
+			this->ke_handling = KE_NEGOTIATE_METHODS | KE_ESTABLISH_KEY;
 			break;
 		default:
 			return NEED_MORE;
@@ -1768,7 +1798,8 @@ METHOD(task_t, build_i, status_t,
 													   OPT_PER_CPU_SAS);
 	}
 
-	this->proposals = this->config->get_proposals(this->config, no_ke);
+	this->proposals = this->config->get_proposals(this->config,
+								!(this->ke_handling & KE_NEGOTIATE_METHODS));
 	this->mode = this->config->get_mode(this->config);
 
 	this->child.if_id_in_def = this->ike_sa->get_if_id(this->ike_sa, TRUE);
@@ -1806,8 +1837,8 @@ METHOD(task_t, build_i, status_t,
 		return FAILED;
 	}
 
-	if (no_ke)
-	{	/* we might have one set if we are recreating this SA */
+	if (!(this->ke_handling & KE_NEGOTIATE_METHODS))
+	{	/* make sure we don't have one set if we are recreating this SA */
 		this->ke_method = KE_NONE;
 	}
 	else if (!this->retry)
@@ -1826,7 +1857,7 @@ METHOD(task_t, build_i, status_t,
 		return FAILED;
 	}
 
-	if (this->ke_method != KE_NONE)
+	if (this->ke_handling & KE_ESTABLISH_KEY && this->ke_method != KE_NONE)
 	{
 		this->ke = this->keymat->keymat.create_ke(&this->keymat->keymat,
 												  this->ke_method);
@@ -1940,8 +1971,16 @@ METHOD(task_t, process_r, status_t,
 			return get_nonce(message, &this->other_nonce);
 		case CREATE_CHILD_SA:
 			get_nonce(message, &this->other_nonce);
+			/* establish a key if KE methods are selected */
+			this->ke_handling = KE_NEGOTIATE_METHODS | KE_ESTABLISH_KEY;
 			break;
 		case IKE_AUTH:
+			/* negotiate KE methods if supported but don't establish a key */
+			if (this->ike_sa->supports_extension(this->ike_sa,
+												 EXT_CHILD_SA_PFS_INFO))
+			{
+				this->ke_handling = KE_NEGOTIATE_METHODS;
+			}
 			/* only handle first AUTH payload, not additional rounds */
 			this->public.task.process = (void*)return_need_more;
 			break;
@@ -2198,7 +2237,7 @@ static bool key_exchange_done(private_child_create_t *this)
  * as responder.
  */
 static bool key_exchange_done_and_install_r(private_child_create_t *this,
-											message_t *message, bool ike_auth)
+											message_t *message)
 {
 	bool all_done = FALSE;
 
@@ -2268,7 +2307,7 @@ METHOD(task_t, build_r_multi_ke, status_t,
 		handle_child_sa_failure(this, message);
 		return SUCCESS;
 	}
-	if (!key_exchange_done_and_install_r(this, message, FALSE))
+	if (!key_exchange_done_and_install_r(this, message))
 	{
 		return NEED_MORE;
 	}
@@ -2280,7 +2319,7 @@ METHOD(task_t, build_r, status_t,
 {
 	payload_t *payload;
 	enumerator_t *enumerator;
-	bool no_ke = TRUE, ike_auth = FALSE;
+	bool ike_auth = FALSE;
 
 	switch (message->get_exchange_type(message))
 	{
@@ -2293,7 +2332,6 @@ METHOD(task_t, build_r, status_t,
 									chunk_empty);
 				return SUCCESS;
 			}
-			no_ke = FALSE;
 			break;
 		case IKE_AUTH:
 			if (!this->ike_sa->has_condition(this->ike_sa, COND_AUTHENTICATED))
@@ -2384,7 +2422,7 @@ METHOD(task_t, build_r, status_t,
 	}
 	enumerator->destroy(enumerator);
 
-	if (!select_proposal(this, no_ke))
+	if (!select_proposal(this))
 	{
 		message->add_notify(message, FALSE, NO_PROPOSAL_CHOSEN, chunk_empty);
 		handle_child_sa_failure(this, message);
@@ -2467,7 +2505,7 @@ METHOD(task_t, build_r, status_t,
 			return SUCCESS;
 	}
 
-	if (!key_exchange_done_and_install_r(this, message, ike_auth))
+	if (!key_exchange_done_and_install_r(this, message))
 	{
 		this->public.task.build = _build_r_multi_ke;
 		this->public.task.process = _process_r_multi_ke;
@@ -2539,7 +2577,7 @@ static status_t delete_failed_sa(private_child_create_t *this)
  * as initiator.
  */
 static status_t key_exchange_done_and_install_i(private_child_create_t *this,
-												message_t *message, bool ike_auth)
+												message_t *message)
 {
 	if (key_exchange_done(this))
 	{
@@ -2580,7 +2618,7 @@ METHOD(task_t, process_i_multi_ke, status_t,
 		return delete_failed_sa(this);
 	}
 
-	return key_exchange_done_and_install_i(this, message, FALSE);
+	return key_exchange_done_and_install_i(this, message);
 }
 
 METHOD(task_t, process_i, status_t,
@@ -2588,7 +2626,7 @@ METHOD(task_t, process_i, status_t,
 {
 	enumerator_t *enumerator;
 	payload_t *payload;
-	bool no_ke = TRUE, ike_auth = FALSE;
+	bool ike_auth = FALSE;
 
 	switch (message->get_exchange_type(message))
 	{
@@ -2596,7 +2634,6 @@ METHOD(task_t, process_i, status_t,
 			return get_nonce(message, &this->other_nonce);
 		case CREATE_CHILD_SA:
 			get_nonce(message, &this->other_nonce);
-			no_ke = FALSE;
 			break;
 		case IKE_AUTH:
 			if (!this->ike_sa->has_condition(this->ike_sa, COND_AUTHENTICATED))
@@ -2657,7 +2694,20 @@ METHOD(task_t, process_i, status_t,
 					chunk_t data;
 					uint16_t alg = KE_NONE;
 
-					if (this->aborted)
+					data = notify->get_notification_data(notify);
+					if (data.len == sizeof(alg))
+					{
+						alg = untoh16(data.ptr);
+					}
+					if (ike_auth)
+					{	/* make sure we ignore this notify during IKE_AUTH */
+						DBG1(DBG_IKE, "ignore %N notify with key exchange "
+							 "method %N during IKE_AUTH",
+							 key_exchange_method_names, alg,
+							 notify_type_names, type);
+						break;
+					}
+					else if (this->aborted)
 					{	/* nothing to do if the task was aborted */
 						DBG1(DBG_IKE, "received %N notify in aborted %N task",
 							 notify_type_names, type, task_type_names,
@@ -2665,12 +2715,7 @@ METHOD(task_t, process_i, status_t,
 						enumerator->destroy(enumerator);
 						return SUCCESS;
 					}
-					data = notify->get_notification_data(notify);
-					if (data.len == sizeof(alg))
-					{
-						alg = untoh16(data.ptr);
-					}
-					if (this->retry)
+					else if (this->retry)
 					{
 						DBG1(DBG_IKE, "already retried with key exchange method "
 							 "%N, ignore requested %N", key_exchange_method_names,
@@ -2712,7 +2757,7 @@ METHOD(task_t, process_i, status_t,
 
 	process_payloads(this, message);
 
-	if (!select_proposal(this, no_ke))
+	if (!select_proposal(this))
 	{
 		handle_child_sa_failure(this, message);
 		return delete_failed_sa(this);
@@ -2786,7 +2831,7 @@ METHOD(task_t, process_i, status_t,
 		this->child_sa->set_per_cpu(this->child_sa, this->child.per_cpu);
 	}
 
-	if (key_exchange_done_and_install_i(this, message, ike_auth) == NEED_MORE)
+	if (key_exchange_done_and_install_i(this, message) == NEED_MORE)
 	{
 		/* if the installation failed, we delete the failed SA, i.e. build() was
 		 * changed, otherwise, we switch to multi-KE mode */
@@ -2989,6 +3034,7 @@ METHOD(task_t, migrate, void,
 	DESTROY_IF(this->nonceg);
 	DESTROY_IF(this->ke);
 	this->ke_failed = FALSE;
+	this->ke_handling = KE_SKIP;
 	clear_key_exchanges(this);
 	DESTROY_OFFSET_IF(this->proposals, offsetof(proposal_t, destroy));
 	if (!this->rekey && !this->retry)
