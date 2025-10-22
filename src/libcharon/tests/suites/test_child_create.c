@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2020 Tobias Brunner
+ * Copyright (C) 2016-2025 Tobias Brunner
  *
  * Copyright (C) secunet Security Networks AG
  *
@@ -21,6 +21,181 @@
 #include <tests/utils/exchange_test_asserts.h>
 #include <tests/utils/job_asserts.h>
 #include <tests/utils/sa_asserts.h>
+
+struct {
+	char *init;
+	char *resp;
+	char *enabled;
+	char *disabled;
+} ike_auth_ke[] = {
+	{ "aes128-sha256", "aes128-sha256", "aes128-sha256", "aes128-sha256" },
+	{ "aes128-sha256-curve25519", "aes128-sha256-curve25519",
+		"aes128-sha256-curve25519", "aes128-sha256" },
+	{ "aes128-sha256-curve25519-none", "aes128-sha256",
+		"aes128-sha256", "aes128-sha256" },
+	{ "aes128-sha256", "aes128-sha256-curve25519-none", "aes128-sha256",
+		"aes128-sha256" },
+	{ "aes128-sha256-curve25519", "aes128-sha256", NULL, "aes128-sha256"  },
+	{ "aes128-sha256", "aes128-sha256-curve25519", NULL, "aes128-sha256" },
+};
+
+/**
+ * KE method negotiation during IKE_AUTH, which results in a selected KE method
+ * or a mismatch.
+ */
+START_TEST(test_ike_auth_ke_enabled)
+{
+	exchange_test_sa_conf_t conf = {
+		.initiator = {
+			.esp = ike_auth_ke[_i].init,
+		},
+		.responder = {
+			.esp = ike_auth_ke[_i].resp,
+		},
+	};
+	ike_sa_t *a, *b;
+	ike_sa_id_t *id_a, *id_b;
+	child_cfg_t *child_cfg;
+	child_sa_t *child_sa;
+	proposal_t *selected;
+
+	child_cfg = exchange_test_helper->create_sa(exchange_test_helper, &a, &b,
+												&conf);
+	id_a = a->get_id(a);
+	id_b = b->get_id(b);
+
+	call_ikesa(a, initiate, child_cfg, NULL);
+
+	/* IKE_SA_INIT --> */
+	assert_notify(IN, CHILD_SA_PFS_INFO_SUPPORTED);
+	id_b->set_initiator_spi(id_b, id_a->get_initiator_spi(id_a));
+	exchange_test_helper->process_message(exchange_test_helper, b, NULL);
+	/* <-- IKE_SA_INIT */
+	assert_notify(IN, CHILD_SA_PFS_INFO_SUPPORTED);
+	id_a->set_responder_spi(id_a, id_b->get_responder_spi(id_b));
+	exchange_test_helper->process_message(exchange_test_helper, a, NULL);
+
+	if (!ike_auth_ke[_i].enabled)
+	{
+		/* IKE_AUTH --> */
+		assert_hook_not_called(child_updown);
+		assert_no_payload(IN, PLV2_KEY_EXCHANGE);
+		exchange_test_helper->process_message(exchange_test_helper, b, NULL);
+
+		/* <-- IKE_AUTH */
+		assert_notify(IN, NO_PROPOSAL_CHOSEN);
+		exchange_test_helper->process_message(exchange_test_helper, a, NULL);
+		assert_hook();
+	}
+	else
+	{
+		/* IKE_AUTH --> */
+		assert_hook_called(child_updown);
+		assert_no_payload(IN, PLV2_KEY_EXCHANGE);
+		exchange_test_helper->process_message(exchange_test_helper, b, NULL);
+		assert_child_sa_count(b, 1);
+		assert_hook();
+
+		/* <-- IKE_AUTH */
+		assert_hook_called(child_updown);
+		assert_no_payload(IN, PLV2_KEY_EXCHANGE);
+		exchange_test_helper->process_message(exchange_test_helper, a, NULL);
+		assert_child_sa_count(a, 1);
+		assert_hook();
+
+		child_sa = a->get_child_sa(a, PROTO_ESP, 1, TRUE);
+		selected = proposal_create_from_string(PROTO_ESP, ike_auth_ke[_i].enabled);
+		ck_assert(selected->equals(selected, child_sa->get_proposal(child_sa)));
+		selected->destroy(selected);
+	}
+
+	assert_sa_idle(a);
+	assert_sa_idle(b);
+
+	call_ikesa(a, destroy);
+	call_ikesa(b, destroy);
+}
+END_TEST
+
+/**
+ * With KE method negotiation during IKE_AUTH disabled, we don't get any KE
+ * methods or mismatches (until the SA is later rekeyed).
+ */
+START_TEST(test_ike_auth_ke_disabled)
+{
+	bool disable_init = _i > countof(ike_auth_ke);
+	_i = _i % countof(ike_auth_ke);
+	exchange_test_sa_conf_t conf = {
+		.initiator = {
+			.esp = ike_auth_ke[_i].init,
+		},
+		.responder = {
+			.esp = ike_auth_ke[_i].resp,
+		},
+	};
+	ike_sa_t *a, *b;
+	ike_sa_id_t *id_a, *id_b;
+	child_cfg_t *child_cfg;
+	child_sa_t *child_sa;
+	proposal_t *selected;
+
+	child_cfg = exchange_test_helper->create_sa(exchange_test_helper, &a, &b,
+												&conf);
+	id_a = a->get_id(a);
+	id_b = b->get_id(b);
+
+	if (disable_init)
+	{
+		lib->settings->set_bool(lib->settings, "%s.child_sa_pfs_info",
+								FALSE, lib->ns);
+	}
+
+	call_ikesa(a, initiate, child_cfg, NULL);
+
+	/* IKE_SA_INIT --> */
+	if (disable_init)
+	{
+		assert_no_notify(IN, CHILD_SA_PFS_INFO_SUPPORTED);
+	}
+	else
+	{
+		lib->settings->set_bool(lib->settings, "%s.child_sa_pfs_info",
+								FALSE, lib->ns);
+	}
+	id_b->set_initiator_spi(id_b, id_a->get_initiator_spi(id_a));
+	exchange_test_helper->process_message(exchange_test_helper, b, NULL);
+
+	/* <-- IKE_SA_INIT */
+	assert_no_notify(IN, CHILD_SA_PFS_INFO_SUPPORTED);
+	id_a->set_responder_spi(id_a, id_b->get_responder_spi(id_b));
+	exchange_test_helper->process_message(exchange_test_helper, a, NULL);
+
+	/* IKE_AUTH --> */
+	assert_hook_called(child_updown);
+	assert_no_payload(IN, PLV2_KEY_EXCHANGE);
+	exchange_test_helper->process_message(exchange_test_helper, b, NULL);
+	assert_child_sa_count(b, 1);
+	assert_hook();
+
+	/* <-- IKE_AUTH */
+	assert_hook_called(child_updown);
+	assert_no_payload(IN, PLV2_KEY_EXCHANGE);
+	exchange_test_helper->process_message(exchange_test_helper, a, NULL);
+	assert_child_sa_count(a, 1);
+	assert_hook();
+
+	child_sa = a->get_child_sa(a, PROTO_ESP, 1, TRUE);
+	selected = proposal_create_from_string(PROTO_ESP, ike_auth_ke[_i].disabled);
+	ck_assert(selected->equals(selected, child_sa->get_proposal(child_sa)));
+	selected->destroy(selected);
+
+	assert_sa_idle(a);
+	assert_sa_idle(b);
+
+	call_ikesa(a, destroy);
+	call_ikesa(b, destroy);
+}
+END_TEST
 
 /**
  * The peers try to create a new CHILD_SA that looks exactly the same
@@ -208,6 +383,11 @@ Suite *child_create_suite_create()
 	TCase *tc;
 
 	s = suite_create("child create");
+
+	tc = tcase_create("ike_auth ke");
+	tcase_add_loop_test(tc, test_ike_auth_ke_enabled, 0, countof(ike_auth_ke));
+	tcase_add_loop_test(tc, test_ike_auth_ke_disabled, 0, 2 * countof(ike_auth_ke));
+	suite_add_tcase(s, tc);
 
 	tc = tcase_create("initiate duplicate");
 	tcase_add_test(tc, test_duplicate);
