@@ -1,0 +1,13 @@
+The roadwarriors <b>carol</b> and <b>dave</b> set up a connection each
+to gateway <b>moon</b>, as does gateway <b>sun</b>. While <b>carol</b> and
+<b>sun</b> support negotiating KE methods during IKE_AUTH, <b>dave</b> does not.
+The configured KE methods don't match for <b>carol</b> and <b>dave</b>. However,
+only <b>carol</b> will notice this immediately, while <b>dave</b> only notices
+when rekeying the SA. <b>sun</b> also rekeys the Child SA to ensure that the
+previously negotiated KE group is used and no INVALID_KE_PAYLOAD notify is
+necessary.
+<p/>
+Upon the successful establishment of the IPsec tunnels, the updown script
+automatically inserts iptables-based firewall rules that let pass the tunneled traffic.
+In order to test both tunnel and firewall, client <b>alice</b> behind the
+gateway <b>moon</b> pings both <b>dave</b> and <b>sun</b>.
