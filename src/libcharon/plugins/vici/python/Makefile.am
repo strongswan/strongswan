@@ -7,6 +7,7 @@ EXTRA_DIST = LICENSE README.rst MANIFEST.in \
 	test/test_session.py \
 	vici/__init__.py \
 	vici/command_wrappers.py \
+	vici/event_listener.py \
 	vici/exception.py \
 	vici/protocol.py \
 	vici/session.py
