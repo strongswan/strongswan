@@ -1,0 +1,34 @@
+# the connection with sun shows the negotiated (but unused) KE methods
+sun::swanctl --list-sas --raw 2> /dev/null::home.*version=2 state=ESTABLISHED local-host=192.168.0.2 local-port=4500 local-id=sun.strongswan.org remote-host=192.168.0.1 remote-port=4500 remote-id=moon.strongswan.org initiator=yes.*encr-alg=AES_CBC encr-keysize=128 integ-alg=HMAC_SHA2_256_128 prf-alg=PRF_HMAC_SHA2_256 dh-group=CURVE_25519 ake1=ML_KEM_768.*child-sas.*home.*state=INSTALLED mode=TUNNEL.*ESP.*encr-alg=AES_GCM_16 encr-keysize=128 dh-group=CURVE_25519 ake1=ML_KEM_768.*local-ts=\[192.168.0.2/32] remote-ts=\[10.1.0.0/16]::YES
+moon::swanctl --list-sas --ike-id 1 --raw 2> /dev/null::rw.*version=2 state=ESTABLISHED local-host=192.168.0.1 local-port=4500 local-id=moon.strongswan.org remote-host=192.168.0.2 remote-port=4500 remote-id=sun.strongswan.org.*encr-alg=AES_CBC encr-keysize=128 integ-alg=HMAC_SHA2_256_128 prf-alg=PRF_HMAC_SHA2_256 dh-group=CURVE_25519 ake1=ML_KEM_768.*child-sas.*net.*reqid=1 state=INSTALLED mode=TUNNEL.*ESP.*encr-alg=AES_GCM_16 encr-keysize=128 dh-group=CURVE_25519 ake1=ML_KEM_768.*local-ts=\[10.1.0.0/16] remote-ts=\[192.168.0.2/32]::YES
+alice::ping -c 1 192.168.0.2::64 bytes from 192.168.0.2: icmp_.eq=1::YES
+# initiate the connection from carol, which should fail with NO_PROPOSAL_CHOSEN during IKE_AUTH
+carol::swanctl --initiate --child home 2> /dev/null
+carol::cat /var/log/daemon.log::IKE_SA_INIT.*N(CHILD_PFS_SUP)::2
+carol::cat /var/log/daemon.log::received NO_PROPOSAL_CHOSEN notify, no CHILD_SA built::YES
+moon::cat /var/log/daemon.log::received proposals: ESP:AES_GCM_16_128/CURVE_25519/NO_EXT_SEQ::YES
+moon::cat /var/log/daemon.log::no acceptable proposal found::YES
+# initiate the connection from dave, which works because no KE methods are negotiated
+dave::swanctl --initiate --child home 2> /dev/null
+dave::swanctl --list-sas --raw 2> /dev/null::home.*version=2 state=ESTABLISHED local-host=192.168.0.200 local-port=4500 local-id=dave@strongswan.org remote-host=192.168.0.1 remote-port=4500 remote-id=moon.strongswan.org initiator=yes.*encr-alg=AES_CBC encr-keysize=128 integ-alg=HMAC_SHA2_256_128 prf-alg=PRF_HMAC_SHA2_256 dh-group=CURVE_25519 ake1=ML_KEM_768.*child-sas.*home.*state=INSTALLED mode=TUNNEL.*ESP.*encr-alg=AES_GCM_16 encr-keysize=128.*local-ts=\[192.168.0.200/32] remote-ts=\[10.1.0.0/16]::YES
+moon::swanctl --list-sas --ike-id 3 --raw 2> /dev/null::rw.*version=2 state=ESTABLISHED local-host=192.168.0.1 local-port=4500 local-id=moon.strongswan.org remote-host=192.168.0.200 remote-port=4500 remote-id=dave@strongswan.org.*encr-alg=AES_CBC encr-keysize=128 integ-alg=HMAC_SHA2_256_128 prf-alg=PRF_HMAC_SHA2_256 dh-group=CURVE_25519 ake1=ML_KEM_768.*child-sas.*net.*reqid=2 state=INSTALLED mode=TUNNEL.*ESP.*encr-alg=AES_GCM_16 encr-keysize=128.*local-ts=\[10.1.0.0/16] remote-ts=\[192.168.0.200/32]::YES
+dave::cat /var/log/daemon.log::IKE_SA_INIT.*N(CHILD_PFS_SUP)::NO
+dave::cat /var/log/daemon.log::selected proposal: ESP:AES_GCM_16_128/NO_EXT_SEQ::YES
+alice::ping -c 1 192.168.0.200::64 bytes from 192.168.0.200: icmp_.eq=1::YES
+# however, rekeying with dave fails as the proposals mismatch (the existing SA remains until it expires)
+dave::swanctl --rekey --child home
+moon::sleep 1
+moon::cat /var/log/daemon.log::received proposals: ESP:AES_GCM_16_128/CURVE_25519/NO_EXT_SEQ::2
+moon::cat /var/log/daemon.log::no acceptable proposal found::2
+dave::cat /var/log/daemon.log::received NO_PROPOSAL_CHOSEN notify, no CHILD_SA built::YES
+dave::cat /var/log/daemon.log::CHILD_SA rekeying failed::YES
+alice::ping -c 1 192.168.0.200::64 bytes from 192.168.0.200: icmp_.eq=1::YES
+# rekey the SA from sun, which proposes the negotiated KE method and not its preferred one
+sun::swanctl --rekey --child home
+sun::sleep 1
+sun::cat /var/log/daemon.log::parsed CREATE_CHILD_SA.*N(INVAL_KE)::NO
+alice::ping -c 1 192.168.0.2::64 bytes from 192.168.0.2: icmp_.eq=1::YES
+moon::tcpdump::IP moon.strongswan.org > sun.strongswan.org: ESP::YES
+moon::tcpdump::IP sun.strongswan.org > moon.strongswan.org: ESP::YES
+moon::tcpdump::IP moon.strongswan.org > dave.strongswan.org: ESP::YES
+moon::tcpdump::IP dave.strongswan.org > moon.strongswan.org: ESP::YES
