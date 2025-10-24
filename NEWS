@@ -1,6 +1,11 @@
 strongswan-6.0.3
 ----------------
 
+- Fixed a vulnerability in the eap-mschapv2 plugin related to processing Failure
+  Request packets on the client that can lead to a heap-based buffer overflow
+  and potentially remote code execution.
+  This vulnerability has been registered as CVE-2025-62291.
+
 - The new `alert` event for vici is raised for certain error conditions.
 
 - Only plugins with matching version number are loaded by programs.
