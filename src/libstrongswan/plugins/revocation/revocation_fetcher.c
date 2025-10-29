@@ -19,6 +19,9 @@
 #include "revocation_fetcher.h"
 
 #include <utils/debug.h>
+#include <threading/mutex.h>
+#include <threading/condvar.h>
+#include <collections/hashtable.h>
 #include <credentials/certificates/crl.h>
 #include <credentials/certificates/ocsp_request.h>
 #include <credentials/certificates/ocsp_response.h>
@@ -34,10 +37,51 @@ struct private_revocation_fetcher_t {
 	 * Public revocation_fetcher_t interface.
 	 */
 	revocation_fetcher_t public;
+
+	/**
+	 * Mutex to synchronize CRL fetches
+	 */
+	mutex_t *mutex;
+
+	/**
+	 * Active/completed/failed CRL fetches, crl_fetch_t.
+	 */
+	hashtable_t *crls;
 };
 
-METHOD(revocation_fetcher_t, fetch_crl, certificate_t *,
-	private_revocation_fetcher_t *this, char *url, u_int timeout)
+typedef struct crl_fetch_t crl_fetch_t;
+
+/**
+ * Represents an active/completed/failed CRL fetch.
+ */
+struct crl_fetch_t {
+
+	/**
+	 * URL of the CRL.
+	 */
+	char *url;
+
+	/**
+	 * Condition variable to signal completion of the fetch.
+	 */
+	condvar_t *condvar;
+
+	/**
+	 * Number of threads fetching this CRL.
+	 */
+	u_int fetchers;
+
+	/**
+	 * CRL received in the currently active fetch.
+	 */
+	certificate_t *crl;
+};
+
+/**
+ * Perform the actual CRL fetch from the given URL.
+ */
+static certificate_t *do_crl_fetch(private_revocation_fetcher_t *this,
+								   char *url, u_int timeout)
 {
 	certificate_t *crl;
 	chunk_t chunk = chunk_empty;
@@ -59,6 +103,82 @@ METHOD(revocation_fetcher_t, fetch_crl, certificate_t *,
 		DBG1(DBG_CFG, "crl fetched successfully but parsing failed");
 		return NULL;
 	}
+	return crl;
+}
+
+/**
+ * Start a new CRL fetch and signal completion to waiting threads.
+ */
+static certificate_t *start_crl_fetch(private_revocation_fetcher_t *this,
+									  crl_fetch_t *fetch, u_int timeout)
+{
+	certificate_t *crl;
+
+	fetch->fetchers++;
+	this->mutex->unlock(this->mutex);
+	crl = do_crl_fetch(this, fetch->url, timeout);
+	this->mutex->lock(this->mutex);
+	fetch->crl = crl;
+	while (fetch->fetchers > 1)
+	{
+		fetch->condvar->signal(fetch->condvar);
+		fetch->condvar->wait(fetch->condvar, this->mutex);
+	}
+	fetch->fetchers--;
+	fetch->crl = NULL;
+	return crl;
+}
+
+/**
+ * Wait for a CRL fetch performed by another thread to complete.
+ */
+static certificate_t *wait_for_crl(private_revocation_fetcher_t *this,
+								   crl_fetch_t *fetch)
+{
+	certificate_t *crl = NULL;
+
+	DBG1(DBG_CFG, "  waiting for crl fetch from '%s' ...", fetch->url);
+	if (fetch->crl)
+	{
+		/* fetch is already complete, no need to wait */
+		return fetch->crl->get_ref(fetch->crl);
+	}
+	fetch->fetchers++;
+	fetch->condvar->wait(fetch->condvar, this->mutex);
+	fetch->fetchers--;
+	if (fetch->crl)
+	{
+		crl = fetch->crl->get_ref(fetch->crl);
+	}
+	fetch->condvar->signal(fetch->condvar);
+	return crl;
+}
+
+METHOD(revocation_fetcher_t, fetch_crl, certificate_t*,
+	private_revocation_fetcher_t *this, char *url, u_int timeout)
+{
+	certificate_t *crl;
+	crl_fetch_t *fetch;
+
+	this->mutex->lock(this->mutex);
+	fetch = this->crls->get(this->crls, url);
+	if (!fetch)
+	{
+		INIT(fetch,
+			.url = strdup(url),
+			.condvar = condvar_create(CONDVAR_TYPE_DEFAULT),
+		);
+		this->crls->put(this->crls, fetch->url, fetch);
+	}
+	if (fetch->fetchers)
+	{
+		crl = wait_for_crl(this, fetch);
+	}
+	else
+	{
+		crl = start_crl_fetch(this, fetch, timeout);
+	}
+	this->mutex->unlock(this->mutex);
 	return crl;
 }
 
@@ -134,9 +254,18 @@ METHOD(revocation_fetcher_t, fetch_ocsp, certificate_t*,
 	return response;
 }
 
+CALLBACK(crl_fetch_destroy, void, crl_fetch_t *fetch, const void *key)
+{
+	fetch->condvar->destroy(fetch->condvar);
+	free(fetch->url);
+	free(fetch);
+}
+
 METHOD(revocation_fetcher_t, destroy, void,
 	private_revocation_fetcher_t *this)
 {
+	this->crls->destroy_function(this->crls, crl_fetch_destroy);
+	this->mutex->destroy(this->mutex);
 	free(this);
 }
 
@@ -153,6 +282,8 @@ revocation_fetcher_t *revocation_fetcher_create()
 			.fetch_ocsp = _fetch_ocsp,
 			.destroy = _destroy,
 		},
+		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
+		.crls = hashtable_create(hashtable_hash_str, hashtable_equals_str, 8),
 	);
 
 	return &this->public;
