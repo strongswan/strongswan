@@ -23,11 +23,12 @@
 #include <utils/debug.h>
 #include <credentials/certificates/x509.h>
 #include <credentials/certificates/crl.h>
-#include <credentials/certificates/ocsp_request.h>
 #include <credentials/certificates/ocsp_response.h>
 #include <credentials/sets/ocsp_response_wrapper.h>
 #include <selectors/traffic_selector.h>
 #include <threading/spinlock.h>
+
+#include "revocation_fetcher.h"
 
 /**
  * Default timeout in seconds when fetching OCSP/CRL.
@@ -45,6 +46,11 @@ struct private_revocation_validator_t {
 	 * Public revocation_validator_t interface.
 	 */
 	revocation_validator_t public;
+
+	/**
+	 * Fetch helper for CRL/OCSP.
+	 */
+	revocation_fetcher_t *fetcher;
 
 	/**
 	 * Enable OCSP validation
@@ -66,80 +72,6 @@ struct private_revocation_validator_t {
 	 */
 	spinlock_t *lock;
 };
-
-/**
- * Do an OCSP request
- */
-static certificate_t *fetch_ocsp(char *url, certificate_t *subject,
-								 certificate_t *issuer, u_int timeout)
-{
-	certificate_t *request, *response;
-	ocsp_request_t *ocsp_request;
-	ocsp_response_t *ocsp_response;
-	chunk_t send, receive = chunk_empty;
-
-	/* TODO: requestor name, signature */
-	request = lib->creds->create(lib->creds,
-						CRED_CERTIFICATE, CERT_X509_OCSP_REQUEST,
-						BUILD_CA_CERT, issuer,
-						BUILD_CERT, subject, BUILD_END);
-	if (!request)
-	{
-		DBG1(DBG_CFG, "generating ocsp request failed");
-		return NULL;
-	}
-
-	if (!request->get_encoding(request, CERT_ASN1_DER, &send))
-	{
-		DBG1(DBG_CFG, "encoding ocsp request failed");
-		request->destroy(request);
-		return NULL;
-	}
-
-	DBG1(DBG_CFG, "  requesting ocsp status from '%s' ...", url);
-	if (lib->fetcher->fetch(lib->fetcher, url, &receive,
-							FETCH_REQUEST_DATA, send,
-							FETCH_REQUEST_TYPE, "application/ocsp-request",
-							FETCH_TIMEOUT, timeout,
-							FETCH_END) != SUCCESS)
-	{
-		DBG1(DBG_CFG, "ocsp request to %s failed", url);
-		request->destroy(request);
-		chunk_free(&receive);
-		chunk_free(&send);
-		return NULL;
-	}
-	chunk_free(&send);
-
-	response = lib->creds->create(lib->creds,
-								  CRED_CERTIFICATE, CERT_X509_OCSP_RESPONSE,
-								  BUILD_BLOB_ASN1_DER, receive, BUILD_END);
-	chunk_free(&receive);
-	if (!response)
-	{
-		DBG1(DBG_CFG, "parsing ocsp response failed");
-		request->destroy(request);
-		return NULL;
-	}
-	ocsp_response = (ocsp_response_t*)response;
-	if (ocsp_response->get_ocsp_status(ocsp_response) != OCSP_SUCCESSFUL)
-	{
-		response->destroy(response);
-		request->destroy(request);
-		return NULL;
-	}
-	ocsp_request = (ocsp_request_t*)request;
-	if (ocsp_response->get_nonce(ocsp_response).len &&
-		!chunk_equals_const(ocsp_request->get_nonce(ocsp_request),
-							ocsp_response->get_nonce(ocsp_response)))
-	{
-		DBG1(DBG_CFG, "nonce in ocsp response doesn't match");
-		request->destroy(request);
-		return NULL;
-	}
-	request->destroy(request);
-	return response;
-}
 
 /**
  * Verify OCSP response signature
@@ -369,8 +301,9 @@ static cert_validation_t check_ocsp(private_revocation_validator_t *this,
 											CERT_X509_OCSP_RESPONSE, keyid);
 		while (enumerator->enumerate(enumerator, &uri))
 		{
-			current = fetch_ocsp(uri, &subject->interface, &issuer->interface,
-								 timeout);
+			current = this->fetcher->fetch_ocsp(this->fetcher, uri,
+												&subject->interface,
+												&issuer->interface, timeout);
 			if (current)
 			{
 				best = get_better_ocsp(current, best, subject, issuer,
@@ -392,8 +325,9 @@ static cert_validation_t check_ocsp(private_revocation_validator_t *this,
 		enumerator = subject->create_ocsp_uri_enumerator(subject);
 		while (enumerator->enumerate(enumerator, &uri))
 		{
-			current = fetch_ocsp(uri, &subject->interface, &issuer->interface,
-								 timeout);
+			current = this->fetcher->fetch_ocsp(this->fetcher, uri,
+												&subject->interface,
+												&issuer->interface, timeout);
 			if (current)
 			{
 				best = get_better_ocsp(current, best, subject, issuer,
@@ -426,34 +360,6 @@ static cert_validation_t check_ocsp(private_revocation_validator_t *this,
 		DESTROY_IF(best);
 	}
 	return valid;
-}
-
-/**
- * fetch a CRL from an URL
- */
-static certificate_t* fetch_crl(char *url, u_int timeout)
-{
-	certificate_t *crl;
-	chunk_t chunk = chunk_empty;
-
-	DBG1(DBG_CFG, "  fetching crl from '%s' ...", url);
-	if (lib->fetcher->fetch(lib->fetcher, url, &chunk,
-							FETCH_TIMEOUT, timeout,
-							FETCH_END) != SUCCESS)
-	{
-		DBG1(DBG_CFG, "crl fetching failed");
-		chunk_free(&chunk);
-		return NULL;
-	}
-	crl = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509_CRL,
-							 BUILD_BLOB_PEM, chunk, BUILD_END);
-	chunk_free(&chunk);
-	if (!crl)
-	{
-		DBG1(DBG_CFG, "crl fetched successfully but parsing failed");
-		return NULL;
-	}
-	return crl;
 }
 
 /**
@@ -649,7 +555,7 @@ static cert_validation_t find_crl(private_revocation_validator_t *this,
 		while (enumerator->enumerate(enumerator, &uri))
 		{
 			*uri_found = TRUE;
-			current = fetch_crl(uri, timeout);
+			current = this->fetcher->fetch_crl(this->fetcher, uri, timeout);
 			if (current)
 			{
 				if (!current->has_issuer(current, issuer))
@@ -741,7 +647,7 @@ static cert_validation_t check_delta_crl(private_revocation_validator_t *this,
 	while (valid != VALIDATION_GOOD && valid != VALIDATION_REVOKED &&
 		   enumerator->enumerate(enumerator, &cdp))
 	{
-		current = fetch_crl(cdp->uri, timeout);
+		current = this->fetcher->fetch_crl(this->fetcher, cdp->uri, timeout);
 		if (current)
 		{
 			if (!check_issuer(current, issuer, cdp))
@@ -815,7 +721,8 @@ static cert_validation_t check_crl(private_revocation_validator_t *this,
 		while (enumerator->enumerate(enumerator, &cdp))
 		{
 			uri_found = TRUE;
-			current = fetch_crl(cdp->uri, timeout);
+			current = this->fetcher->fetch_crl(this->fetcher, cdp->uri,
+											   timeout);
 			if (current)
 			{
 				if (!check_issuer(current, issuer, cdp))
@@ -1023,6 +930,7 @@ METHOD(revocation_validator_t, reload, void,
 METHOD(revocation_validator_t, destroy, void,
 	private_revocation_validator_t *this)
 {
+	this->fetcher->destroy(this->fetcher);
 	this->lock->destroy(this->lock);
 	free(this);
 }
@@ -1041,6 +949,7 @@ revocation_validator_t *revocation_validator_create()
 			.reload = _reload,
 			.destroy = _destroy,
 		},
+		.fetcher = revocation_fetcher_create(),
 		.lock = spinlock_create(),
 	);
 
