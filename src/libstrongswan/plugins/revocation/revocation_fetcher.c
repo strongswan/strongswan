@@ -26,6 +26,9 @@
 #include <credentials/certificates/ocsp_request.h>
 #include <credentials/certificates/ocsp_response.h>
 
+/* number of fetch timeouts to degrade a CRL fetch after a failure */
+#define CRL_DEGRADATION_TIMES 3
+
 typedef struct private_revocation_fetcher_t private_revocation_fetcher_t;
 
 /**
@@ -70,6 +73,11 @@ struct crl_fetch_t {
 	 * Number of threads fetching this CRL.
 	 */
 	u_int fetchers;
+
+	/**
+	 * Has the previous fetch failed, until when is this URL degraded?
+	 */
+	time_t failing;
 
 	/**
 	 * CRL received in the currently active fetch.
@@ -119,6 +127,14 @@ static certificate_t *start_crl_fetch(private_revocation_fetcher_t *this,
 	crl = do_crl_fetch(this, fetch->url, timeout);
 	this->mutex->lock(this->mutex);
 	fetch->crl = crl;
+	if (crl)
+	{
+		fetch->failing = 0;
+	}
+	else
+	{
+		fetch->failing = time_monotonic(NULL) + timeout * CRL_DEGRADATION_TIMES;
+	}
 	while (fetch->fetchers > 1)
 	{
 		fetch->condvar->signal(fetch->condvar);
@@ -137,6 +153,12 @@ static certificate_t *wait_for_crl(private_revocation_fetcher_t *this,
 {
 	certificate_t *crl = NULL;
 
+	if (fetch->failing && fetch->failing > time_monotonic(NULL))
+	{
+		DBG1(DBG_CFG, "  crl fetch from '%s' recently failed, skipping",
+			 fetch->url);
+		return NULL;
+	}
 	DBG1(DBG_CFG, "  waiting for crl fetch from '%s' ...", fetch->url);
 	if (fetch->crl)
 	{
