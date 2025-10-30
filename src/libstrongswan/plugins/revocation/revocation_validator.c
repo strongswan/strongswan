@@ -327,7 +327,8 @@ static certificate_t *get_better_ocsp(certificate_t *cand, certificate_t *best,
 /**
  * validate a x509 certificate using OCSP
  */
-static cert_validation_t check_ocsp(x509_t *subject, x509_t *issuer,
+static cert_validation_t check_ocsp(private_revocation_validator_t *this,
+									x509_t *subject, x509_t *issuer,
 									auth_cfg_t *auth, u_int timeout,
 									certificate_t **response)
 {
@@ -615,7 +616,8 @@ static certificate_t *get_better_crl(certificate_t *cand, certificate_t *best,
 /**
  * Find or fetch a certificate for a given crlIssuer
  */
-static cert_validation_t find_crl(x509_t *subject, identification_t *issuer,
+static cert_validation_t find_crl(private_revocation_validator_t *this,
+								  x509_t *subject, identification_t *issuer,
 								  crl_t *base, certificate_t **best,
 								  bool *uri_found, u_int timeout)
 {
@@ -698,7 +700,8 @@ static bool check_issuer(certificate_t *crl, x509_t *issuer, x509_cdp_t *cdp)
 /**
  * Look for a delta CRL for a given base CRL
  */
-static cert_validation_t check_delta_crl(x509_t *subject, x509_t *issuer,
+static cert_validation_t check_delta_crl(private_revocation_validator_t *this,
+									x509_t *subject, x509_t *issuer,
 									crl_t *base, cert_validation_t base_valid,
 									u_int timeout)
 {
@@ -716,7 +719,7 @@ static cert_validation_t check_delta_crl(x509_t *subject, x509_t *issuer,
 	if (chunk.len)
 	{
 		id = identification_create_from_encoding(ID_KEY_ID, chunk);
-		valid = find_crl(subject, id, base, &best, &uri, timeout);
+		valid = find_crl(this, subject, id, base, &best, &uri, timeout);
 		id->destroy(id);
 	}
 
@@ -727,7 +730,8 @@ static cert_validation_t check_delta_crl(x509_t *subject, x509_t *issuer,
 	{
 		if (cdp->issuer)
 		{
-			valid = find_crl(subject, cdp->issuer, base, &best, &uri, timeout);
+			valid = find_crl(this, subject, cdp->issuer, base, &best, &uri,
+							 timeout);
 		}
 	}
 	enumerator->destroy(enumerator);
@@ -769,7 +773,8 @@ static cert_validation_t check_delta_crl(x509_t *subject, x509_t *issuer,
 /**
  * validate a x509 certificate using CRL
  */
-static cert_validation_t check_crl(x509_t *subject, x509_t *issuer,
+static cert_validation_t check_crl(private_revocation_validator_t *this,
+								   x509_t *subject, x509_t *issuer,
 								   auth_cfg_t *auth, u_int timeout)
 {
 	cert_validation_t valid = VALIDATION_SKIPPED;
@@ -786,7 +791,7 @@ static cert_validation_t check_crl(x509_t *subject, x509_t *issuer,
 	if (chunk.len)
 	{
 		id = identification_create_from_encoding(ID_KEY_ID, chunk);
-		valid = find_crl(subject, id, NULL, &best, &uri_found, timeout);
+		valid = find_crl(this, subject, id, NULL, &best, &uri_found, timeout);
 		id->destroy(id);
 	}
 
@@ -797,8 +802,8 @@ static cert_validation_t check_crl(x509_t *subject, x509_t *issuer,
 	{
 		if (cdp->issuer)
 		{
-			valid = find_crl(subject, cdp->issuer, NULL, &best, &uri_found,
-							 timeout);
+			valid = find_crl(this, subject, cdp->issuer, NULL, &best,
+							 &uri_found, timeout);
 		}
 	}
 	enumerator->destroy(enumerator);
@@ -836,7 +841,8 @@ static cert_validation_t check_crl(x509_t *subject, x509_t *issuer,
 	/* look for delta CRLs */
 	if (best && (valid == VALIDATION_GOOD || valid == VALIDATION_STALE))
 	{
-		valid = check_delta_crl(subject, issuer, (crl_t*)best, valid, timeout);
+		valid = check_delta_crl(this, subject, issuer, (crl_t*)best, valid,
+								timeout);
 	}
 
 	/* an uri was found, but no result. switch validation state to failed */
@@ -880,8 +886,8 @@ METHOD(cert_validator_t, validate_online, bool,
 
 		if (enable_ocsp)
 		{
-			switch (check_ocsp((x509_t*)subject, (x509_t*)issuer, auth, timeout,
-							   NULL))
+			switch (check_ocsp(this, (x509_t*)subject, (x509_t*)issuer,
+							   auth, timeout, NULL))
 			{
 				case VALIDATION_GOOD:
 					DBG1(DBG_CFG, "certificate status is good");
@@ -910,7 +916,8 @@ METHOD(cert_validator_t, validate_online, bool,
 
 		if (enable_crl)
 		{
-			switch (check_crl((x509_t*)subject, (x509_t*)issuer, auth, timeout))
+			switch (check_crl(this, (x509_t*)subject, (x509_t*)issuer, auth,
+							  timeout))
 			{
 				case VALIDATION_GOOD:
 					DBG1(DBG_CFG, "certificate status is good");
@@ -964,8 +971,8 @@ METHOD (cert_validator_t, ocsp, certificate_t *,
 			 subject->get_subject(subject));
 
 		auth = auth_cfg_create();
-		switch (check_ocsp((x509_t*)subject, (x509_t*)issuer, auth, timeout,
-						   &response))
+		switch (check_ocsp(this, (x509_t*)subject, (x509_t*)issuer,
+						   auth, timeout, &response))
 		{
 			case VALIDATION_GOOD:
 			case VALIDATION_ON_HOLD:
