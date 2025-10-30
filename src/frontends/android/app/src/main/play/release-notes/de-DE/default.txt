@@ -1,12 +1,15 @@
+# 2.6.2 #
+
+- Fixt randlose Anzeige von Settings und App-Auswahl
+
 # 2.6.1 #
 
 - Aktualisiert OpenSSL, um ML-KEM zu unterstützen (muss explizit in Proposal konfiguriert werden)
 - Behebt eine Schwachstelle im eap-mschapv2 Plugin
-- Korrigiert den Dateinamen, wenn das Log exportiert wird
+- Korrigiert den Dateinamen beim Log-Export
 
 # 2.6.0 #
 
-- Erlaubt die Vorauswahl eines Benutzer-Zertifikats via Alias in verwalteten Profilen
-- Erlaubt die Auswahl von Benutzer-Zertifikaten in verwalteten Profilen
-- Fixt das Lesen von Split-Tunneling Settings in verwalteten Profilen
-- Anpassungen für die randlose Anzeige
+- Auswahl von Benutzer-Zertifikaten in verwalteten Profilen (Vorauswahl via Alias ist möglich)
+- Fixt Lesen von Split-Tunneling Settings in verwalteten Profilen
+- Anpassungen für randlose Anzeige
