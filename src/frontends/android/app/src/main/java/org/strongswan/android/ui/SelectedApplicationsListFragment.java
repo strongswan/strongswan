@@ -34,6 +34,7 @@ import org.strongswan.android.R;
 import org.strongswan.android.data.VpnProfileDataSource;
 import org.strongswan.android.ui.adapter.SelectedApplicationEntry;
 import org.strongswan.android.ui.adapter.SelectedApplicationsAdapter;
+import org.strongswan.android.utils.Utils;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -60,6 +61,9 @@ public class SelectedApplicationsListFragment extends ListFragment implements Me
 	{
 		super.onViewCreated(view, savedInstanceState);
 		requireActivity().addMenuProvider(this, getViewLifecycleOwner());
+
+		getListView().setClipToPadding(false);
+		Utils.applyWindowInsetsAsPaddingForLists(getListView());
 
 		final boolean readOnly = getActivity().getIntent().getBooleanExtra(VpnProfileDataSource.KEY_READ_ONLY, false);
 		getListView().setChoiceMode(readOnly ? ListView.CHOICE_MODE_NONE : ListView.CHOICE_MODE_MULTIPLE);
