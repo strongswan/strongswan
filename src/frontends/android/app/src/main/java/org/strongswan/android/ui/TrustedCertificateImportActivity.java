@@ -41,7 +41,6 @@ import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.app.AppCompatDialogFragment;
-import androidx.core.view.WindowCompat;
 import androidx.fragment.app.FragmentTransaction;
 
 public class TrustedCertificateImportActivity extends AppCompatActivity

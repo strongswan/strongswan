@@ -1,3 +1,7 @@
+# 2.6.2 #
+
+- Fix edge-to-edge layout issues with settings and app selection
+
 # 2.6.1 #
 
 - Update OpenSSL to support ML-KEM (requires explicit configuration in proposals)

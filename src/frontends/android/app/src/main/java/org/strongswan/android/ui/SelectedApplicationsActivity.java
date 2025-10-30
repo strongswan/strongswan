@@ -20,7 +20,9 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.view.MenuItem;
 
+import org.strongswan.android.R;
 import org.strongswan.android.data.VpnProfileDataSource;
+import org.strongswan.android.utils.Utils;
 
 import androidx.activity.OnBackPressedCallback;
 import androidx.annotation.Nullable;
@@ -38,8 +40,9 @@ public class SelectedApplicationsActivity extends AppCompatActivity
 	protected void onCreate(@Nullable Bundle savedInstanceState)
 	{
 		super.onCreate(savedInstanceState);
+		setContentView(R.layout.selected_applications_activity);
 		WindowCompat.enableEdgeToEdge(getWindow());
-		WindowCompat.setDecorFitsSystemWindows(getWindow(), true);
+		Utils.applyWindowInsetsAsMarginsForLists(findViewById(R.id.fragment_container));
 
 		ActionBar actionBar = getSupportActionBar();
 		actionBar.setDisplayHomeAsUpEnabled(true);
@@ -59,7 +62,7 @@ public class SelectedApplicationsActivity extends AppCompatActivity
 		if (mApps == null)
 		{
 			mApps = new SelectedApplicationsListFragment();
-			fm.beginTransaction().add(android.R.id.content, mApps, LIST_TAG).commit();
+			fm.beginTransaction().add(R.id.fragment_container, mApps, LIST_TAG).commit();
 		}
 	}
 

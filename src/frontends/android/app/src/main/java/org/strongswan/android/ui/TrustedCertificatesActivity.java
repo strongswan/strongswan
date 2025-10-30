@@ -33,7 +33,6 @@ import org.strongswan.android.logic.TrustedCertificateManager;
 import org.strongswan.android.logic.TrustedCertificateManager.TrustedCertificateSource;
 import org.strongswan.android.security.TrustedCertificateEntry;
 import org.strongswan.android.ui.CertificateDeleteConfirmationDialog.OnCertificateDeleteListener;
-import org.strongswan.android.utils.Utils;
 
 import java.security.KeyStore;
 
