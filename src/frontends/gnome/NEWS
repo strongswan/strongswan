@@ -1,3 +1,20 @@
+NetworkManager-strongswan-1.6.3
+-------------------------------
+
+- Fix configure/linker issue when not using GNU libtool
+- Update URL in metainfo
+
+NetworkManager-strongswan-1.6.2
+-------------------------------
+
+- Add support to configure local and remote traffic selectors
+
+NetworkManager-strongswan-1.6.1
+-------------------------------
+
+- Migrated from intltool to gettext
+- Remove dependency on gnome-common
+
 NetworkManager-strongswan-1.6.0
 -------------------------------
 

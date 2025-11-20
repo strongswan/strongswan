@@ -483,8 +483,14 @@ static identification_t *parse_generalName(chunk_t blob, int level0)
 					case 4:
 						id_type = ID_IPV4_ADDR;
 						break;
+					case 8:
+						id_type = ID_IPV4_ADDR_SUBNET;
+						break;
 					case 16:
 						id_type = ID_IPV6_ADDR;
+						break;
+					case 32:
+						id_type = ID_IPV6_ADDR_SUBNET;
 						break;
 					default:
 						break;
@@ -2063,8 +2069,13 @@ static chunk_t build_generalName(identification_t *id)
 		case ID_DER_ASN1_DN:
 			context = ASN1_CONTEXT_C_4;
 			break;
+		case ID_DER_ASN1_GN_URI:
+			context = ASN1_CONTEXT_S_6;
+			break;
 		case ID_IPV4_ADDR:
 		case ID_IPV6_ADDR:
+		case ID_IPV4_ADDR_SUBNET:
+		case ID_IPV6_ADDR_SUBNET:
 			context = ASN1_CONTEXT_S_7;
 			break;
 		default:
@@ -2416,9 +2427,15 @@ static bool generate(private_x509_cert_t *cert, certificate_t *sign_cert,
 	/* add the keyid authKeyIdentifier for non self-signed certificates */
 	if (sign_cert)
 	{
-		chunk_t keyid;
+		x509_t *sign_x509 = (x509_t*)sign_cert;
+		chunk_t keyid = chunk_empty;
 
-		if (sign_key->get_fingerprint(sign_key, KEYID_PUBKEY_SHA1, &keyid))
+		if (sign_cert->get_type(sign_cert) == CERT_X509)
+		{
+			keyid = sign_x509->get_subjectKeyIdentifier(sign_x509);
+		}
+		if (keyid.len ||
+			sign_key->get_fingerprint(sign_key, KEYID_PUBKEY_SHA1, &keyid))
 		{
 			authKeyIdentifier = asn1_wrap(ASN1_SEQUENCE, "mm",
 							asn1_build_known_oid(OID_AUTHORITY_KEY_ID),
@@ -2618,8 +2635,12 @@ static bool generate(private_x509_cert_t *cert, certificate_t *sign_cert,
 					asn1_simple_object(ASN1_OCTET_STRING, chunk_empty));
 	}
 
-	if (basicConstraints.ptr || subjectAltNames.ptr || authKeyIdentifier.ptr ||
-		crlDistributionPoints.ptr || nameConstraints.ptr || ipAddrBlocks.ptr)
+	if (basicConstraints.ptr || keyUsage.ptr || subjectKeyIdentifier.ptr ||
+		authKeyIdentifier.ptr || subjectAltNames.ptr || extendedKeyUsage.ptr ||
+		crlDistributionPoints.ptr || authorityInfoAccess.ptr ||
+		nameConstraints.ptr || certPolicies.ptr || policyMappings.ptr ||
+		policyConstraints.ptr || inhibitAnyPolicy.ptr || ipAddrBlocks.ptr ||
+		criticalExtension.ptr)
 	{
 		extensions = asn1_wrap(ASN1_CONTEXT_C_3, "m",
 						asn1_wrap(ASN1_SEQUENCE, "mmmmmmmmmmmmmmm",

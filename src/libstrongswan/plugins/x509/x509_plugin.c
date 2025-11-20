@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2008-2009 Martin Willi
+ * Copyright (C) 2023 Andreas Steffen, strongSec GmbH
  *
  * Copyright (C) secunet Security Networks AG
  *
@@ -69,6 +70,10 @@ METHOD(plugin_t, get_features, int,
 			PLUGIN_PROVIDE(CERT_ENCODE, CERT_X509_OCSP_REQUEST),
 				PLUGIN_DEPENDS(HASHER, HASH_SHA1),
 				PLUGIN_DEPENDS(RNG, RNG_WEAK),
+		PLUGIN_REGISTER(CERT_DECODE, x509_ocsp_request_load, TRUE),
+			PLUGIN_PROVIDE(CERT_DECODE, CERT_X509_OCSP_REQUEST),
+		PLUGIN_REGISTER(CERT_ENCODE, x509_ocsp_response_gen, FALSE),
+			PLUGIN_PROVIDE(CERT_ENCODE, CERT_X509_OCSP_RESPONSE),
 		PLUGIN_REGISTER(CERT_DECODE, x509_ocsp_response_load, TRUE),
 			PLUGIN_PROVIDE(CERT_DECODE, CERT_X509_OCSP_RESPONSE),
 
@@ -90,7 +95,7 @@ METHOD(plugin_t, destroy, void,
 /*
  * see header file
  */
-plugin_t *x509_plugin_create()
+PLUGIN_DEFINE(x509)
 {
 	private_x509_plugin_t *this;
 

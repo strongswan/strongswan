@@ -1,11 +1,11 @@
-task:
+freebsd_task:
   matrix:
-    - name: FreeBSD 13.0
+    - name: FreeBSD 14.2
       freebsd_instance:
-        image_family: freebsd-13-0
-    - name: FreeBSD 12.3
+        image_family: freebsd-14-2
+    - name: FreeBSD 13.4
       freebsd_instance:
-        image_family: freebsd-12-3
+        image_family: freebsd-13-4
 
   env:
     TESTS_REDUCED_KEYLENGTHS: yes
@@ -13,6 +13,21 @@ task:
     MONOLITHIC: no
     TEST: freebsd
     OS_NAME: freebsd
+
+  install_script: ./scripts/test.sh deps
+  script: ./scripts/test.sh
+
+alpine_task:
+  container:
+    image: alpine:latest
+
+  env:
+    TESTS_REDUCED_KEYLENGTHS: yes
+    TESTS_NO_IPV6: yes
+    LEAK_DETECTIVE: no
+    MONOLITHIC: no
+    TEST: alpine
+    OS_NAME: alpine
 
   install_script: ./scripts/test.sh deps
   script: ./scripts/test.sh

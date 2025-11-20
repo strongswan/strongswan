@@ -4,8 +4,8 @@ Official Android port of the popular strongSwan VPN solution.
 
 <ul>
  <li>Uses the VpnService API featured by Android 4+. Devices by some manufacturers seem to lack support for this - strongSwan VPN Client won't work on these devices!</li>
- <li>Uses the IKEv2 key exchange protocol (IKEv1 is not supported)</li>
- <li>Uses IPsec for data traffic (L2TP is not supported)</li>
+ <li>Uses the IKEv2 key exchange protocol</li>
+ <li>Uses IPsec for data traffic</li>
  <li>Full support for changed connectivity and mobility through MOBIKE (or reauthentication)</li>
  <li>Supports username/password EAP authentication (namely EAP-MSCHAPv2, EAP-MD5 and EAP-GTC) as well as RSA/ECDSA private key/certificate authentication to authenticate users, EAP-TLS with client certificates is also supported</li>
  <li>Combined RSA/ECDSA and EAP authentication is supported by using two authentication rounds as defined in RFC 4739</li>
@@ -16,9 +16,10 @@ Official Android port of the popular strongSwan VPN solution.
  <li>The IPsec implementation currently supports the AES-CBC, AES-GCM, ChaCha20/Poly1305 and SHA1/SHA2 algorithms</li>
  <li>Passwords are currently stored as cleartext in the database (only if stored with a profile)</li>
  <li>VPN profiles may be imported from files</li>
+ <li>Supports managed configurations via enterprise mobility management (EMM)</li>
 </ul>
 
-Details and a changelog can be found in our documentation: https://docs.strongswan.org/docs/5.9/os/androidVpnClient.html
+Details and a changelog can be found in our documentation: https://docs.strongswan.org/docs/latest/os/androidVpnClient.html
 
 # PERMISSIONS #
 
@@ -29,7 +30,7 @@ Details and a changelog can be found in our documentation: https://docs.strongsw
 
 # EXAMPLE SERVER CONFIGURATION #
 
-Example server configurations may be found in our documentation: https://docs.strongswan.org/docs/5.9/os/androidVpnClient.html#_server_configuration
+Example server configurations may be found in our documentation: https://docs.strongswan.org/docs/latest/os/androidVpnClient.html#_server_configuration
 
 Please note that the host name (or IP address) configured with a VPN profile in the app *must be* contained in the server certificate as subjectAltName extension.
 

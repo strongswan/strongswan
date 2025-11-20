@@ -20,11 +20,15 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.view.MenuItem;
 
+import org.strongswan.android.R;
 import org.strongswan.android.data.VpnProfileDataSource;
+import org.strongswan.android.utils.Utils;
 
+import androidx.activity.OnBackPressedCallback;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.view.WindowCompat;
 import androidx.fragment.app.FragmentManager;
 
 public class SelectedApplicationsActivity extends AppCompatActivity
@@ -36,16 +40,29 @@ public class SelectedApplicationsActivity extends AppCompatActivity
 	protected void onCreate(@Nullable Bundle savedInstanceState)
 	{
 		super.onCreate(savedInstanceState);
+		setContentView(R.layout.selected_applications_activity);
+		WindowCompat.enableEdgeToEdge(getWindow());
+		Utils.applyWindowInsetsAsMarginsForLists(findViewById(R.id.fragment_container));
 
 		ActionBar actionBar = getSupportActionBar();
 		actionBar.setDisplayHomeAsUpEnabled(true);
+
+		getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true)
+		{
+			@Override
+			public void handleOnBackPressed()
+			{
+				prepareResult();
+				finish();
+			}
+		});
 
 		FragmentManager fm = getSupportFragmentManager();
 		mApps = (SelectedApplicationsListFragment)fm.findFragmentByTag(LIST_TAG);
 		if (mApps == null)
 		{
 			mApps = new SelectedApplicationsListFragment();
-			fm.beginTransaction().add(android.R.id.content, mApps, LIST_TAG).commit();
+			fm.beginTransaction().add(R.id.fragment_container, mApps, LIST_TAG).commit();
 		}
 	}
 
@@ -60,13 +77,6 @@ public class SelectedApplicationsActivity extends AppCompatActivity
 				return true;
 		}
 		return super.onOptionsItemSelected(item);
-	}
-
-	@Override
-	public void onBackPressed()
-	{
-		prepareResult();
-		super.onBackPressed();
 	}
 
 	private void prepareResult()

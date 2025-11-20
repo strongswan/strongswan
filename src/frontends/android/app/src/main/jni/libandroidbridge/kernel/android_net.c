@@ -70,7 +70,7 @@ struct private_android_net_t {
 static job_requeue_t roam_event()
 {
 	/* this will fail if no connection is up */
-	charonservice->bypass_socket(charonservice, -1, 0);
+	charonservice->bypass_socket(charonservice, -1, FALSE);
 	charon->kernel->roam(charon->kernel, TRUE);
 	return JOB_REQUEUE_NONE;
 }
@@ -122,13 +122,8 @@ METHOD(kernel_net_t, get_source_addr, host_t*,
 			 strerror(errno));
 		return NULL;
 	}
-	charonservice->bypass_socket(charonservice, skt, dst->get_family(dst));
+	charonservice->bypass_socket(charonservice, skt, FALSE);
 
-	if (android_sdk_version <= ANDROID_JELLY_BEAN_MR2)
-	{	/* this seems to help avoiding the VIP, unless there is no connectivity
-		 * at all */
-		charonservice->bypass_socket(charonservice, -1, 0);
-	}
 	if (connect(skt, dst->get_sockaddr(dst), addrlen) < 0)
 	{
 		/* don't report an error if we are not connected (ENETUNREACH) */
@@ -177,28 +172,6 @@ CALLBACK(vip_equals, bool,
 
 	VA_ARGS_VGET(args, host);
 	return host->ip_equals(host, vip);
-}
-
-METHOD(kernel_net_t, get_source_addr_old, host_t*,
-	private_android_net_t *this, host_t *dest, host_t *src)
-{
-	host_t *host;
-
-	/* on older Android versions we might get the virtual IP back because
-	 * the protect() implementation there and connect() don't properly work
-	 * together, on newer releases (using fwmarks) that's not a problem */
-	host = get_source_addr(this, dest, src);
-	if (host)
-	{
-		this->mutex->lock(this->mutex);
-		if (this->vips->find_first(this->vips, vip_equals, NULL, host))
-		{
-			host->destroy(host);
-			host = NULL;
-		}
-		this->mutex->unlock(this->mutex);
-	}
-	return host;
 }
 
 METHOD(kernel_net_t, get_nexthop, host_t*,
@@ -302,11 +275,6 @@ kernel_net_t *kernel_android_net_create()
 		.network_manager = charonservice->get_network_manager(charonservice),
 	);
 	timerclear(&this->next_roam);
-
-	if (android_sdk_version <= ANDROID_JELLY_BEAN_MR2)
-	{
-		this->public.get_source_addr = _get_source_addr_old;
-	}
 
 	this->mutex->lock(this->mutex);
 	this->network_manager->add_connectivity_cb(

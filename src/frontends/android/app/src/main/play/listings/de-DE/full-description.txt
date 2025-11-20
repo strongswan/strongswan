@@ -4,8 +4,8 @@ Dies ist die offizielle Android-Portierung der populären strongSwan VPN-Lösung
 
 <ul>
  <li>Verwendet die VpnService API von Android 4+. Geräte von einigen Herstellern scheinen diese nicht zu unterstützen - strongSwan wird auf diesen Geräten nicht funktionieren!</li>
- <li>Verwendet das IKEv2 Schlüsselaustausch-Protokoll (IKEv1 wird nicht unterstützt)</li>
- <li>Verwendet IPsec für den Datenkanal (L2TP wird nicht unterstützt)</li>
+ <li>Verwendet das IKEv2 Schlüsselaustausch-Protokoll</li>
+ <li>Verwendet IPsec für den Datenkanal</li>
  <li>Volle Unterstützung für Konnektivitätsänderungen und Mobilität via MOBIKE (oder Re-Authentisierung)</li>
  <li>Zur Authentisierung der Nutzer wird sowohl einfache auf Benutzername und Passwort basierende EAP-Authentisierung (namentlich EAP-MSCHAPv2, EAP-MD5 und EAP-GTC), sowie zertifikatsbasierte RSA/ECSA-Authentisierung unterstützt, EAP-TLS mit Benutzer-Zertifikaten wird ebenfalls unterstützt</li>
  <li>Kombinierte Authentisierung mit RSA/ECDSA und EAP wird über zwei Authentisierungsrunden nach RFC 4739 unterstützt</li>
@@ -16,9 +16,10 @@ Dies ist die offizielle Android-Portierung der populären strongSwan VPN-Lösung
  <li>Die IPsec-Implementierung unterstützt derzeit die AES-CBC, AES-GCM, ChaCha20/Poly1305 und SHA1/SHA2-Algorithmen</li>
  <li>Passwörter werden zurzeit als Klartext in der Datenbank gespeichert (nur wenn diese mit einem Profil gespeichert werden)</li>
  <li>VPN Profile können von Dateien importiert werden</li>
+ <li>Unterstützt verwaltete Konfigurationen via Enterprise Mobility Management (EMM)</li>
 </ul>
 
-Details und ein Changelog sind in unserer Dokumentation zu finden: https://docs.strongswan.org/docs/5.9/os/androidVpnClient.html
+Details und ein Changelog sind in unserer Dokumentation zu finden: https://docs.strongswan.org/docs/latest/os/androidVpnClient.html
 
 # PERMISSIONS #
 
@@ -29,7 +30,7 @@ Details und ein Changelog sind in unserer Dokumentation zu finden: https://docs.
 
 # BEISPIEL-SERVERKONFIGURATION #
 
-Sie finden in unserer Dokumentation Beispiel-Serverkonfigurationen: https://docs.strongswan.org/docs/5.9/os/androidVpnClient.html#_server_configuration
+Sie finden in unserer Dokumentation Beispiel-Serverkonfigurationen: https://docs.strongswan.org/docs/latest/os/androidVpnClient.html#_server_configuration
 
 Beachten Sie bitte, dass der im VPN Profil konfigurierte Hostname (bzw. die IP-Adresse) *zwingend* als subjectAltName-Extension im Server-Zertifikat vorhanden sein muss.
 

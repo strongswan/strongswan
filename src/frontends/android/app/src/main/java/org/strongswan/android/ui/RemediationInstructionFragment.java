@@ -16,6 +16,7 @@
 
 package org.strongswan.android.ui;
 
+import android.os.Build;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -58,7 +59,14 @@ public class RemediationInstructionFragment extends ListFragment
 
 		if (savedInstanceState != null)
 		{
-			mInstruction = savedInstanceState.getParcelable(ARG_REMEDIATION_INSTRUCTION);
+			if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU)
+			{
+				mInstruction = getInstructionCompat(savedInstanceState);
+			}
+			else
+			{
+				mInstruction = savedInstanceState.getParcelable(ARG_REMEDIATION_INSTRUCTION, RemediationInstruction.class);
+			}
 		}
 		/* show dividers only between list items */
 		getListView().setHeaderDividersEnabled(false);
@@ -85,7 +93,14 @@ public class RemediationInstructionFragment extends ListFragment
 		Bundle args = getArguments();
 		if (args != null)
 		{
-			mInstruction = args.getParcelable(ARG_REMEDIATION_INSTRUCTION);
+			if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU)
+			{
+				mInstruction = getInstructionCompat(args);
+			}
+			else
+			{
+				mInstruction = args.getParcelable(ARG_REMEDIATION_INSTRUCTION, RemediationInstruction.class);
+			}
 		}
 		updateView(mInstruction);
 	}
@@ -116,5 +131,11 @@ public class RemediationInstructionFragment extends ListFragment
 			mHeader.setText("");
 			setListAdapter(null);
 		}
+	}
+
+	@SuppressWarnings("deprecation")
+	private static RemediationInstruction getInstructionCompat(Bundle bundle)
+	{
+		return bundle.getParcelable(ARG_REMEDIATION_INSTRUCTION);
 	}
 }

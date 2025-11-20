@@ -337,7 +337,7 @@ static bool generate(private_x509_pkcs10_t *cert, private_key_t *sign_key,
 	extendedKeyUsage = x509_generate_eku_extension(cert->flags);
 
 	/* encode extensionRequest attribute */
-	if (subjectAltNames.ptr || certTypeExt.ptr)
+	if (subjectAltNames.ptr || certTypeExt.ptr || extendedKeyUsage.ptr)
 	{
 		extensionRequest = asn1_wrap(ASN1_SEQUENCE, "mm",
 				asn1_build_known_oid(OID_EXTENSION_REQUEST),
@@ -350,10 +350,13 @@ static bool generate(private_x509_pkcs10_t *cert, private_key_t *sign_key,
 	/* encode challengePassword attribute */
 	if (cert->challengePassword.len > 0)
 	{
+		asn1_t type = asn1_is_printablestring(cert->challengePassword) ?
+										ASN1_PRINTABLESTRING : ASN1_UTF8STRING;
+
 		challengePassword = asn1_wrap(ASN1_SEQUENCE, "mm",
 				asn1_build_known_oid(OID_CHALLENGE_PASSWORD),
 				asn1_wrap(ASN1_SET, "m",
-					asn1_simple_object(ASN1_UTF8STRING, cert->challengePassword)
+					asn1_simple_object(type, cert->challengePassword)
 				));
 	}
 

@@ -83,7 +83,6 @@ static bool derive_key(hash_algorithm_t hash, chunk_t unicode, chunk_t salt,
 	}
 	switch (hash)
 	{
-		case HASH_MD2:
 		case HASH_MD5:
 		case HASH_SHA1:
 		case HASH_SHA224:
@@ -157,7 +156,7 @@ bool pkcs12_derive_key(hash_algorithm_t hash, chunk_t password, chunk_t salt,
 	bool success;
 	int i;
 
-	if (password.len)
+	if (password.ptr)
 	{	/* convert the password to UTF-16BE (without BOM) with 0 terminator */
 		unicode = chunk_alloca(password.len * 2 + 2);
 		for (i = 0; i < password.len; i++)

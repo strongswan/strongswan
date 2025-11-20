@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2018 Tobias Brunner
+ * Copyright (C) 2010-2025 Tobias Brunner
  * Copyright (C) 2008 Martin Willi
  *
  * Copyright (C) secunet Security Networks AG
@@ -113,6 +113,7 @@
 #include "credentials/credential_factory.h"
 #include "credentials/credential_manager.h"
 #include "credentials/cred_encoding.h"
+#include "credentials/ocsp_responders.h"
 #include "metadata/metadata_factory.h"
 #include "utils/chunk.h"
 #include "utils/capabilities.h"
@@ -190,6 +191,11 @@ struct library_t {
 	 * Credential encoding registry and factory
 	 */
 	cred_encoding_t *encoding;
+
+	/**
+	 * Manager for OCSP responders
+	 */
+	ocsp_responders_t *ocsp;
 
 	/**
 	 * Registry and factory for metadata creation
@@ -278,6 +284,24 @@ bool library_init(char *settings, const char *namespace);
  * Deinitialize library, destroys "lib" instance.
  */
 void library_deinit();
+
+/**
+ * Custom function called during init/deinit of a library.
+ *
+ * @param init			TRUE during init, FALSE during deinit
+ * @return				FALSE if an error occurred and init should fail
+ */
+typedef bool (*library_init_t)(bool init);
+
+/**
+ * Register a custom init function that's called at the end of library_init()
+ * and the start of library_deinit().
+ *
+ * To be called from __attribute__((constructor)) functions.
+ *
+ * @param init				init function
+ */
+void library_init_register(library_init_t init);
 
 /**
  * Library instance, set after library_init() and before library_deinit() calls.

@@ -43,12 +43,12 @@ import android.widget.Toast;
 import org.strongswan.android.R;
 import org.strongswan.android.data.VpnProfile;
 import org.strongswan.android.data.VpnProfileDataSource;
+import org.strongswan.android.data.VpnProfileSource;
 import org.strongswan.android.data.VpnType.VpnTypeFeature;
 import org.strongswan.android.logic.VpnStateService;
 import org.strongswan.android.logic.VpnStateService.State;
 import org.strongswan.android.utils.Constants;
 
-import androidx.activity.result.ActivityResultCallback;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
@@ -68,10 +68,12 @@ public class VpnProfileControlActivity extends AppCompatActivity
 	public static final String DISCONNECT = "org.strongswan.android.action.DISCONNECT";
 	public static final String STATUS = "org.strongswan.android.action.STATUS";
 	public static final String EXTRA_VPN_PROFILE_ID = "org.strongswan.android.VPN_PROFILE_ID";
-
+	public static final String EXTRA_VPN_PROFILE_UUID = "org.strongswan.android.VPN_PROFILE_UUID";
+	
 	private static final String WAITING_FOR_RESULT = "WAITING_FOR_RESULT";
 	private static final String PROFILE_NAME = "PROFILE_NAME";
 	private static final String PROFILE_REQUIRES_PASSWORD = "REQUIRES_PASSWORD";
+	private static final String PROFILE_CERTIFICATE_MISSING = "CERTIFICATE_MISSING";
 	private static final String PROFILE_RECONNECT = "RECONNECT";
 	private static final String PROFILE_DISCONNECT = "DISCONNECT";
 	private static final String DIALOG_TAG = "Dialog";
@@ -260,6 +262,7 @@ public class VpnProfileControlActivity extends AppCompatActivity
 	/**
 	 * Check if we have permission to display notifications to the user, if necessary,
 	 * ask the user to allow this.
+	 *
 	 * @return true if profile can be initiated immediately
 	 */
 	private boolean checkNotificationPermission()
@@ -277,6 +280,7 @@ public class VpnProfileControlActivity extends AppCompatActivity
 	/**
 	 * Check if we are on the system's power whitelist, if necessary, or ask the user
 	 * to add us.
+	 *
 	 * @return true if profile can be initiated immediately
 	 */
 	private boolean checkPowerWhitelist()
@@ -332,6 +336,8 @@ public class VpnProfileControlActivity extends AppCompatActivity
 		profileInfo.putString(VpnProfileDataSource.KEY_USERNAME, profile.getUsername());
 		profileInfo.putString(VpnProfileDataSource.KEY_PASSWORD, profile.getPassword());
 		profileInfo.putBoolean(PROFILE_REQUIRES_PASSWORD, profile.getVpnType().has(VpnTypeFeature.USER_PASS));
+		profileInfo.putBoolean(PROFILE_CERTIFICATE_MISSING, profile.getVpnType().has(VpnTypeFeature.CERTIFICATE) &&
+							   profile.getUserCertificateAlias() == null);
 		profileInfo.putString(PROFILE_NAME, profile.getName());
 
 		removeFragmentByTag(DIALOG_TAG);
@@ -355,6 +361,13 @@ public class VpnProfileControlActivity extends AppCompatActivity
 	 */
 	private void startVpnProfile(Bundle profileInfo)
 	{
+		if (profileInfo.getBoolean(PROFILE_CERTIFICATE_MISSING))
+		{
+			CertificateRequiredDialog dialog = new CertificateRequiredDialog();
+			dialog.setArguments(profileInfo);
+			dialog.show(getSupportFragmentManager(), DIALOG_TAG);
+			return;
+		}
 		if (profileInfo.getBoolean(PROFILE_REQUIRES_PASSWORD) &&
 			profileInfo.getString(VpnProfileDataSource.KEY_PASSWORD) == null)
 		{
@@ -376,20 +389,16 @@ public class VpnProfileControlActivity extends AppCompatActivity
 	{
 		VpnProfile profile = null;
 
-		VpnProfileDataSource dataSource = new VpnProfileDataSource(this);
+		VpnProfileDataSource dataSource = new VpnProfileSource(this);
 		dataSource.open();
-		String profileUUID = intent.getStringExtra(EXTRA_VPN_PROFILE_ID);
+		String profileUUID = intent.getStringExtra(EXTRA_VPN_PROFILE_UUID);
+		if (profileUUID == null)
+		{
+			profileUUID = intent.getStringExtra(EXTRA_VPN_PROFILE_ID);
+		}
 		if (profileUUID != null)
 		{
 			profile = dataSource.getVpnProfile(profileUUID);
-		}
-		else
-		{
-			long profileId = intent.getLongExtra(EXTRA_VPN_PROFILE_ID, 0);
-			if (profileId > 0)
-			{
-				profile = dataSource.getVpnProfile(profileId);
-			}
 		}
 		dataSource.close();
 
@@ -415,10 +424,14 @@ public class VpnProfileControlActivity extends AppCompatActivity
 
 		removeFragmentByTag(DIALOG_TAG);
 
-		String profileUUID = intent.getStringExtra(EXTRA_VPN_PROFILE_ID);
+		String profileUUID = intent.getStringExtra(EXTRA_VPN_PROFILE_UUID);
+		if (profileUUID == null)
+		{
+			profileUUID = intent.getStringExtra(EXTRA_VPN_PROFILE_ID);
+		}
 		if (profileUUID != null)
 		{
-			VpnProfileDataSource dataSource = new VpnProfileDataSource(this);
+			VpnProfileDataSource dataSource = new VpnProfileSource(this);
 			dataSource.open();
 			profile = dataSource.getVpnProfile(profileUUID);
 			dataSource.close();
@@ -600,9 +613,9 @@ public class VpnProfileControlActivity extends AppCompatActivity
 			final Bundle profileInfo = getArguments();
 			LayoutInflater inflater = getActivity().getLayoutInflater();
 			View view = inflater.inflate(R.layout.login_dialog, null);
-			EditText username = (EditText)view.findViewById(R.id.username);
+			EditText username = view.findViewById(R.id.username);
 			username.setText(profileInfo.getString(VpnProfileDataSource.KEY_USERNAME));
-			final EditText password = (EditText)view.findViewById(R.id.password);
+			final EditText password = view.findViewById(R.id.password);
 
 			AlertDialog.Builder adb = new AlertDialog.Builder(getActivity());
 			adb.setView(view);
@@ -626,6 +639,36 @@ public class VpnProfileControlActivity extends AppCompatActivity
 				}
 			});
 			return adb.create();
+		}
+
+		@Override
+		public void onCancel(DialogInterface dialog)
+		{
+			getActivity().finish();
+		}
+	}
+
+	/**
+	 * Class that displays a dialog warning about a missing certificate.
+	 */
+	public static class CertificateRequiredDialog extends AppCompatDialogFragment
+	{
+		@Override
+		public Dialog onCreateDialog(Bundle savedInstanceState)
+		{
+			final Bundle profileInfo = getArguments();
+
+			AlertDialog.Builder builder = new AlertDialog.Builder(getActivity())
+				.setTitle(R.string.certificate_required_title)
+				.setMessage(R.string.certificate_required_text)
+				.setNegativeButton(android.R.string.cancel, (dialog, which) -> getActivity().finish())
+				.setPositiveButton(R.string.edit_profile, (dialog, which) -> {
+					Intent editIntent = new Intent(getActivity(), VpnProfileDetailActivity.class);
+					editIntent.putExtra(VpnProfileDataSource.KEY_UUID, profileInfo.getString(VpnProfileDataSource.KEY_UUID));
+					startActivity(editIntent);
+					getActivity().finish();
+				});
+			return builder.create();
 		}
 
 		@Override

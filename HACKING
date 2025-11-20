@@ -14,7 +14,6 @@ the code, you need the following tools:
     - autoconf
     - libtool
     - pkg-config
-    - gettext
     - perl
     - python
     - lex/flex

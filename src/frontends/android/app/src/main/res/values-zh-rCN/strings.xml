@@ -119,11 +119,19 @@
     <string name="profile_select_one_app">已选择一个应用程序</string>
     <string name="profile_select_x_apps">%1$d 应用程序被选择</string>
     <string name="profile_proposals_label">算法</string>
-    <string name="profile_proposals_intro">（可选）配置用于IKEv2和/或IPsec/ESP的特定算法，而不是默认算法。请参阅我们的wiki以了解<a href="https://docs.strongswan.org/docs/5.9/config/IKEv2CipherSuites.html">算法标识符列表</a>（请注意，此应用程序并不支持所有标识符）。这两个字段都包含一个算法列表，每个算法用连字符分隔。</string>
+    <string name="profile_proposals_intro">（可选）配置用于IKEv2和/或IPsec/ESP的特定算法，而不是默认算法。请参阅我们的wiki以了解<a href="https://docs.strongswan.org/docs/latest/config/IKEv2CipherSuites.html">算法标识符列表</a>（请注意，此应用程序并不支持所有标识符）。这两个字段都包含一个算法列表，每个算法用连字符分隔。</string>
     <string name="profile_proposals_ike_label">IKEv2算法</string>
     <string name="profile_proposals_ike_hint">对于非AEAD/经典加密算法，需要完整性算法、伪随机函数（可选，默认为基于完整性算法的函数）和Diffie-Hellman组（例如aes256-sha256-ecp256）。对于组合模式/AEAD算法，省略完整性算法，但需要PRF（例如aes256gcm16-prfsha256-ecp256）。</string>
     <string name="profile_proposals_esp_label">IPsec/ESP 算法</string>
     <string name="profile_proposals_esp_hint">对于非AEAD/经典加密算法，需要完整性算法，Diffie-Hellman组是可选的（例如aes256-sha256或aes256-sha256-ecp256）。对于组合模式/AEAD算法，省略完整性算法（例如aes256gcm16或aes256gcm16-ecp256）。如果指定了DH组，IPsec SA密钥更新将使用DH密钥交换。但是，在最初建立连接时，不使用此处指定的DH组，因为其中的密钥来自IKE SA密钥材料。因此，与服务器的任何配置不匹配只会在稍后重新设置密钥时导致错误。</string>
+    <string name="profile_proxy_server_label">HTTP proxy server</string>
+    <string name="profile_proxy_server_intro">Optional HTTP proxy server to use when connected to the VPN. This is only a recommendation and may be ignored by apps. Note that apps using the proxy will access all HTTP resources through it regardless of the destination, so split-tunneling settings might not have any effect. To avoid using the proxy server for specific hosts, use the exclusion list below.</string>
+    <string name="profile_proxy_host_label">Proxy host</string>
+    <string name="profile_proxy_host_hint">IP address or hostname of the HTTP proxy server to use when connected to the VPN</string>
+    <string name="profile_proxy_port_label">Proxy port</string>
+    <string name="profile_proxy_port_hint">Port to access the HTTP proxy server, defaults to 8080</string>
+    <string name="profile_proxy_exclusions_label">Proxy exclusion list</string>
+    <string name="profile_proxy_exclusions_hint">Optional list of hosts for which the HTTP proxy server is not used (separated by spaces, and wildcards are possible, e.g. \"direct.example.net *.example.com\")</string>
     <string name="profile_import">导入VPN配置</string>
     <string name="profile_import_failed">导入VPN配置失败</string>
     <string name="profile_import_failed_detail">导入VPN配置失败: %1$s</string>
@@ -132,9 +140,11 @@
     <string name="profile_import_failed_tls">TLS握手失败</string>
     <string name="profile_import_failed_value">无效的值： \"%1$s\"</string>
     <string name="profile_import_exists">此VPN配置已经存在，当前设定将被覆盖。</string>
+    <string name="profile_import_shared_secret">This file contains a cleartext password. Remember to delete it after importing.</string>
     <string name="profile_cert_import">从VPN配置导入证书</string>
     <string name="profile_cert_alias">\"%1$s\" 所对应的证书</string>
     <string name="profile_profile_id">配置文件ID</string>
+    <string name="profile_managed">Managed profile</string>
     <!-- Warnings/Notifications in the details view -->
     <string name="alert_text_no_input_gateway">必填信息以初始化连接</string>
     <string name="alert_text_no_input_username">请输入您的用户名</string>
@@ -144,6 +154,7 @@
     <string name="alert_text_no_subnets">请输入有效的子网和/或IP地址，用空格分隔</string>
     <string name="alert_text_no_ips">请输入有效的IP地址，以空格分隔</string>
     <string name="alert_text_no_proposal">请输入用连字符分隔的有效算法列表</string>
+    <string name="alert_text_vpn_profile_read_only">This VPN profile is managed by your administrator and can\'t be modified. You can only change the password or user certificate</string>
     <string name="tnc_notice_title">EAP-TNC可能会影响您的隐私</string>
     <string name="tnc_notice_subtitle">设备数据已被发送至服务器管理员</string>
     <string name="tnc_notice_details"><![CDATA[<p>可信网络连接t (TNC) 允许服务器管理员评定一个用户设备的状况。</p><p>出于此目的，服务器管理员可能要求以下数据如独立ID、已安装软件列表、系统设置、或加密过的文件校验值。</p><b>任何数据都仅将在验证过服务器的身份ID之后被发出。</b>]]></string>
@@ -219,6 +230,8 @@
     <string name="cancel_retry">取消重试</string>
     <string name="power_whitelist_title">禁用电池优化</string>
     <string name="power_whitelist_text">请确认下一个对话框，将应用程序添加到设备的电源白名单中，这样它就可以忽略电池优化，并准确地安排NAT保持有效和重新键入，以便在建立VPN时始终保持可访问性。</string>
+    <string name="certificate_required_title">User certificate required</string>
+    <string name="certificate_required_text">Please edit the VPN profile to select one.</string>
 
     <!-- Quick Settings tile -->
     <string name="tile_default">切换VPN</string>

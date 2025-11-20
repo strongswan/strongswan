@@ -14,14 +14,10 @@ android {
     defaultConfig {
 //        applicationId "org.strongswan.android"
         minSdkVersion 21
-        targetSdkVersion 33
-        versionCode 80
-        versionName "2.4.2"
-    }
+        targetSdkVersion 36
 
-    sourceSets.main {
-        jniLibs.srcDir 'src/main/libs'
-    }
+        versionCode 96
+        versionName "2.6.2"
 
     task buildNative(type: Exec) {
         workingDir 'src/main/jni'
@@ -33,12 +29,16 @@ android {
         commandLine "${android.ndkDirectory}\\ndk-build.cmd", 'clean'
     }
 
-    tasks.withType(JavaCompile) {
-        compileTask -> compileTask.dependsOn buildNative
-        options.compilerArgs << "-Xlint:unchecked" << "-Xlint:deprecation"
+    externalNativeBuild {
+        ndkBuild {
+            path 'src/main/jni/Android.mk'
+        }
     }
 
-    clean.dependsOn 'cleanNative'
+    tasks.withType(JavaCompile).configureEach {
+        compileTask ->
+            options.compilerArgs << "-Xlint:unchecked" << "-Xlint:deprecation"
+    }
 
     buildTypes {
         release {
@@ -53,15 +53,15 @@ android {
 }
 
 dependencies {
-    implementation 'androidx.appcompat:appcompat:1.4.2'
-    implementation 'androidx.preference:preference:1.2.0'
-    implementation 'androidx.legacy:legacy-support-v4:1.0.0'
-    implementation 'com.google.android.material:material:1.6.1'
+    implementation 'androidx.appcompat:appcompat:1.7.1'
+    implementation 'androidx.core:core:1.17.0'
+    implementation 'androidx.lifecycle:lifecycle-process:2.9.4'
+    implementation 'androidx.preference:preference:1.2.1'
+    implementation 'androidx.localbroadcastmanager:localbroadcastmanager:1.1.0'
+    implementation 'com.google.android.material:material:1.13.0'
     testImplementation 'junit:junit:4.13.2'
-    testImplementation 'org.mockito:mockito-core:3.11.2'
-    testImplementation 'org.powermock:powermock-core:2.0.9'
-    testImplementation 'org.powermock:powermock-module-junit4:2.0.9'
-    testImplementation 'org.powermock:powermock-api-mockito2:2.0.9'
+    testImplementation 'org.assertj:assertj-core:3.27.6'
+    testImplementation 'org.mockito:mockito-core:5.20.0'
 }
 
 // This is also for the maven-publish plugin. It will publish a "-sources" jar file along with the compiled jar.

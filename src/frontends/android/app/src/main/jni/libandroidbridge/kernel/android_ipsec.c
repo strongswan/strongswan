@@ -159,7 +159,7 @@ METHOD(kernel_ipsec_t, flush_policies, status_t,
 METHOD(kernel_ipsec_t, bypass_socket, bool,
 	private_kernel_android_ipsec_t *this, int fd, int family)
 {
-	return charonservice->bypass_socket(charonservice, fd, family);
+	return charonservice->bypass_socket(charonservice, fd, TRUE);
 }
 
 METHOD(kernel_ipsec_t, enable_udp_decap, bool,

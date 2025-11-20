@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2018 Tobias Brunner
+ * Copyright (C) 2009-2025 Tobias Brunner
  * Copyright (C) 2008 Martin Willi
  *
  * Copyright (C) secunet Security Networks AG
@@ -95,6 +95,30 @@ void library_add_namespace(char *ns)
 	}
 }
 
+#define MAX_LIBSTRONGSWAN_INIT_FUNCTIONS 10
+
+/**
+ * Static array for init function registration using __attribute__((constructor))
+ */
+static library_init_t init_functions[MAX_LIBSTRONGSWAN_INIT_FUNCTIONS];
+static int init_function_count;
+
+/**
+ * Described in header
+ */
+void library_init_register(library_init_t init)
+{
+	if (init_function_count < MAX_LIBSTRONGSWAN_INIT_FUNCTIONS - 1)
+	{
+		init_functions[init_function_count++] = init;
+	}
+	else
+	{
+		fprintf(stderr, "failed to register init function, please increase "
+				"MAX_LIBSTRONGSWAN_INIT_FUNCTIONS");
+	}
+}
+
 /**
  * Register plugins if built statically
  */
@@ -149,6 +173,7 @@ void library_deinit()
 {
 	private_library_t *this = (private_library_t*)lib;
 	bool detailed;
+	int i;
 
 	if (!this || !ref_put(&this->ref))
 	{	/* have more users */
@@ -161,6 +186,13 @@ void library_deinit()
 	/* make sure the cache is clear before unloading plugins */
 	lib->credmgr->flush_cache(lib->credmgr, CERT_ANY);
 
+	for (i = 0; i < init_function_count; ++i)
+	{
+		init_functions[i](FALSE);
+	}
+
+	key_exchange_deinit();
+
 	this->public.streams->destroy(this->public.streams);
 	this->public.watcher->destroy(this->public.watcher);
 	this->public.scheduler->destroy(this->public.scheduler);
@@ -171,6 +203,7 @@ void library_deinit()
 	this->public.credmgr->destroy(this->public.credmgr);
 	this->public.creds->destroy(this->public.creds);
 	this->public.encoding->destroy(this->public.encoding);
+	this->public.ocsp->destroy(this->public.ocsp);
 	this->public.metadata->destroy(this->public.metadata);
 	this->public.crypto->destroy(this->public.crypto);
 	this->public.caps->destroy(this->public.caps);
@@ -275,6 +308,7 @@ static void do_magic(int *magic, int **out)
 /**
  * Check if memwipe works as expected
  */
+ADDRESS_SANITIZER_EXCLUDE
 static bool check_memwipe()
 {
 	int magic = 0xCAFEBABE, *buf, i;
@@ -401,6 +435,7 @@ bool library_init(char *settings, const char *namespace)
 	this->public.creds = credential_factory_create();
 	this->public.credmgr = credential_manager_create();
 	this->public.encoding = cred_encoding_create();
+	this->public.ocsp = ocsp_responders_create();
 	this->public.metadata = metadata_factory_create();
 	this->public.fetcher = fetcher_manager_create();
 	this->public.resolver = resolver_manager_create();
@@ -434,7 +469,14 @@ bool library_init(char *settings, const char *namespace)
 #endif /* INTEGRITY_TEST */
 	}
 
-	diffie_hellman_init();
+	key_exchange_init();
 
+	for (i = 0; i < init_function_count; ++i)
+	{
+		if (!init_functions[i](TRUE))
+		{
+			this->init_failed = TRUE;
+		}
+	}
 	return !this->init_failed;
 }

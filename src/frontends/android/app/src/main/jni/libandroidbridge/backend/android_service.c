@@ -359,7 +359,7 @@ static bool setup_tun_device(private_android_service_t *this,
 
 		lib->processor->queue_job(lib->processor,
 			(job_t*)callback_job_create((callback_job_cb_t)handle_plain, this,
-									NULL, (callback_job_cancel_t)return_false));
+									NULL, callback_job_cancel_thread));
 	}
 	return TRUE;
 }
@@ -600,7 +600,7 @@ METHOD(listener_t, alert, bool,
 				lib->processor->queue_job(lib->processor,
 					(job_t*)callback_job_create_with_prio(
 						(callback_job_cb_t)reestablish, id, free,
-						(callback_job_cancel_t)return_false, JOB_PRIO_HIGH));
+						callback_job_cancel_thread, JOB_PRIO_HIGH));
 				break;
 			}
 			case ALERT_PEER_INIT_UNREACHABLE:
@@ -619,7 +619,7 @@ METHOD(listener_t, alert, bool,
 					lib->processor->queue_job(lib->processor,
 						(job_t*)callback_job_create_with_prio(
 							(callback_job_cb_t)terminate, id, free,
-							(callback_job_cancel_t)return_false, JOB_PRIO_HIGH));
+							callback_job_cancel_thread, JOB_PRIO_HIGH));
 					stay_registered = FALSE;
 				}
 				else
@@ -792,10 +792,9 @@ static job_requeue_t initiate(private_android_service_t *this)
 	};
 	char *type, *remote_id;
 
-	if (android_sdk_version >= ANDROID_LOLLIPOP)
-	{   /* only try once and notify the GUI on Android 5+ where we have a blocking TUN device */
-		peer.keyingtries = 1;
-	}
+	/* only try once and notify the GUI since Android 5+ where we have a
+	 * blocking TUN device */
+	peer.keyingtries = 1;
 
 	ike.remote = this->settings->get_str(this->settings, "connection.server",
 										 NULL);

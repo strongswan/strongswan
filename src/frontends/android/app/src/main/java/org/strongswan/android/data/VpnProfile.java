@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2019 Tobias Brunner
+ * Copyright (C) 2012-2025 Tobias Brunner
  * Copyright (C) 2012 Giuliano Grassi
  * Copyright (C) 2012 Ralf Sager
  *
@@ -22,6 +22,7 @@ package org.strongswan.android.data;
 import android.text.TextUtils;
 
 import java.util.Arrays;
+import java.util.Objects;
 import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.UUID;
@@ -41,12 +42,14 @@ public class VpnProfile implements Cloneable
 
 	private String mName, mGateway, mUsername, mPassword, mCertificate, mUserCertificate;
 	private String mRemoteId, mLocalId, mExcludedSubnets, mIncludedSubnets, mSelectedApps;
-	private String mIkeProposal, mEspProposal, mDnsServers;
-	private Integer mMTU, mPort, mSplitTunneling, mNATKeepAlive, mFlags;
+	private String mIkeProposal, mEspProposal, mDnsServers, mProxyHost, mProxyExclusions;
+	private Integer mMTU, mPort, mProxyPort, mSplitTunneling, mNATKeepAlive, mFlags;
 	private SelectedAppsHandling mSelectedAppsHandling = SelectedAppsHandling.SELECTED_APPS_DISABLE;
 	private VpnType mVpnType;
 	private UUID mUUID;
 	private long mId = -1;
+	private boolean mReadOnly;
+	private VpnProfileDataSource mDataSource;
 
 	public enum SelectedAppsHandling
 	{
@@ -54,7 +57,7 @@ public class VpnProfile implements Cloneable
 		SELECTED_APPS_EXCLUDE(1),
 		SELECTED_APPS_ONLY(2);
 
-		private Integer mValue;
+		private final Integer mValue;
 
 		SelectedAppsHandling(int value)
 		{
@@ -310,6 +313,36 @@ public class VpnProfile implements Cloneable
 		return mSelectedAppsHandling;
 	}
 
+	public String getProxyHost()
+	{
+		return mProxyHost;
+	}
+
+	public void setProxyHost(String proxy)
+	{
+		this.mProxyHost = proxy;
+	}
+
+	public Integer getProxyPort()
+	{
+		return mProxyPort;
+	}
+
+	public void setProxyPort(Integer port)
+	{
+		this.mProxyPort = port;
+	}
+
+	public String getProxyExclusions()
+	{
+		return mProxyExclusions;
+	}
+
+	public void setProxyExclusions(String exclusions)
+	{
+		this.mProxyExclusions = exclusions;
+	}
+
 	public Integer getSplitTunneling()
 	{
 		return mSplitTunneling;
@@ -330,6 +363,26 @@ public class VpnProfile implements Cloneable
 		this.mFlags = flags;
 	}
 
+	public boolean isReadOnly()
+	{
+		return mReadOnly;
+	}
+
+	public void setReadOnly(boolean readOnly)
+	{
+		this.mReadOnly = readOnly;
+	}
+
+	public VpnProfileDataSource getDataSource()
+	{
+		return mDataSource;
+	}
+
+	public void setDataSource(VpnProfileDataSource mDataSource)
+	{
+		this.mDataSource = mDataSource;
+	}
+
 	@Override
 	public String toString()
 	{
@@ -339,16 +392,22 @@ public class VpnProfile implements Cloneable
 	@Override
 	public boolean equals(Object o)
 	{
-		if (o != null && o instanceof VpnProfile)
+		if (o == this)
 		{
-			VpnProfile other = (VpnProfile)o;
-			if (this.mUUID != null && other.getUUID() != null)
-			{
-				return this.mUUID.equals(other.getUUID());
-			}
-			return this.mId == other.getId();
+			return true;
 		}
-		return false;
+		if (o == null || getClass() != o.getClass())
+		{
+			return false;
+		}
+		VpnProfile that = (VpnProfile)o;
+		return Objects.equals(mUUID, that.mUUID);
+	}
+
+	@Override
+	public int hashCode()
+	{
+		return Objects.hash(mUUID);
 	}
 
 	@Override

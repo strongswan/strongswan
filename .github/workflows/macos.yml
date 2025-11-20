@@ -2,6 +2,10 @@ name: macOS
 
 on: [push, pull_request]
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   TESTS_REDUCED_KEYLENGTHS: yes
   CCACHE_BASEDIR: ${{ github.workspace }}
@@ -18,18 +22,21 @@ jobs:
       - id: skip-check
         uses: fkirc/skip-duplicate-actions@master
         with:
-          concurrent_skipping: 'same_content'
+          concurrent_skipping: 'same_content_newer'
 
   macos:
+    strategy:
+      matrix:
+        os: [macos-latest, macos-14]
     needs: pre-check
     if: ${{ needs.pre-check.outputs.should_skip != 'true' }}
-    runs-on: macos-latest
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 20
     env:
       TEST: macos
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/cache@v3
+      - uses: actions/checkout@v4
+      - uses: actions/cache@v4
         with:
           path: ~/Library/Caches/ccache
           key: ccache-${{ runner.os }}-${{ github.sha }}
@@ -44,7 +51,7 @@ jobs:
       - uses: ./.github/actions/default
       - run: ccache -s
       - if: ${{ failure() }}
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: Logs ${{ github.job }}
           path: config.log

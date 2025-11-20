@@ -16,7 +16,6 @@
 
 package org.strongswan.android.ui;
 
-import android.annotation.TargetApi;
 import android.app.Dialog;
 import android.content.ActivityNotFoundException;
 import android.content.DialogInterface;
@@ -61,7 +60,6 @@ public class TrustedCertificateImportActivity extends AppCompatActivity
 		}
 	);
 
-	@TargetApi(Build.VERSION_CODES.KITKAT)
 	@Override
 	public void onCreate(Bundle savedInstanceState)
 	{
@@ -78,7 +76,7 @@ public class TrustedCertificateImportActivity extends AppCompatActivity
 		{
 			importCertificate(intent.getData());
 		}
-		else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT)
+		else
 		{
 			Intent openIntent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
 			openIntent.setType("*/*");
@@ -89,7 +87,6 @@ public class TrustedCertificateImportActivity extends AppCompatActivity
 			catch (ActivityNotFoundException e)
 			{	/* some devices are unable to browse for files */
 				finish();
-				return;
 			}
 		}
 	}
@@ -195,7 +192,14 @@ public class TrustedCertificateImportActivity extends AppCompatActivity
 		{
 			final X509Certificate certificate;
 
-			certificate = (X509Certificate)getArguments().getSerializable(VpnProfileDataSource.KEY_CERTIFICATE);
+			if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU)
+			{
+				certificate = getCertificateCompat(getArguments());
+			}
+			else
+			{
+				certificate = getArguments().getSerializable(VpnProfileDataSource.KEY_CERTIFICATE, X509Certificate.class);
+			}
 
 			return new AlertDialog.Builder(getActivity())
 				.setIcon(R.mipmap.ic_app)
@@ -233,6 +237,12 @@ public class TrustedCertificateImportActivity extends AppCompatActivity
 		public void onCancel(DialogInterface dialog)
 		{
 			getActivity().finish();
+		}
+
+		@SuppressWarnings("deprecation")
+		private static X509Certificate getCertificateCompat(Bundle bundle)
+		{
+			return (X509Certificate)bundle.getSerializable(VpnProfileDataSource.KEY_CERTIFICATE);
 		}
 	}
 }

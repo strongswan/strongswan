@@ -27,7 +27,6 @@ install:
       set IMG=%APPVEYOR_BUILD_WORKER_IMAGE:~-4%
       set OPENSSL=OpenSSL
       IF "%IMG%" == "2017" set OPENSSL=OpenSSL-v11
-      IF "%IMG%" == "2019" set OPENSSL=OpenSSL-v111
       set OPENSSL_DIR=/c/%OPENSSL%-%TEST%
       C:\%OPENSSL%-%TEST%\bin\openssl.exe version -a
   # newer versions of msys2 don't provide autotools or gperf via base-devel anymore

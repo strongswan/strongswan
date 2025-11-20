@@ -12,7 +12,7 @@ export PATH=${ANDROID_NDK_ROOT}/toolchains/llvm/prebuilt/linux-x86_64/bin:$PATH
 export ANDROID_NDK_HOME=${ANDROID_NDK_ROOT}
 
 # automatically determine the ABIs supported by the NDK
-: ${ABIS=$(jq -r 'keys | join(" ")' ${ANDROID_NDK_ROOT}/meta/abis.json)}
+: ${ABIS=$(jq -r 'map_values(select(.default == true)) | keys | join(" ")' ${ANDROID_NDK_ROOT}/meta/abis.json)}
 
 # this should match APP_PLATFORM
 : ${MIN_SDK=21}
@@ -34,6 +34,10 @@ x86)
 	;;
 x86_64)
 	OPTIONS="android-x86_64"
+	;;
+*)
+	echo "!! Skipping unknown ABI '${ABI}'"
+	continue
 	;;
 esac
 

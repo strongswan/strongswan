@@ -340,7 +340,7 @@ METHOD(android_dns_proxy_t, handle, bool,
 						  skt);
 		lib->scheduler->schedule_job(lib->scheduler,
 			(job_t*)callback_job_create(handle_timeout, skt,
-					NULL, (callback_job_cancel_t)return_false), SOCKET_TIMEOUT);
+					NULL, callback_job_cancel_thread), SOCKET_TIMEOUT);
 	}
 	skt->last_use = time_monotonic(NULL);
 	if (sendto(skt->fd, data.ptr, data.len, 0, dst->get_sockaddr(dst),

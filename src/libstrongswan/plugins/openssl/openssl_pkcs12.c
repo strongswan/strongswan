@@ -103,40 +103,41 @@ static bool add_cas(private_pkcs12_t *this, STACK_OF(X509) *cas)
  */
 static bool add_key(private_pkcs12_t *this, EVP_PKEY *private)
 {
-	private_key_t *key = NULL;
-	chunk_t encoding;
-	key_type_t type;
+	private_key_t *key;
 
 	if (!private)
 	{	/* no private key is ok */
 		return TRUE;
 	}
-	switch (EVP_PKEY_base_id(private))
+	key = openssl_wrap_private_key(private, FALSE);
+	if (key)
 	{
-		case EVP_PKEY_RSA:
-			type = KEY_RSA;
-			break;
-		case EVP_PKEY_EC:
-			type = KEY_ECDSA;
-			break;
-		default:
-			EVP_PKEY_free(private);
-			return FALSE;
+		this->creds->add_key(this->creds, key);
 	}
-	encoding = openssl_i2chunk(PrivateKey, private);
-	if (encoding.ptr)
-	{
-		key = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, type,
-								 BUILD_BLOB_ASN1_DER, encoding,
-								 BUILD_END);
-		if (key)
-		{
-			this->creds->add_key(this->creds, key);
-		}
-	}
-	chunk_clear(&encoding);
-	EVP_PKEY_free(private);
 	return key != NULL;
+}
+
+/**
+ * Decrypt PKCS#12 file using the given password and unpack credentials
+ */
+static status_t decrypt_and_unpack_pw(private_pkcs12_t *this, char *password)
+{
+	STACK_OF(X509) *cas = NULL;
+	EVP_PKEY *private;
+	X509 *cert;
+
+	if (PKCS12_parse(this->p12, password, &private, &cert, &cas))
+	{
+		/* if at least one is successful, we accept it */
+		if ((int)add_key(this, private) |
+			(int)add_cert(this, cert) |
+			(int)add_cas(this, cas))
+		{
+			return SUCCESS;
+		}
+		return FAILED;
+	}
+	return PARSE_ERROR;
 }
 
 /**
@@ -146,12 +147,20 @@ static bool decrypt_and_unpack(private_pkcs12_t *this)
 {
 	enumerator_t *enumerator;
 	shared_key_t *shared;
-	STACK_OF(X509) *cas = NULL;
-	EVP_PKEY *private;
-	X509 *cert;
 	chunk_t key;
 	char *password;
 	bool success = FALSE;
+
+	/* try without password first */
+	switch (decrypt_and_unpack_pw(this, NULL))
+	{
+		case PARSE_ERROR:
+			break;
+		case SUCCESS:
+			return TRUE;
+		default:
+			return FALSE;
+	}
 
 	enumerator = lib->credmgr->create_shared_enumerator(lib->credmgr,
 										SHARED_PRIVATE_KEY_PASS, NULL, NULL);
@@ -160,17 +169,25 @@ static bool decrypt_and_unpack(private_pkcs12_t *this)
 		key = shared->get_key(shared);
 		if (!key.ptr || asprintf(&password, "%.*s", (int)key.len, key.ptr) < 0)
 		{
-			password = NULL;
+			password = strdup("");
 		}
-		if (PKCS12_parse(this->p12, password, &private, &cert, &cas))
+		switch (decrypt_and_unpack_pw(this, password))
 		{
-			success = add_key(this, private);
-			success &= add_cert(this, cert);
-			success &= add_cas(this, cas);
-			free(password);
-			break;
+			case PARSE_ERROR:
+				/* password was incorrect, try another */
+				memwipe(password, strlen(password));
+				free(password);
+				continue;
+			case SUCCESS:
+				success = TRUE;
+				break;
+			default:
+				/* password was correct but we were unable to unpack anything */
+				break;
 		}
+		memwipe(password, strlen(password));
 		free(password);
+		break;
 	}
 	enumerator->destroy(enumerator);
 	return success;

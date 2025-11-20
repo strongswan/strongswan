@@ -1,0 +1,14 @@
+DOMAIN = $(PACKAGE)
+
+subdir = po
+top_builddir = ..
+
+XGETTEXT_OPTIONS = --from-code=UTF-8 --keyword=_ --keyword=N_ --add-comments
+
+COPYRIGHT_HOLDER = strongSwan Developers
+
+MSGID_BUGS_ADDRESS = https://github.com/strongswan/strongswan
+
+# play nice with Git
+PO_DEPENDS_ON_POT = no
+DIST_DEPENDS_ON_UPDATE_PO = no

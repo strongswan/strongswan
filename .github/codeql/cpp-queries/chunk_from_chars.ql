@@ -10,8 +10,7 @@
  * @precision very-high
  */
 import cpp
-import DataFlow::PathGraph
-import semmle.code.cpp.dataflow.DataFlow
+import semmle.code.cpp.dataflow.new.DataFlow
 
 class ChunkFromChars extends Expr {
   ChunkFromChars() {
@@ -23,29 +22,30 @@ class ChunkFromChars extends Expr {
   }
 }
 
-class ChunkFromCharsUsage extends DataFlow::Configuration {
-  ChunkFromCharsUsage() { this = "ChunkFromCharsUsage" }
-
-  override predicate isSource(DataFlow::Node source) {
+module ChunkFromCharsConfig implements DataFlow::ConfigSig {
+  predicate isSource(DataFlow::Node source) {
     source.asExpr() instanceof ChunkFromChars
   }
 
-  override predicate isSink(DataFlow::Node sink) {
+  predicate isSink(DataFlow::Node sink) {
     exists(sink.asExpr())
   }
 
-  override predicate isBarrierOut(DataFlow::Node node) {
+  predicate isBarrierOut(DataFlow::Node node) {
     /* don't track beyond function calls */
     exists(FunctionCall fc | node.asExpr().getParent*() = fc)
   }
 }
 
+module ChunkFromCharsFlow = DataFlow::Global<ChunkFromCharsConfig>;
+import ChunkFromCharsFlow::PathGraph
+
 BlockStmt enclosingBlock(BlockStmt b) {
   result = b.getEnclosingBlock()
 }
 
-from ChunkFromCharsUsage usage, DataFlow::PathNode source, DataFlow::PathNode sink
+from ChunkFromCharsFlow::PathNode source, ChunkFromCharsFlow::PathNode sink
 where
-  usage.hasFlowPath(source, sink)
+  ChunkFromCharsFlow::flowPath(source, sink)
   and not source.getNode().asExpr().getEnclosingBlock() = enclosingBlock*(sink.getNode().asExpr().getEnclosingBlock())
 select source, source, sink, "Invalid use of chunk_from_chars() result in sibling/parent block."

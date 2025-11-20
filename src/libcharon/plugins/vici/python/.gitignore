@@ -1,3 +1,4 @@
+.eggs
 .tox
 *.pyc
 build

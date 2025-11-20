@@ -18,8 +18,8 @@ RUN apt-get update && \
 COPY compile.sh /
 RUN chmod +x /compile.sh
 
-ENV ANDROID_NDK_ROOT /ndk
-ENV OUT_DIR /out
+ENV ANDROID_NDK_ROOT=/ndk
+ENV OUT_DIR=/out
 
 WORKDIR /src
 

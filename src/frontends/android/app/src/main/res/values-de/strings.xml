@@ -123,11 +123,19 @@
     <string name="profile_select_one_app">Eine App ausgewählt</string>
     <string name="profile_select_x_apps">%1$d Apps ausgewählt</string>
     <string name="profile_proposals_label">Algorithmen</string>
-    <string name="profile_proposals_intro">Optionale spezifische Algorithmen für IKEv2 und/oder IPsec/ESP die statt der Standardwerte verwendet werden sollen. Eine <a href="https://docs.strongswan.org/docs/5.9/config/IKEv2CipherSuites.html">Liste gültiger Algorithmen</a> kann unserem Wiki entnommen werden (nicht alle werden von dieser App unterstützt). Beide Felder erwarten eine Liste von Algorithmen, jeweils mit einem Bindestrich getrennt.</string>
+    <string name="profile_proposals_intro">Optionale spezifische Algorithmen für IKEv2 und/oder IPsec/ESP die statt der Standardwerte verwendet werden sollen. Eine <a href="https://docs.strongswan.org/docs/latest/config/IKEv2CipherSuites.html">Liste gültiger Algorithmen</a> kann unserem Wiki entnommen werden (nicht alle werden von dieser App unterstützt). Beide Felder erwarten eine Liste von Algorithmen, jeweils mit einem Bindestrich getrennt.</string>
     <string name="profile_proposals_ike_label">IKEv2 Algorithmen</string>
     <string name="profile_proposals_ike_hint">Für non-AEAD/klassische Verschlüsselungsalgorithmen wird ein Integritätsalgorithmus, eine pseudozufällige Funktion (PRF, optional, ansonsten wird eine auf dem Integritätsalgorithmus basierende verwendet) und eine Diffie-Hellman Gruppe benötigt (z.B. aes256-sha256-ecp256). Für kombinierte/AEAD Algorithmen wird der Integritätsalgorithmus weggelassen aber eine PRF wird benötigt (z.B. aes256gcm16-prfsha256-ecp256).</string>
     <string name="profile_proposals_esp_label">IPsec/ESP Algorithmen</string>
     <string name="profile_proposals_esp_hint">Für non-AEAD/klassische Verschlüsselungsalgorithmen wird ein Integritätsalgorithmus benötigt, eine Diffie-Hellman Gruppe ist optional (z.B. aes256-sha256 oder aes256-sha256-ecp256). Für kombinierte/AEAD Algorithmen wird der Integritätsalgorithmus weggelassen (z.B. aes256gcm16 oder aes256gcm16-ecp256). Falls eine DH Gruppe angegeben wird, kommt während dem IPsec SA Rekeying ein DH Schlüsselaustausch zur Anwendung. Beim initialen Verbindungsaufbau hat eine DH Gruppe hier keinen Einfluss, weil die Schlüssel dort von der IKE SA abgeleitet werden. Deshalb wird eine Fehlkonfiguration mit dem Server erst später während dem Rekeying zu einem Fehler führen.</string>
+    <string name="profile_proxy_server_label">HTTP Proxy-Server</string>
+    <string name="profile_proxy_server_intro">Optionaler HTTP Proxy-Server bei Verbindung zum VPN. Dies ist nur eine Empfehlung und kann von Apps ignoriert werden. Bitte beachten, dass Apps, die den Proxy verwenden, unabhängig vom Ziel alle HTTP-Ressourcen darüber abrufen, so dass Split-Tunneling-Einstellungen möglicherweise keine Auswirkungen haben. Um die Verwendung des Proxys für bestimmte Hosts zu vermeiden, kann die Ausschlussliste unten verwendet werden.</string>
+    <string name="profile_proxy_host_label">Proxy-Host</string>
+    <string name="profile_proxy_host_hint">IP-Adresse oder Hostname des HTTP Proxy-Servers, der bei Verbindung zum VPN verwendet werden soll</string>
+    <string name="profile_proxy_port_label">Proxy-Port</string>
+    <string name="profile_proxy_port_hint">Port um auf den HTTP Proxy-Server zuzugreifen, Standardwert ist 8080</string>
+    <string name="profile_proxy_exclusions_label">Proxy-Ausschlussliste</string>
+    <string name="profile_proxy_exclusions_hint">Optionale Liste von Hosts für die der HTTP Proxy-Server nicht verwendet werden soll (mit Leerzeichen getrennt und Platzhalter können verwendet werden, z.B. \"direct.example.net *.example.com\")</string>
     <string name="profile_import">VPN Profil importieren</string>
     <string name="profile_import_failed">VPN Profil-Import fehlgeschlagen</string>
     <string name="profile_import_failed_detail">VPN Profil-Import fehlgeschlagen: %1$s</string>
@@ -136,9 +144,11 @@
     <string name="profile_import_failed_tls">TLS-Handshake fehlgeschlagen</string>
     <string name="profile_import_failed_value">Ungültiger Wert in \"%1$s\"</string>
     <string name="profile_import_exists">Dieses VPN Profil existiert bereits, die bestehenden Einstellungen werden ersetzt.</string>
+    <string name="profile_import_shared_secret">Diese Datei enthält ein Klartext-Passwort. Denken Sie daran, sie nach dem Importieren zu löschen.</string>
     <string name="profile_cert_import">Zertifikat aus VPN Profil importieren</string>
     <string name="profile_cert_alias">Zertifikat für \"%1$s\"</string>
     <string name="profile_profile_id">Profil-ID</string>
+    <string name="profile_managed">Verwaltetes Profil</string>
     <!-- Warnings/Notifications in the details view -->
     <string name="alert_text_no_input_gateway">Ein Wert wird benötigt, um die Verbindung aufbauen zu können</string>
     <string name="alert_text_no_input_username">Bitte geben Sie Ihren Benutzernamen ein</string>
@@ -148,6 +158,7 @@
     <string name="alert_text_no_subnets">Bitte geben Sie mit Leerzeichen getrennte, gültige Subnetzte und/oder IP-Adressen ein</string>
     <string name="alert_text_no_ips">Bitte geben Sie mit Leerzeichen getrennte, gültige IP-Adressen ein</string>
     <string name="alert_text_no_proposal">Bitte geben Sie eine mit Bindestrichen getrennte, gültige Liste von Algorithmen ein</string>
+    <string name="alert_text_vpn_profile_read_only">Dieses Profil wird von Ihrem Administrator verwaltet und kann nicht bearbeitet werden. Nur das Passwort bzw. Benutzer-Zertifikat kann geändert werden</string>
     <string name="tnc_notice_title">EAP-TNC kann Ihre Privatsphäre beeinträchtigen</string>
     <string name="tnc_notice_subtitle">Gerätedaten werden an den Server-Betreiber gesendet</string>
     <string name="tnc_notice_details"><![CDATA[<p>Trusted Network Connect (TNC) erlaubt Server-Betreibern den Gesundheitszustand von Endgeräten zu prüfen.</p><p>Dazu kann der Betreiber Daten verlangen, wie etwa eine eindeutige Identifikationsnummer, eine Liste der installierten Pakete, Systemeinstellungen oder kryptografische Prüfsummen von Dateien.</p><b>Solche Daten werden nur übermittelt nachdem die Identität des Servers geprüft wurde.</b>]]></string>
@@ -223,6 +234,8 @@
     <string name="cancel_retry">Wiederholen abbrechen</string>
     <string name="power_whitelist_title">Akku-Optimierung deaktivieren</string>
     <string name="power_whitelist_text">Bitte den nächsten Dialog bestätigen, um die App auf die weisse Liste für Akku-Optimierung zu setzen, so dass sie NAT keepalives und Rekeyings zeitlich korrekt planen kann, um konstant erreichbar zu bleiben während die VPN-Verbindung besteht.</string>
+    <string name="certificate_required_title">Benutzer-Zertifikat benötigt</string>
+    <string name="certificate_required_text">Bitte bearbeiten Sie das VPN Profil, um eines auszuwählen.</string>
 
     <!-- Quick Settings tile -->
     <string name="tile_default">VPN umschalten</string>

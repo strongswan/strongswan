@@ -2,6 +2,10 @@ name: TKM
 
 on: [push, pull_request]
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   CCACHE_DIR: ${{ github.workspace }}/.ccache
   CCACHE_CONTAINER: /root/.ccache
@@ -18,7 +22,7 @@ jobs:
       - id: skip-check
         uses: fkirc/skip-duplicate-actions@master
         with:
-          concurrent_skipping: 'same_content'
+          concurrent_skipping: 'same_content_newer'
 
   tkm:
     needs: pre-check
@@ -27,8 +31,8 @@ jobs:
     env:
       TEST: tkm
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/cache@v3
+      - uses: actions/checkout@v4
+      - uses: actions/cache@v4
         with:
           path: ${{ env.CCACHE_DIR }}
           key: ccache-tkm-${{ github.sha }}

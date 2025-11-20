@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2015 Tobias Brunner
+ * Copyright (C) 2012-2024 Tobias Brunner
  * Copyright (C) 2012 Giuliano Grassi
  * Copyright (C) 2012 Ralf Sager
  *
@@ -20,6 +20,8 @@ package org.strongswan.android.logic;
 
 import android.util.Log;
 
+import java.beans.PropertyChangeListener;
+import java.beans.PropertyChangeSupport;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
 import java.security.cert.Certificate;
@@ -27,10 +29,9 @@ import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.Hashtable;
-import java.util.Observable;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
-public class TrustedCertificateManager extends Observable
+public class TrustedCertificateManager
 {
 	private static final String TAG = TrustedCertificateManager.class.getSimpleName();
 	private final ReentrantReadWriteLock mLock = new ReentrantReadWriteLock();
@@ -38,6 +39,7 @@ public class TrustedCertificateManager extends Observable
 	private volatile boolean mReload;
 	private boolean mLoaded;
 	private final ArrayList<KeyStore> mKeyStores = new ArrayList<KeyStore>();
+	private PropertyChangeSupport mObservers = new PropertyChangeSupport(this);
 
 	public enum TrustedCertificateSource
 	{
@@ -99,6 +101,35 @@ public class TrustedCertificateManager extends Observable
 	}
 
 	/**
+	 * Add an observer for changes to the trusted certificate store.  There will
+	 * be a "storeChanged" property "change" when anything in the store changed.
+	 *
+	 * @param observer observer to add
+	 */
+	public void addObserver(PropertyChangeListener observer)
+	{
+		mObservers.addPropertyChangeListener(observer);
+	}
+
+	/**
+	 * Remove an observer for changes to the trusted certificate store.
+	 *
+	 * @param observer observer to remove
+	 */
+	public void deleteObserver(PropertyChangeListener observer)
+	{
+		mObservers.removePropertyChangeListener(observer);
+	}
+
+	/**
+	 * Use a fake property with a forced change to notify observers.
+	 */
+	private void notifyObservers()
+	{
+		mObservers.firePropertyChange("storeChanged", false, true);
+	}
+
+	/**
 	 * Invalidates the current load state so that the next call to load()
 	 * will force a reload of the cached CA certificates.
 	 *
@@ -110,7 +141,6 @@ public class TrustedCertificateManager extends Observable
 	{
 		Log.d(TAG, "Force reload of cached CA certificates on next load");
 		this.mReload = true;
-		this.setChanged();
 		this.notifyObservers();
 		return this;
 	}
@@ -152,7 +182,6 @@ public class TrustedCertificateManager extends Observable
 		this.mCACerts = certs;
 		if (!this.mLoaded)
 		{
-			this.setChanged();
 			this.notifyObservers();
 			this.mLoaded = true;
 		}

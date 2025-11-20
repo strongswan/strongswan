@@ -2,6 +2,10 @@ name: SonarCloud
 
 on: [push]
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   CCACHE_BASEDIR: ${{ github.workspace }}
   CCACHE_COMPRESS: true
@@ -17,7 +21,7 @@ jobs:
       - id: skip-check
         uses: fkirc/skip-duplicate-actions@master
         with:
-          concurrent_skipping: 'same_content'
+          concurrent_skipping: 'same_content_newer'
 
   sonarcloud:
     needs: pre-check
@@ -26,14 +30,13 @@ jobs:
     env:
       TEST: sonarcloud
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - uses: actions/cache@v3
+      - uses: actions/cache@v4
         with:
           path: |
             ~/.cache/ccache
-            ~/.sonar-cache
           key: ccache-sonarcloud-${{ github.sha }}
           restore-keys: |
             ccache-sonarcloud-
@@ -41,24 +44,17 @@ jobs:
           sudo apt-get install -qq ccache
           echo "PATH=/usr/lib/ccache:$PATH" >> $GITHUB_ENV
           ccache -z
-      # using SonarSource/sonarcloud-github-action is currently not recommended
-      # for C builds, so we follow the "any CI" instructions
-      - name: Install sonar-scanner
+      - uses: SonarSource/sonarqube-scan-action/install-build-wrapper@v6.0.0
+      - run: |
+          echo "BUILD_WRAPPER_OUT_DIR=$HOME/bw-output" >> $GITHUB_ENV
+      - uses: ./.github/actions/default
+      - uses: SonarSource/sonarqube-scan-action@v6.0.0
         env:
-          SONAR_SCANNER_VERSION: 4.6.2.2472
-        run: |
-          export SONAR_SCANNER_HOME=$HOME/.sonar/sonar-scanner-$SONAR_SCANNER_VERSION-linux
-          curl --create-dirs -sSLo $HOME/.sonar/sonar-scanner.zip https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-$SONAR_SCANNER_VERSION-linux.zip
-          unzip -o $HOME/.sonar/sonar-scanner.zip -d $HOME/.sonar/
-          echo "SONAR_SCANNER_OPTS=-server" >> $GITHUB_ENV
-          curl --create-dirs -sSLo $HOME/.sonar/build-wrapper-linux-x86.zip https://sonarcloud.io/static/cpp/build-wrapper-linux-x86.zip
-          unzip -o $HOME/.sonar/build-wrapper-linux-x86.zip -d $HOME/.sonar/
-          echo "PATH=$HOME/.sonar/build-wrapper-linux-x86:$SONAR_SCANNER_HOME/bin:$PATH" >> $GITHUB_ENV
-      - env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          BUILD_NUMBER: ${{ github.run_id }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-          SONAR_PROJECT: ${{ secrets.SONAR_PROJECT }}
-          SONAR_ORGANIZATION: ${{ secrets.SONAR_ORGANIZATION }}
-        uses: ./.github/actions/default
+        with:
+          args: >
+            -Dsonar.projectKey=${{ secrets.SONAR_PROJECT }}
+            -Dsonar.organization=${{ secrets.SONAR_ORGANIZATION }}
+            -Dsonar.cfamily.threads=2
+            -Dsonar.cfamily.compile-commands=${{ env.BUILD_WRAPPER_OUT_DIR }}/compile_commands.json
       - run: ccache -s

@@ -1,5 +1,16 @@
-# 2.4.2 #
+# 2.6.2 #
 
-- Increased target SDK to Android 13 and ask for permission to show status notification
-- Enable hardware acceleration in OpenSSL
-- Use a more stable approach to determine source IP
+- Fix edge-to-edge layout issues with settings and app selection
+
+# 2.6.1 #
+
+- Update OpenSSL to support ML-KEM (requires explicit configuration in proposals)
+- Fix vulnerability in eap-mschapv2 plugin
+- Fix filename when exporting the log
+
+# 2.6.0 #
+
+- Allow preselecting a user certificate via alias in managed profiles
+- Allow selecting a user certificate for managed profiles
+- Fix reading split-tunneling settings in managed profiles
+- Adapt to edge-to-edge display

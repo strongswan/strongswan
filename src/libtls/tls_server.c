@@ -444,7 +444,7 @@ static status_t process_client_hello(private_tls_server_t *this,
 	if (this->tls->get_version_max(this->tls) >= TLS_1_3 && !this->hashsig.len)
 	{
 		DBG1(DBG_TLS, "no %N extension received", tls_extension_names,
-			 TLS_MISSING_EXTENSION);
+			 TLS_EXT_SIGNATURE_ALGORITHMS);
 		this->alert->add(this->alert, TLS_FATAL, TLS_MISSING_EXTENSION);
 		return NEED_MORE;
 	}
@@ -1483,20 +1483,23 @@ static status_t send_certificate_request(private_tls_server_t *this,
 }
 
 /**
- * Try to find a curve supported by both, client and server
+ * Try to find a curve/group supported by both, client and server
  */
 static bool find_supported_curve(private_tls_server_t *this,
-								 tls_named_group_t *curve)
+								 tls_named_group_t *curve,
+								 key_exchange_method_t *group)
 {
 	tls_named_group_t current;
+	key_exchange_method_t current_group;
 	enumerator_t *enumerator;
 
 	enumerator = this->crypto->create_ec_enumerator(this->crypto);
-	while (enumerator->enumerate(enumerator, NULL, &current))
+	while (enumerator->enumerate(enumerator, &current_group, &current))
 	{
 		if (peer_supports_curve(this, current))
 		{
 			*curve = current;
+			*group = current_group;
 			enumerator->destroy(enumerator);
 			return TRUE;
 		}
@@ -1520,7 +1523,7 @@ static status_t send_server_key_exchange(private_tls_server_t *this,
 	{
 		curve = tls_ec_group_to_curve(group);
 		if (!curve || (!peer_supports_curve(this, curve) &&
-					   !find_supported_curve(this, &curve)))
+					   !find_supported_curve(this, &curve, &group)))
 		{
 			DBG1(DBG_TLS, "no EC group supported by client and server");
 			this->alert->add(this->alert, TLS_FATAL, TLS_HANDSHAKE_FAILURE);

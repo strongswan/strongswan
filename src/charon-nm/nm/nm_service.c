@@ -214,6 +214,10 @@ static void signal_ip_config(NMVpnServicePlugin *plugin,
 
 	handler = priv->handler;
 
+	/* we can reconnect automatically if interfaces change */
+	g_variant_builder_add (&builder, "{sv}", NM_VPN_PLUGIN_CAN_PERSIST,
+						   g_variant_new_boolean (TRUE));
+
 	/* NM apparently requires to know the gateway (it uses it to install a
 	 * direct route via physical interface if conflicting routes are passed) */
 	other = ike_sa->get_other_host(ike_sa);
@@ -675,6 +679,51 @@ static bool add_auth_cfg_pw(NMStrongswanPluginPrivate *priv,
 }
 
 /**
+ * Add traffic selectors to the given config, optionally parse them from a
+ * semicolon-separated list.
+ */
+static bool add_traffic_selectors(child_cfg_t *child_cfg, bool local,
+								  const char *list, GError **err)
+{
+	enumerator_t *enumerator;
+	traffic_selector_t *ts;
+	char *token;
+
+	if (list && strlen(list))
+	{
+		enumerator = enumerator_create_token(list, ";", "");
+		while (enumerator->enumerate(enumerator, &token))
+		{
+			ts = traffic_selector_create_from_cidr(token, 0, 0, 65535);
+			if (!ts)
+			{
+				g_set_error(err, NM_VPN_PLUGIN_ERROR,
+							NM_VPN_PLUGIN_ERROR_LAUNCH_FAILED,
+							"Invalid %s traffic selector '%s'.",
+							local ? "local" : "remote", token);
+				enumerator->destroy(enumerator);
+				return FALSE;
+			}
+			child_cfg->add_traffic_selector(child_cfg, local, ts);
+		}
+		enumerator->destroy(enumerator);
+	}
+	else if (local)
+	{
+		ts = traffic_selector_create_dynamic(0, 0, 65535);
+		child_cfg->add_traffic_selector(child_cfg, TRUE, ts);
+	}
+	else
+	{
+		ts = traffic_selector_create_from_cidr("0.0.0.0/0", 0, 0, 65535);
+		child_cfg->add_traffic_selector(child_cfg, FALSE, ts);
+		ts = traffic_selector_create_from_cidr("::/0", 0, 0, 65535);
+		child_cfg->add_traffic_selector(child_cfg, FALSE, ts);
+	}
+	return TRUE;
+}
+
+/**
  * Connect function called from NM via DBUS
  */
 static gboolean connect_(NMVpnServicePlugin *plugin, NMConnection *connection,
@@ -692,7 +741,6 @@ static gboolean connect_(NMVpnServicePlugin *plugin, NMConnection *connection,
 	ike_cfg_t *ike_cfg;
 	peer_cfg_t *peer_cfg;
 	child_cfg_t *child_cfg;
-	traffic_selector_t *ts;
 	ike_sa_t *ike_sa;
 	auth_cfg_t *auth;
 	certificate_t *cert = NULL;
@@ -912,10 +960,9 @@ static gboolean connect_(NMVpnServicePlugin *plugin, NMConnection *connection,
 	if (priv->xfrmi_id)
 	{	/* set the same mark as for IKE packets on the ESP packets so no routing
 		 * loop is created if the TS covers the VPN server's IP */
-		child.set_mark_out = (mark_t){
-			.value = 220,
-			.mask = 0xffffffff,
-		};
+		mark_from_string(lib->settings->get_str(lib->settings,
+							"charon-nm.plugins.socket-default.fwmark", NULL),
+						 MARK_OP_NONE, &child.set_mark_out);
 		child.if_id_in = child.if_id_out = priv->xfrmi_id;
 	}
 
@@ -946,36 +993,22 @@ static gboolean connect_(NMVpnServicePlugin *plugin, NMConnection *connection,
 		child_cfg->add_proposal(child_cfg, proposal_create_default_aead(PROTO_ESP));
 		child_cfg->add_proposal(child_cfg, proposal_create_default(PROTO_ESP));
 	}
-	ts = traffic_selector_create_dynamic(0, 0, 65535);
-	child_cfg->add_traffic_selector(child_cfg, TRUE, ts);
+
+	str = nm_setting_vpn_get_data_item(vpn, "local-ts");
+	if (!add_traffic_selectors(child_cfg, TRUE, str, err))
+	{
+		child_cfg->destroy(child_cfg);
+		peer_cfg->destroy(peer_cfg);
+		return FALSE;
+	}
 	str = nm_setting_vpn_get_data_item(vpn, "remote-ts");
-	if (str && strlen(str))
+	if (!add_traffic_selectors(child_cfg, FALSE, str, err))
 	{
-		enumerator = enumerator_create_token(str, ";", "");
-		while (enumerator->enumerate(enumerator, &str))
-		{
-			ts = traffic_selector_create_from_cidr((char*)str, 0, 0, 65535);
-			if (!ts)
-			{
-				g_set_error(err, NM_VPN_PLUGIN_ERROR,
-							NM_VPN_PLUGIN_ERROR_LAUNCH_FAILED,
-							"Invalid remote traffic selector.");
-				enumerator->destroy(enumerator);
-				child_cfg->destroy(child_cfg);
-				peer_cfg->destroy(peer_cfg);
-				return FALSE;
-			}
-			child_cfg->add_traffic_selector(child_cfg, FALSE, ts);
-		}
-		enumerator->destroy(enumerator);
+		child_cfg->destroy(child_cfg);
+		peer_cfg->destroy(peer_cfg);
+		return FALSE;
 	}
-	else
-	{
-		ts = traffic_selector_create_from_cidr("0.0.0.0/0", 0, 0, 65535);
-		child_cfg->add_traffic_selector(child_cfg, FALSE, ts);
-		ts = traffic_selector_create_from_cidr("::/0", 0, 0, 65535);
-		child_cfg->add_traffic_selector(child_cfg, FALSE, ts);
-	}
+
 	peer_cfg->add_child_cfg(peer_cfg, child_cfg);
 
 	/**

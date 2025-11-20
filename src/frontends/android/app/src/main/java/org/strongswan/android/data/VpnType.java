@@ -17,6 +17,10 @@
 package org.strongswan.android.data;
 
 import java.util.EnumSet;
+import java.util.Objects;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 public enum VpnType
 {
@@ -32,11 +36,19 @@ public enum VpnType
 	 */
 	public enum VpnTypeFeature
 	{
-		/** client certificate is required */
+		/**
+		 * Client certificate is required
+		 */
 		CERTIFICATE,
-		/** username and password are required */
+
+		/**
+		 * Username and password are required
+		 */
 		USER_PASS,
-		/** enable BYOD features */
+
+		/**
+		 * Enable BYOD features
+		 */
 		BYOD;
 	}
 
@@ -48,7 +60,6 @@ public enum VpnType
 	 *
 	 * @param id identifier used to store and transmit this specific type
 	 * @param features of the given VPN type
-	 * @param certificate true if a client certificate is required
 	 */
 	VpnType(String id, EnumSet<VpnTypeFeature> features)
 	{
@@ -58,6 +69,7 @@ public enum VpnType
 
 	/**
 	 * The identifier used to store this value in the database
+	 *
 	 * @return identifier
 	 */
 	public String getIdentifier()
@@ -81,11 +93,12 @@ public enum VpnType
 	 * @param identifier get the enum entry with this identifier
 	 * @return the enum entry, or the default if not found
 	 */
-	public static VpnType fromIdentifier(String identifier)
+	@NonNull
+	public static VpnType fromIdentifier(@Nullable String identifier)
 	{
 		for (VpnType type : VpnType.values())
 		{
-			if (identifier.equals(type.mIdentifier))
+			if (Objects.equals(identifier, type.mIdentifier))
 			{
 				return type;
 			}

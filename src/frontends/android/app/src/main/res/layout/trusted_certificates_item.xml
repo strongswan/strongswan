@@ -30,7 +30,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_below="@id/subject_primary"
-        android:layout_alignLeft="@id/subject_primary"
+        android:layout_alignStart="@id/subject_primary"
         android:textAppearance="?android:attr/textAppearanceSmall"
         android:textColor="?android:attr/textColorSecondary" />
 
