@@ -52,36 +52,31 @@ public class LogActivity extends AppCompatActivity
 	@Override
 	public boolean onOptionsItemSelected(MenuItem item)
 	{
-		switch (item.getItemId())
-		{
-			case android.R.id.home:
-				finish();
+		int itemId = item.getItemId();
+		if (itemId == android.R.id.home) {
+			finish();
+			return true;
+		} else if (itemId == R.id.menu_send_log) {
+			File logfile = new File(getFilesDir(), CharonVpnService.LOG_FILE);
+			if (!logfile.exists() || logfile.length() == 0) {
+				Toast.makeText(this, getString(R.string.empty_log), Toast.LENGTH_SHORT).show();
 				return true;
-			case R.id.menu_send_log:
-				File logfile = new File(getFilesDir(), CharonVpnService.LOG_FILE);
-				if (!logfile.exists() || logfile.length() == 0)
-				{
-					Toast.makeText(this, getString(R.string.empty_log), Toast.LENGTH_SHORT).show();
-					return true;
-				}
+			}
 
-				String version = "";
-				try
-				{
-					version = getPackageManager().getPackageInfo(getPackageName(), 0).versionName;
-				}
-				catch (NameNotFoundException e)
-				{
-					e.printStackTrace();
-				}
+			String version = "";
+			try {
+				version = getPackageManager().getPackageInfo(getPackageName(), 0).versionName;
+			} catch (NameNotFoundException e) {
+				e.printStackTrace();
+			}
 
-				Intent intent = new Intent(Intent.ACTION_SEND);
-				intent.putExtra(Intent.EXTRA_EMAIL, new String[]{MainActivity.CONTACT_EMAIL});
-				intent.putExtra(Intent.EXTRA_SUBJECT, String.format(getString(R.string.log_mail_subject), version));
-				intent.setType("text/plain");
-				intent.putExtra(Intent.EXTRA_STREAM, LogContentProvider.createContentUri());
-				startActivity(Intent.createChooser(intent, getString(R.string.send_log)));
-				return true;
+			Intent intent = new Intent(Intent.ACTION_SEND);
+			intent.putExtra(Intent.EXTRA_EMAIL, new String[]{MainActivity.CONTACT_EMAIL});
+			intent.putExtra(Intent.EXTRA_SUBJECT, String.format(getString(R.string.log_mail_subject), version));
+			intent.setType("text/plain");
+			intent.putExtra(Intent.EXTRA_STREAM, LogContentProvider.createContentUri());
+			startActivity(Intent.createChooser(intent, getString(R.string.send_log)));
+			return true;
 		}
 		return super.onOptionsItemSelected(item);
 	}

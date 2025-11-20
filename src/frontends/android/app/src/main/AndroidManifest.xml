@@ -64,6 +64,10 @@
                 <action android:name="org.strongswan.android.action.DISCONNECT" />
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
+            <intent-filter>
+                <action android:name="org.strongswan.android.action.STATUS" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
         </activity>
         <activity
             android:name=".ui.VpnProfileDetailActivity" >
@@ -184,14 +188,14 @@
             </intent-filter>
         </service>
 
-        <provider
-            android:name=".data.LogContentProvider"
-            android:authorities="org.strongswan.android.content.log"
-            android:exported="true" >
-            <!-- android:grantUriPermissions="true" combined with a custom permission does
-                 not work (probably too many indirections with ACTION_SEND) so we secure
-                 this provider with a custom ticketing system -->
-        </provider>
-    </application>
+        <!--        <provider
+                    android:name=".data.LogContentProvider"
+                    android:authorities="org.strongswan.android.content.log"
+                    android:exported="true" > -->
+                    <!-- android:grantUriPermissions="true" combined with a custom permission does
+                         not work (probably too many indirections with ACTION_SEND) so we secure
+                         this provider with a custom ticketing system -->
+        <!--        </provider> -->
+            </application>
 
-</manifest>
+        </manifest>

@@ -1,12 +1,18 @@
-apply plugin: 'com.android.application'
+plugins {
+//    id "com.android.application"
+    id "com.android.library"
+    id "maven-publish"
+}
 
 android {
     compileSdkVersion 33
 
     namespace 'org.strongswan.android'
+    
+    ndkVersion rootProject.ext.ndkVersion
 
     defaultConfig {
-        applicationId "org.strongswan.android"
+//        applicationId "org.strongswan.android"
         minSdkVersion 21
         targetSdkVersion 33
         versionCode 80
@@ -19,12 +25,12 @@ android {
 
     task buildNative(type: Exec) {
         workingDir 'src/main/jni'
-        commandLine "${android.ndkDirectory}/ndk-build", '-j', Runtime.runtime.availableProcessors()
+        commandLine "${android.ndkDirectory}\\ndk-build.cmd", '-j', Runtime.runtime.availableProcessors()
     }
 
     task cleanNative(type: Exec) {
         workingDir 'src/main/jni'
-        commandLine "${android.ndkDirectory}/ndk-build", 'clean'
+        commandLine "${android.ndkDirectory}\\ndk-build.cmd", 'clean'
     }
 
     tasks.withType(JavaCompile) {
@@ -56,4 +62,19 @@ dependencies {
     testImplementation 'org.powermock:powermock-core:2.0.9'
     testImplementation 'org.powermock:powermock-module-junit4:2.0.9'
     testImplementation 'org.powermock:powermock-api-mockito2:2.0.9'
+}
+
+// This is also for the maven-publish plugin. It will publish a "-sources" jar file along with the compiled jar.
+publishing {
+    publications {
+        release(MavenPublication){
+            groupId = "org.strongswan.android"
+            artifactId = "strongswan"
+            version = "1.0"
+
+            afterEvaluate {
+                from components.release
+            }
+        }
+    }
 }

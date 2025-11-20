@@ -34,6 +34,7 @@ import android.os.Bundle;
 import android.os.IBinder;
 import android.os.PowerManager;
 import android.provider.Settings;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.EditText;
@@ -62,8 +63,10 @@ import androidx.preference.PreferenceManager;
 
 public class VpnProfileControlActivity extends AppCompatActivity
 {
+    private static final String TAG = "VpnProfileCtlAct";
 	public static final String START_PROFILE = "org.strongswan.android.action.START_PROFILE";
 	public static final String DISCONNECT = "org.strongswan.android.action.DISCONNECT";
+	public static final String STATUS = "org.strongswan.android.action.STATUS";
 	public static final String EXTRA_VPN_PROFILE_ID = "org.strongswan.android.VPN_PROFILE_ID";
 
 	private static final String WAITING_FOR_RESULT = "WAITING_FOR_RESULT";
@@ -447,12 +450,22 @@ public class VpnProfileControlActivity extends AppCompatActivity
 	}
 
 	/**
+	 * Disconnect the current connection, if any (silently ignored if there is no connection).
+	 *
+	 * @param intent Intent that caused us to start this
+	 */
+	private void status(Intent intent)
+	{
+    }
+    
+	/**
 	 * Handle the Intent of this Activity depending on its action
 	 */
 	private void handleIntent()
 	{
 		Intent intent = getIntent();
 
+        Log.d(TAG, "intent " + intent.getAction());
 		if (START_PROFILE.equals(intent.getAction()))
 		{
 			startVpnProfile(intent);
@@ -460,6 +473,10 @@ public class VpnProfileControlActivity extends AppCompatActivity
 		else if (DISCONNECT.equals(intent.getAction()))
 		{
 			disconnect(intent);
+		}
+		else if (STATUS.equals(intent.getAction()))
+		{
+			status(intent);
 		}
 	}
 

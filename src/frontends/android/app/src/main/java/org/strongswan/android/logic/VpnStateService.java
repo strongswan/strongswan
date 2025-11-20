@@ -26,6 +26,7 @@ import android.os.IBinder;
 import android.os.Looper;
 import android.os.Message;
 import android.os.SystemClock;
+import android.util.Log;
 
 import org.strongswan.android.R;
 import org.strongswan.android.data.VpnProfile;
@@ -46,6 +47,7 @@ import androidx.core.content.ContextCompat;
 
 public class VpnStateService extends Service
 {
+    private static final String TAG = "VpnStateService";
 	private final HashSet<VpnStateListener> mListeners = new HashSet<VpnStateListener>();
 	private final IBinder mBinder = new LocalBinder();
 	private long mConnectionID = 0;
@@ -363,6 +365,7 @@ public class VpnStateService extends Service
 					{	/* otherwise there is no need to notify the listeners */
 						for (VpnStateListener listener : mListeners)
 						{
+							Log.d(TAG, "notifyListeners");
 							listener.stateChanged();
 						}
 					}
@@ -560,6 +563,7 @@ public class VpnStateService extends Service
 
 				for (VpnStateListener listener : mService.get().mListeners)
 				{
+					Log.d(TAG, "handleMessage");
 					listener.stateChanged();
 				}
 				sendMessageAtTime(obtainMessage(RETRY_MSG), next);

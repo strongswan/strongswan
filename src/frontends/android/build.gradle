@@ -1,4 +1,7 @@
 buildscript {
+    ext {
+        ndkVersion = "25.2.9519653"
+    }
     repositories {
         mavenCentral()
         google()
