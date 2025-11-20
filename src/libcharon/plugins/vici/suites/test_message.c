@@ -284,6 +284,24 @@ START_TEST(test_builder)
 }
 END_TEST
 
+START_TEST(test_builder_limits)
+{
+	vici_builder_t *b;
+
+	b = vici_builder_create();
+	b->add(b, VICI_SECTION_START, "this-section-name-is-too-long-to-be-encoded-this-section-name-is-too-long-to-be-encoded-this-section-name-is-too-long-to-be-encoded-this-section-name-is-too-long-to-be-encoded-this-section-name-is-too-long-to-be-encoded-this-section-name-is-too-long-to-be-encoded");
+	b->add(b,  VICI_KEY_VALUE, "key1", chunk_from_str("value1"));
+	b->add(b, VICI_SECTION_END);
+	ck_assert(!b->finalize(b));
+
+	b = vici_builder_create();
+	b->add(b, VICI_SECTION_START, "section1");
+	b->add(b,  VICI_KEY_VALUE, "this-key-value-name-is-too-long-to-be-encoded-this-key-value-name-is-too-long-to-be-encoded-this-key-value-name-is-too-long-to-be-encoded-this-key-value-name-is-too-long-to-be-encoded-this-key-value-name-is-too-long-to-be-encoded-this-key-value-name-is-too-long-to-be-encoded", chunk_from_str("value1"));
+	b->add(b, VICI_SECTION_END);
+	ck_assert(!b->finalize(b));
+}
+END_TEST
+
 START_TEST(test_builder_fmt)
 {
 	enumerator_t *parse, *tmpl;
@@ -426,6 +444,7 @@ Suite *message_suite_create()
 
 	tc = tcase_create("builder encode");
 	tcase_add_test(tc, test_builder);
+	tcase_add_test(tc, test_builder_limits);
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("builder format encode");
