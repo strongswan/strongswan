@@ -39,7 +39,7 @@ build_botan()
 
 build_wolfssl()
 {
-	WOLFSSL_REV=v5.8.2-stable
+	WOLFSSL_REV=v5.8.4-stable
 	WOLFSSL_DIR=$DEPS_BUILD_DIR/wolfssl
 
 	if test -d "$WOLFSSL_DIR"; then
@@ -57,7 +57,7 @@ build_wolfssl()
 					--enable-curve25519 --enable-curve448 --enable-des3
 					--enable-ecccustcurves --enable-ed25519 --enable-ed448
 					--enable-keygen --enable-mlkem --with-max-rsa-bits=8192
-					--enable-md4 --enable-rsapss --enable-sha3 --enable-shake256"
+					--enable-rsapss --enable-sha3 --enable-shake256"
 
 	git clone https://github.com/wolfSSL/wolfssl.git $WOLFSSL_DIR &&
 	cd $WOLFSSL_DIR &&
