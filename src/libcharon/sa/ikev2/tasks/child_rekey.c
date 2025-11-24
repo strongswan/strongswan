@@ -400,7 +400,7 @@ METHOD(task_t, build_r, status_t,
 {
 	notify_payload_t *notify;
 	child_cfg_t *config;
-	child_sa_t *child_sa;
+	child_sa_t *child_sa, *old_replacement;
 	child_sa_state_t state = CHILD_INSTALLED;
 	uint32_t reqid;
 	bool followup_sent = FALSE;
@@ -470,6 +470,13 @@ METHOD(task_t, build_r, status_t,
 	if (child_sa && child_sa->get_state(child_sa) == CHILD_INSTALLED)
 	{
 		this->child_sa->set_state(this->child_sa, CHILD_REKEYED);
+		/* we've seen peers sending multiple rekey requests (probably a bug in
+		 * their collision handling), so make sure we unlink any previous SA */
+		old_replacement = this->child_sa->get_rekey_sa(this->child_sa);
+		if (old_replacement)
+		{
+			old_replacement->set_rekey_sa(old_replacement, NULL);
+		}
 		/* link the SAs to handle possible collisions */
 		this->child_sa->set_rekey_sa(this->child_sa, child_sa);
 		child_sa->set_rekey_sa(child_sa, this->child_sa);
