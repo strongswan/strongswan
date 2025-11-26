@@ -15,6 +15,7 @@
  */
 
 #include <stdio.h>
+#include <fcntl.h>
 #include <inttypes.h>
 #include <net/if.h>
 
@@ -54,6 +55,8 @@ typedef struct {
 	tun_device_t *tun;
 	/* name of the connection */
 	char *name;
+	/* temporary files for safe access */
+	GPtrArray *safe_files;
 } NMStrongswanPluginPrivate;
 
 G_DEFINE_TYPE_WITH_PRIVATE(NMStrongswanPlugin, nm_strongswan_plugin, NM_TYPE_VPN_SERVICE_PLUGIN)
@@ -422,6 +425,100 @@ METHOD(listener_t, child_updown, bool,
 }
 
 /**
+ * Determine the user configured in the given connection (if any).
+ */
+static const char *get_connection_permission_user(NMConnection *connection)
+{
+	NMSettingConnection *s_con;
+	const char *ptype, *pitem, *pdetail;
+	guint num_perms, i;
+
+	s_con = nm_connection_get_setting_connection(connection);
+	if (s_con)
+	{
+		num_perms = nm_setting_connection_get_num_permissions(s_con);
+		if (num_perms > 0)
+		{
+			for (i = 0; i < num_perms; i++)
+			{
+				if (nm_setting_connection_get_permission(s_con, i, &ptype,
+														 &pitem, &pdetail) &&
+					streq(ptype, "user"))
+				{
+					return pitem;
+				}
+			}
+		}
+	}
+	return NULL;
+}
+
+/**
+ * Given a file name and an (optional) user name owning the connection, returns
+ * the file name to be used in the configuration.
+ *
+ * If the user is set, the file is accessed on behalf of the user, and copied
+ * safely to a temporary file readable only by root.
+ *
+ * The returned file name must be freed by the caller.
+ */
+static char *access_file(NMStrongswanPluginPrivate *priv, const char *filename,
+						 const char *user, GError **err)
+{
+#ifdef HAVE_NM_UTILS_COPY_CERT_AS_USER
+	if (user)
+	{
+		char *tmp = nm_utils_copy_cert_as_user(filename, user, err);
+		if (tmp)
+		{
+			g_ptr_array_add(priv->safe_files, g_strdup(tmp));
+		}
+		return tmp;
+	}
+#endif
+	return g_strdup(filename);
+}
+
+/**
+ * Read the contents of the given file. If an (optional) user name owning
+ * the connection is given, the file is accessed safely on behalf of that user.
+ *
+ * We have to do this explicitly via open() because SELinux policies prevent us
+ * from using mmap(), which BUILD_FROM_FILE would use.
+ */
+static chunk_t read_safe_file(NMStrongswanPluginPrivate *priv,
+							  const char *filename, const char *user,
+							  GError **err)
+{
+	chunk_t chunk = chunk_empty;
+	char *safe_path;
+	int fd;
+
+	safe_path = access_file(priv, filename, user, err);
+	if (safe_path)
+	{
+		fd = open(safe_path, O_RDONLY);
+		if (fd != -1)
+		{
+			if (!chunk_from_fd(fd, &chunk))
+			{
+				g_set_error(err, NM_VPN_PLUGIN_ERROR,
+						NM_VPN_PLUGIN_ERROR_BAD_ARGUMENTS,
+						"Unable to read '%s': %s", safe_path, strerror(errno));
+			}
+			close(fd);
+		}
+		else
+		{
+			g_set_error(err, NM_VPN_PLUGIN_ERROR,
+						NM_VPN_PLUGIN_ERROR_BAD_ARGUMENTS,
+						"Unable to open '%s': %s", safe_path, strerror(errno));
+		}
+	}
+	return chunk;
+}
+
+/**
  * Find a certificate for which we have a private key on a smartcard
  */
 static identification_t *find_smartcard_key(NMStrongswanPluginPrivate *priv,
@@ -479,12 +576,13 @@ static identification_t *find_smartcard_key(NMStrongswanPluginPrivate *priv,
  */
 static bool add_auth_cfg_cert(NMStrongswanPluginPrivate *priv,
 							  NMSettingVpn *vpn, peer_cfg_t *peer_cfg,
-							  GError **err)
+							  const char *user, GError **err)
 {
 	identification_t *id = NULL;
 	certificate_t *cert = NULL;
 	auth_cfg_t *auth;
 	const char *str, *method, *cert_source;
+	chunk_t safe_file;
 
 	method = nm_setting_vpn_get_data_item(vpn, "method");
 	cert_source = nm_setting_vpn_get_data_item(vpn, "cert-source") ?: method;
@@ -514,8 +612,14 @@ static bool add_auth_cfg_cert(NMStrongswanPluginPrivate *priv,
 
 		bool agent = streq(cert_source, "agent");
 
+		safe_file = read_safe_file(priv, str, user, err);
+		if (!safe_file.ptr)
+		{
+			return FALSE;
+		}
 		cert = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509,
-								  BUILD_FROM_FILE, str, BUILD_END);
+								  BUILD_BLOB, safe_file, BUILD_END);
+		chunk_clear(&safe_file);
 		if (!cert)
 		{
 			g_set_error(err, NM_VPN_PLUGIN_ERROR,
@@ -555,8 +659,14 @@ static bool add_auth_cfg_cert(NMStrongswanPluginPrivate *priv,
 			{
 				priv->creds->set_key_password(priv->creds, secret);
 			}
+			safe_file = read_safe_file(priv, str, user, err);
+			if (!safe_file.ptr)
+			{
+				return FALSE;
+			}
 			private = lib->creds->create(lib->creds, CRED_PRIVATE_KEY,
-									KEY_ANY, BUILD_FROM_FILE, str, BUILD_END);
+								KEY_ANY, BUILD_BLOB, safe_file, BUILD_END);
+			chunk_clear(&safe_file);
 			if (!private)
 			{
 				g_set_error(err, NM_VPN_PLUGIN_ERROR,
@@ -735,7 +845,8 @@ static gboolean connect_(NMVpnServicePlugin *plugin, NMConnection *connection,
 	NMSettingVpn *vpn;
 	enumerator_t *enumerator;
 	identification_t *gateway = NULL;
-	const char *str, *method;
+	const char *str, *method, *user;
+	chunk_t safe_file;
 	bool virtual, proposal;
 	proposal_t *prop;
 	ike_cfg_t *ike_cfg;
@@ -790,6 +901,8 @@ static gboolean connect_(NMVpnServicePlugin *plugin, NMConnection *connection,
 	DBG4(DBG_CFG, "%s",
 		 nm_setting_to_string(NM_SETTING(vpn)));
 
+	user = get_connection_permission_user(connection);
+
 	ike.remote = (char*)nm_setting_vpn_get_data_item(vpn, "address");
 	if (!ike.remote || !*ike.remote)
 	{
@@ -818,8 +931,14 @@ static gboolean connect_(NMVpnServicePlugin *plugin, NMConnection *connection,
 	str = nm_setting_vpn_get_data_item(vpn, "certificate");
 	if (str)
 	{
+		safe_file = read_safe_file(priv, str, user, err);
+		if (!safe_file.ptr)
+		{
+			return FALSE;
+		}
 		cert = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509,
-								  BUILD_FROM_FILE, str, BUILD_END);
+								  BUILD_BLOB, safe_file, BUILD_END);
+		chunk_clear(&safe_file);
 		if (!cert)
 		{
 			g_set_error(err, NM_VPN_PLUGIN_ERROR,
@@ -907,7 +1026,7 @@ static gboolean connect_(NMVpnServicePlugin *plugin, NMConnection *connection,
 		streq(method, "agent") ||
 		streq(method, "smartcard"))
 	{
-		if (!add_auth_cfg_cert (priv, vpn, peer_cfg, err))
+		if (!add_auth_cfg_cert(priv, vpn, peer_cfg, user, err))
 		{
 			peer_cfg->destroy(peer_cfg);
 			ike_cfg->destroy(ike_cfg);
@@ -1053,10 +1172,12 @@ static gboolean connect_(NMVpnServicePlugin *plugin, NMConnection *connection,
 static gboolean need_secrets(NMVpnServicePlugin *plugin, NMConnection *connection,
 							 const char **setting_name, GError **error)
 {
+	NMStrongswanPluginPrivate *priv;
 	NMSettingVpn *settings;
 	const char *method, *cert_source, *path;
 	bool need_secret = FALSE;
 
+	priv = NM_STRONGSWAN_PLUGIN_GET_PRIVATE((NMStrongswanPlugin*)plugin);
 	settings = NM_SETTING_VPN(nm_connection_get_setting(connection,
 														NM_TYPE_SETTING_VPN));
 	method = nm_setting_vpn_get_data_item(settings, "method");
@@ -1088,18 +1209,27 @@ static gboolean need_secrets(NMVpnServicePlugin *plugin, NMConnection *connectio
 				if (path)
 				{
 					private_key_t *key;
+					const char *user;
+					chunk_t safe_file;
 
-					/* try to load/decrypt the private key */
-					key = lib->creds->create(lib->creds, CRED_PRIVATE_KEY,
-									KEY_ANY, BUILD_FROM_FILE, path, BUILD_END);
-					if (key)
+					user = get_connection_permission_user(connection);
+					safe_file = read_safe_file(priv, path, user, error);
+					if (safe_file.ptr)
 					{
-						key->destroy(key);
-						need_secret = FALSE;
-					}
-					else if (nm_setting_vpn_get_secret(settings, "password"))
-					{
-						need_secret = FALSE;
+						/* try to load/decrypt the private key */
+						key = lib->creds->create(lib->creds, CRED_PRIVATE_KEY,
+											KEY_ANY, BUILD_BLOB, safe_file,
+											BUILD_END);
+						chunk_clear(&safe_file);
+						if (key)
+						{
+							key->destroy(key);
+							need_secret = FALSE;
+						}
+						else if (nm_setting_vpn_get_secret(settings, "password"))
+						{
+							need_secret = FALSE;
+						}
 					}
 				}
 			}
@@ -1185,6 +1315,7 @@ static void nm_strongswan_plugin_init(NMStrongswanPlugin *plugin)
 	priv->listener.ike_reestablish_post = _ike_reestablish_post;
 	charon->bus->add_listener(charon->bus, &priv->listener);
 	priv->xfrmi_manager = lib->get(lib, KERNEL_NETLINK_XFRMI_MANAGER);
+	priv->safe_files = g_ptr_array_new_with_free_func(g_free);
 }
 
 /**
@@ -1194,11 +1325,17 @@ static void nm_strongswan_plugin_dispose(GObject *obj)
 {
 	NMStrongswanPlugin *plugin;
 	NMStrongswanPluginPrivate *priv;
+	int i;
 
 	plugin = NM_STRONGSWAN_PLUGIN(obj);
 	priv = NM_STRONGSWAN_PLUGIN_GET_PRIVATE(plugin);
 	delete_interface(priv);
 	free(priv->name);
+	for (i = 0; i < priv->safe_files->len; i++)
+	{
+		unlink((const char *)priv->safe_files->pdata[i]);
+	}
+	g_ptr_array_unref(priv->safe_files);
 	G_OBJECT_CLASS (nm_strongswan_plugin_parent_class)->dispose (obj);
 }
 

@@ -1255,8 +1255,10 @@ fi
 
 if test x$nm = xtrue; then
 	PKG_CHECK_MODULES(nm, [gthread-2.0 libnm])
-	AC_SUBST(nm_CFLAGS)
-	AC_SUBST(nm_LIBS)
+	saved_LIBS=$LIBS
+	LIBS="$nm_LIBS"
+	AC_CHECK_FUNCS(nm_utils_copy_cert_as_user)
+	LIBS=$saved_LIBS
 
 	AC_MSG_CHECKING([for D-Bus policy directory])
 	if test -n "$dbuspolicydir" -a "x$dbuspolicydir" != xno; then

@@ -2,6 +2,7 @@
 name=strongswan
 service=org.freedesktop.NetworkManager.strongswan
 program=@CHARON@
+supports-safe-private-file-access=true
 
 [libnm]
 plugin=@NM_PLUGINDIR@/libnm-vpn-plugin-strongswan.so
