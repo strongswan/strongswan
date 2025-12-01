@@ -788,6 +788,7 @@ static bool verify_trust_chain(private_credential_manager_t *this,
 					DBG1(DBG_CFG, "  self-signed certificate \"%Y\" is not "
 						 "trusted", current->get_subject(current));
 					issuer->destroy(issuer);
+					signature_params_destroy(scheme);
 					call_hook(this, CRED_HOOK_UNTRUSTED_ROOT, current);
 					break;
 				}
