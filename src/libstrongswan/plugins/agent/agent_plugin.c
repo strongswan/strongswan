@@ -70,6 +70,13 @@ PLUGIN_DEFINE(agent)
 		DBG1(DBG_DMN, "agent plugin requires CAP_DAC_OVERRIDE capability");
 		return NULL;
 	}
+	/* required to switch user/group to access ssh-agent socket */
+	if (!lib->caps->keep(lib->caps, CAP_SETUID) ||
+		!lib->caps->keep(lib->caps, CAP_SETGID))
+	{
+		DBG1(DBG_DMN, "agent plugin requires CAP_SETUID/CAP_SETGID capability");
+		return NULL;
+	}
 
 	INIT(this,
 		.public = {
