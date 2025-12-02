@@ -637,6 +637,7 @@ static bool add_auth_cfg_cert(NMStrongswanPluginPrivate *priv,
 				private = lib->creds->create(lib->creds, CRED_PRIVATE_KEY,
 											 public->get_type(public),
 											 BUILD_AGENT_SOCKET, str,
+											 BUILD_AGENT_USER, user,
 											 BUILD_PUBLIC_KEY, public,
 											 BUILD_END);
 				public->destroy(public);
