@@ -3,3 +3,4 @@ moon::systemctl stop strongswan
 sun::systemctl stop strongswan
 moon::iptables-restore < /etc/iptables.flush
 sun::iptables-restore < /etc/iptables.flush
+sun::set-cpu-affinity eth1 0-1

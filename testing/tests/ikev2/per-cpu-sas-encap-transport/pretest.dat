@@ -1,3 +1,5 @@
+# make sure inbound packets trigger IRQ on the right CPU
+sun::set-cpu-affinity eth0 0
 sun::iptables-restore < /etc/iptables.rules
 moon::iptables-restore < /etc/iptables.rules
 sun::systemctl start strongswan

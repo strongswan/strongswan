@@ -31,8 +31,8 @@ moon::taskset -c 2 ping -c 1 -I PH_IP_MOON PH_IP_SUN::64 bytes from PH_IP_SUN: i
 moon::cat /var/log/daemon.log::creating acquire job for policy PH_IP_MOON/32\[icmp/8] === PH_IP_SUN/32\[icmp/8].*cpu {2}::YES
 moon::swanctl --list-sas --child-id 2 --raw 2> /dev/null::child-sas.*net-net.*packets-in=1.*packets-out=3::YES
 moon::swanctl --list-sas --child-id 3 --raw 2> /dev/null::child-sas.*net-net.*cpu=1.*packets-in=0.*packets-out=1::YES
-moon::swanctl --list-sas --child-id 4 --raw 2> /dev/null::child-sas.*net-net.*cpu=3.*packets-in=3.*packets-out=0::YES
-moon::swanctl --list-sas --child-id 5 --raw 2> /dev/null::child-sas.*net-net.*cpu=0.*packets-in=0.*packets-out=0::YES
+moon::swanctl --list-sas --child-id 4 --raw 2> /dev/null::child-sas.*net-net.*cpu=3.*packets-in=2.*packets-out=0::YES
+moon::swanctl --list-sas --child-id 5 --raw 2> /dev/null::child-sas.*net-net.*cpu=0.*packets-in=1.*packets-out=0::YES
 moon::swanctl --list-sas --child-id 6 --raw 2> /dev/null::child-sas.*net-net.*cpu=2.*packets-in=0.*packets-out=0::YES
 # all these pings must be sent via their respective SAs, never the fallback SA
 moon::taskset -c 0 ping -c 1 -I PH_IP_MOON PH_IP_SUN::64 bytes from PH_IP_SUN: icmp_.eq=1::YES
@@ -41,21 +41,19 @@ moon::taskset -c 2 ping -c 1 -I PH_IP_MOON PH_IP_SUN::64 bytes from PH_IP_SUN: i
 moon::taskset -c 3 ping -c 1 -I PH_IP_MOON PH_IP_SUN::64 bytes from PH_IP_SUN: icmp_.eq=1::YES
 moon::swanctl --list-sas --child-id 2 --raw 2> /dev/null::child-sas.*net-net.*packets-in=1.*packets-out=3::YES
 moon::swanctl --list-sas --child-id 3 --raw 2> /dev/null::child-sas.*net-net.*cpu=1.*packets-in=0.*packets-out=2::YES
-moon::swanctl --list-sas --child-id 4 --raw 2> /dev/null::child-sas.*net-net.*cpu=3.*packets-in=7.*packets-out=1::YES
-moon::swanctl --list-sas --child-id 5 --raw 2> /dev/null::child-sas.*net-net.*cpu=0.*packets-in=0.*packets-out=1::YES
-moon::swanctl --list-sas --child-id 6 --raw 2> /dev/null::child-sas.*net-net.*cpu=2.*packets-in=0.*packets-out=1::YES
+moon::swanctl --list-sas --child-id 4 --raw 2> /dev/null::child-sas.*net-net.*cpu=3.*packets-in=2.*packets-out=1::YES
+moon::swanctl --list-sas --child-id 5 --raw 2> /dev/null::child-sas.*net-net.*cpu=0.*packets-in=1.*packets-out=1::YES
+moon::swanctl --list-sas --child-id 6 --raw 2> /dev/null::child-sas.*net-net.*cpu=2.*packets-in=4.*packets-out=1::YES
 # rekey an SA as initiator
 moon::swanctl --rekey --child-id 5
 moon::sleep .5
 moon::taskset -c 0 ping -c 1 -I PH_IP_MOON PH_IP_SUN::64 bytes from PH_IP_SUN: icmp_.eq=1::YES
-moon::swanctl --list-sas --child-id 4 --raw 2> /dev/null::child-sas.*net-net.*cpu=3.*packets-in=8.*packets-out=1::YES
-moon::swanctl --list-sas --child-id 7 --raw 2> /dev/null::child-sas.*net-net.*cpu=0.*packets-in=0.*packets-out=1::YES
+moon::swanctl --list-sas --child-id 7 --raw 2> /dev/null::child-sas.*net-net.*cpu=0.*packets-in=1.*packets-out=1::YES
 # rekey an SA as responder
 sun::swanctl --rekey --child-id 6
 moon::sleep .5
 moon::taskset -c 2 ping -c 1 -I PH_IP_MOON PH_IP_SUN::64 bytes from PH_IP_SUN: icmp_.eq=1::YES
-moon::swanctl --list-sas --child-id 4 --raw 2> /dev/null::child-sas.*net-net.*cpu=3.*packets-in=9.*packets-out=1::YES
-moon::swanctl --list-sas --child-id 8 --raw 2> /dev/null::child-sas.*net-net.*cpu=2.*packets-in=0.*packets-out=1::YES
+moon::swanctl --list-sas --child-id 8 --raw 2> /dev/null::child-sas.*net-net.*cpu=2.*packets-in=1.*packets-out=1::YES
 # rekey the fallback SA
 moon::swanctl --rekey --child-id 2
 moon::sleep .5
@@ -68,11 +66,11 @@ moon::taskset -c 2 ping -c 1 -I PH_IP_MOON PH_IP_SUN::64 bytes from PH_IP_SUN: i
 moon::taskset -c 3 ping -c 1 -I PH_IP_MOON PH_IP_SUN::64 bytes from PH_IP_SUN: icmp_.eq=1::YES
 moon::swanctl --list-sas --child-id 2 --raw 2> /dev/null::child-sas.*net-net.*state=DELETED.*packets-in=1.*packets-out=3::YES
 moon::swanctl --list-sas --child-id 3 --raw 2> /dev/null::child-sas.*net-net.*state=INSTALLED.*cpu=1.*packets-in=0.*packets-out=3::YES
-moon::swanctl --list-sas --child-id 4 --raw 2> /dev/null::child-sas.*net-net.*state=INSTALLED.*cpu=3.*packets-in=13.*packets-out=2::YES
-moon::swanctl --list-sas --child-id 5 --raw 2> /dev/null::child-sas.*net-net.*state=DELETED.*cpu=0.*packets-in=0.*packets-out=1::YES
-moon::swanctl --list-sas --child-id 6 --raw 2> /dev/null::child-sas.*net-net.*state=DELETED.*cpu=2.*packets-in=0.*packets-out=1::YES
-moon::swanctl --list-sas --child-id 7 --raw 2> /dev/null::child-sas.*net-net.*state=INSTALLED.*cpu=0.*packets-in=0.*packets-out=2::YES
-moon::swanctl --list-sas --child-id 8 --raw 2> /dev/null::child-sas.*net-net.*state=INSTALLED.*cpu=2.*packets-in=0.*packets-out=2::YES
+moon::swanctl --list-sas --child-id 4 --raw 2> /dev/null::child-sas.*net-net.*state=INSTALLED.*cpu=3.*packets-in=2.*packets-out=2::YES
+moon::swanctl --list-sas --child-id 5 --raw 2> /dev/null::child-sas.*net-net.*state=DELETED.*cpu=0.*packets-in=1.*packets-out=1::YES
+moon::swanctl --list-sas --child-id 6 --raw 2> /dev/null::child-sas.*net-net.*state=DELETED.*cpu=2.*packets-in=4.*packets-out=1::YES
+moon::swanctl --list-sas --child-id 7 --raw 2> /dev/null::child-sas.*net-net.*state=INSTALLED.*cpu=0.*packets-in=1.*packets-out=2::YES
+moon::swanctl --list-sas --child-id 8 --raw 2> /dev/null::child-sas.*net-net.*state=INSTALLED.*cpu=2.*packets-in=5.*packets-out=2::YES
 moon::swanctl --list-sas --child-id 9 --raw 2> /dev/null::child-sas.*net-net.*state=INSTALLED.*packets-in=0.*packets-out=0::YES
 sun::tcpdump::IP moon.strongswan.org.* > sun.strongswan.org.ipsec-nat-t: UDP-encap: ESP::YES
 sun::tcpdump::IP sun.strongswan.org.* > moon.strongswan.org.ipsec-nat-t: UDP-encap: ESP::YES
