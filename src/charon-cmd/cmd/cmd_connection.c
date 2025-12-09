@@ -123,6 +123,11 @@ struct private_cmd_connection_t {
 	bool key_seen;
 
 	/**
+	 * Whether to use childless IKE SA initiation
+	 */
+	childless_t childless;
+
+	/**
 	 * Selected connection profile
 	 */
 	profile_t profile;
@@ -149,6 +154,7 @@ static peer_cfg_t* create_peer_cfg(private_cmd_connection_t *this)
 		.remote = this->host,
 		.remote_port = IKEV2_UDP_PORT,
 		.fragmentation = FRAGMENTATION_YES,
+		.childless = this->childless,
 	};
 	peer_cfg_create_t peer = {
 		.cert_policy = CERT_SEND_IF_ASKED,
@@ -542,6 +548,13 @@ METHOD(cmd_connection_t, handle, bool,
 			}
 			this->child_proposals->insert_last(this->child_proposals, proposal);
 			break;
+		case CMD_OPT_CHILDLESS:
+			this->childless = CHILDLESS_PREFER;
+			if (arg && streq("force", arg))
+			{
+				this->childless = CHILDLESS_FORCE;
+			}
+			break;
 		case CMD_OPT_PROFILE:
 			set_profile(this, arg);
 			break;
@@ -582,6 +595,7 @@ cmd_connection_t *cmd_connection_create()
 		.remote_ts = linked_list_create(),
 		.ike_proposals = linked_list_create(),
 		.child_proposals = linked_list_create(),
+		.childless = CHILDLESS_NEVER,
 		.profile = PROF_UNDEF,
 	);
 
