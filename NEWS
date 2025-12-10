@@ -1,3 +1,16 @@
+strongswan-6.0.4
+----------------
+
+- Fixed a vulnerability in the NetworkManager plugin charon-nm that potentially
+  allows using credentials of other local users.
+  This vulnerability has been registered as CVE-2025-9615.
+
+- Concurrent requests to fetch the same CRL URI by multiple threads are now
+  combined.
+
+- Increased the max. supported length for section names in swanctl.conf to 256.
+
+
 strongswan-6.0.3
 ----------------
 
