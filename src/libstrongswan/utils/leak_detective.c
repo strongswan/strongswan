@@ -663,12 +663,10 @@ static char *whitelist[] = {
 	"TNC_IMC_NotifyConnectionChange",
 	"TNC_IMV_NotifyConnectionChange",
 	/* Botan */
-	"botan_public_key_load",
 	"botan_privkey_create",
-	"botan_privkey_load_ecdh",
-	"botan_privkey_load",
 	"botan_privkey_load_rsa_pkcs1",
-	"botan_kdf",
+	"botan_privkey_load",
+	"botan_private_key_load",
 	/* C++ due to Botan */
 	"__cxa_get_globals",
 	"__cxa_thread_atexit",
