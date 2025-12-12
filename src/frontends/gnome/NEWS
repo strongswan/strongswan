@@ -1,3 +1,8 @@
+NetworkManager-strongswan-1.6.4
+-------------------------------
+
+- Fixes regarding CVE-2025-9615
+
 NetworkManager-strongswan-1.6.3
 -------------------------------
 
