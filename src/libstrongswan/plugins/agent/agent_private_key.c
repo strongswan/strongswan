@@ -188,6 +188,7 @@ static int open_connection(char *path, char *user)
 				close(s);
 				return -1;
 			case 0:
+			{
 				/* child, do everything manually to avoid interacting with
 				 * mutexes etc. that are potentially locked in the parent */
 				struct passwd *pwp;
@@ -209,6 +210,7 @@ static int open_connection(char *path, char *user)
 				}
 				exit(EXIT_FAILURE);
 				/* not reached */
+			}
 			default:
 				/* parent */
 				if (waitpid(pid, &status, 0) == -1 ||
