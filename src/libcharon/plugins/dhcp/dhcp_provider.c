@@ -112,7 +112,7 @@ METHOD(attribute_provider_t, release_address, bool,
 	dhcp_transaction_t *transaction;
 	enumerator_t *enumerator;
 	identification_t *id;
-	bool found = FALSE;
+	bool found = FALSE, keep = FALSE;
 	char *pool;
 
 	if (address->get_family(address) != AF_INET)
@@ -130,10 +130,17 @@ METHOD(attribute_provider_t, release_address, bool,
 		this->mutex->lock(this->mutex);
 		transaction = this->transactions->remove(this->transactions,
 										(void*)hash_id_host(id, address));
+		/* don't release the address if it's still used (e.g. after a
+		 * make-before-break reauthentication) */
+		keep = this->transactions->get(this->transactions,
+									   (void*)hash_id_host(id, address));
 		this->mutex->unlock(this->mutex);
 		if (transaction)
 		{
-			this->socket->release(this->socket, transaction);
+			if (!keep)
+			{
+				this->socket->release(this->socket, transaction);
+			}
 			transaction->destroy(transaction);
 			found = TRUE;
 			break;
