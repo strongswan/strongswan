@@ -1539,7 +1539,7 @@ p_plugins=
 
 ADD_PLUGIN([test-vectors],         [s charon pki])
 ADD_PLUGIN([unbound],              [s charon scripts])
-ADD_PLUGIN([ldap],                 [s charon scripts nm cmd])
+ADD_PLUGIN([ldap],                 [s charon pki scripts nm cmd])
 ADD_PLUGIN([pkcs11],               [s charon pki nm cmd])
 ADD_PLUGIN([tpm],                  [p charon pki nm cmd])
 ADD_PLUGIN([aesni],                [s charon pki scripts medsrv attest nm cmd aikgen])
