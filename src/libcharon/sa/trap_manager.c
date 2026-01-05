@@ -579,12 +579,12 @@ METHOD(trap_manager_t, acquire, void,
 	}
 	if (!acquire)
 	{
+		seq = data->seq = data->seq ?: ref_get_nonzero(&this->acquire_seq);
 		INIT(acquire,
 			.dst = host,
 			.reqid = reqid,
 			.data = kernel_acquire_data_clone(data),
 		);
-		seq = data->seq = data->seq ?: ref_get_nonzero(&this->acquire_seq);
 		this->acquires->insert_last(this->acquires, acquire);
 	}
 	else if (data->seq && data->seq != acquire->data->seq)
