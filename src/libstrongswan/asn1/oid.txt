@@ -40,6 +40,7 @@
     0x36                     "dmdName"					OID_DMD_NAME
     0x41                     "pseudonym"				OID_PSEUDONYM
     0x48                     "role"						OID_ROLE
+    0x61                     "organizationIdentifier"   OID_ORGANIZATION_ID
   0x1D                       "id-ce"
     0x09                     "subjectDirectoryAttrs"
     0x0E                     "subjectKeyIdentifier"		OID_SUBJECT_KEY_ID
