@@ -38,7 +38,7 @@ AM_CPPFLAGS = \
 	-I$(top_srcdir)/src/libstrongswan \
 	-I$(top_srcdir)/src/libcharon/plugins/vici \
 	-DSWANCTLDIR=\""${swanctldir}\"" \
-	-DPLUGINS=\""${s_plugins}\""
+	-DPLUGINS=\""${swanctl_plugins}\""
 
 man_MANS = \
 	swanctl.8 \
