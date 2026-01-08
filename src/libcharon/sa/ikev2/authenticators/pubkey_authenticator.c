@@ -631,7 +631,7 @@ METHOD(authenticator_t, process, status_t,
 			DBG1(DBG_IKE, "%N authentication %s", auth_method_names,
 				 auth_method, reason);
 			signature_params_destroy(params);
-			return INVALID_ARG;
+			return FAILED;
 	}
 	id = this->ike_sa->get_other_id(this->ike_sa);
 	if (!get_auth_octets_scheme(this, TRUE, id, this->ppk, &octets, &params))
