@@ -25,6 +25,11 @@
 
 #include <errno.h>
 #include <string.h>
+#include <stdbool.h>
+#include <unistd.h>
+#include <sys/stat.h>
+#include <grp.h>
+#include <stdlib.h>
 
 typedef struct private_vici_socket_t private_vici_socket_t;
 
@@ -706,6 +711,91 @@ METHOD(vici_socket_t, destroy, void,
 	free(this);
 }
 
+/**
+ * Apply socket group ownership and permissions from configuration.
+ *
+ * Reads the following settings from strongswan.conf:
+ *   charon.plugins.vici.group       - group name to own the socket (optional)
+ *   charon.plugins.vici.permissions - octal permissions string (default: "0660")
+ *
+ * Note: Setting group ownership requires root privileges or CAP_CHOWN capability.
+ * When running as non-root without CAP_CHOWN, the group setting is silently
+ * ignored and only permissions are applied.
+ */
+static void apply_socket_permissions(const char *uri)
+{
+	char *socket_group, *socket_path, *perms_str;
+	mode_t socket_mode;
+	struct group *grp;
+	bool is_root;
+
+	/* Check if we're running as root */
+	is_root = (geteuid() == 0);
+
+	/* Read configuration */
+	socket_group = lib->settings->get_str(lib->settings,
+		"%s.plugins.vici.group", NULL, lib->ns);
+	perms_str = lib->settings->get_str(lib->settings,
+		"%s.plugins.vici.permissions", "0660", lib->ns);
+	socket_mode = (mode_t)strtol(perms_str, NULL, 8);
+	if (socket_mode == 0)
+	{
+		socket_mode = 0660;
+	}
+
+	/* Extract socket path from URI (unix:///path/to/socket) */
+	if (strncmp(uri, "unix://", 7) == 0)
+	{
+		socket_path = (char*)(uri + 7);
+	}
+	else
+	{
+		DBG1(DBG_CFG, "vici: cannot apply permissions to non-unix socket");
+		return;
+	}
+
+	/* Apply group ownership (requires root or CAP_CHOWN) */
+	if (socket_group)
+	{
+		if (!is_root)
+		{
+			DBG2(DBG_CFG, "vici: skipping socket group change (not root, "
+				 "requires CAP_CHOWN capability)");
+		}
+		else
+		{
+			grp = getgrnam(socket_group);
+			if (grp)
+			{
+				if (chown(socket_path, -1, grp->gr_gid) == 0)
+				{
+					DBG1(DBG_CFG, "vici: set socket group to %s", socket_group);
+				}
+				else
+				{
+					DBG1(DBG_CFG, "vici: failed to set socket group %s: %s",
+						 socket_group, strerror(errno));
+				}
+			}
+			else
+			{
+				DBG1(DBG_CFG, "vici: group %s not found", socket_group);
+			}
+		}
+	}
+
+	/* Apply permissions (works for socket owner) */
+	if (chmod(socket_path, socket_mode) == 0)
+	{
+		DBG1(DBG_CFG, "vici: set socket permissions to %04o", socket_mode);
+	}
+	else
+	{
+		DBG1(DBG_CFG, "vici: failed to set socket permissions: %s",
+			 strerror(errno));
+	}
+}
+
 /*
  * see header file
  */
@@ -736,6 +826,10 @@ vici_socket_t *vici_socket_create(char *uri, vici_inbound_cb_t inbound,
 		destroy(this);
 		return NULL;
 	}
+
+	/* Apply socket permissions from configuration */
+	apply_socket_permissions(uri);
+
 	this->service->on_accept(this->service, on_accept, this,
 							 JOB_PRIO_CRITICAL, 0);
 
