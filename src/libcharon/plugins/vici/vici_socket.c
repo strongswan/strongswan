@@ -716,7 +716,7 @@ METHOD(vici_socket_t, destroy, void,
  *
  * Reads the following settings from strongswan.conf:
  *   charon.plugins.vici.group       - group name to own the socket (optional)
- *   charon.plugins.vici.permissions - octal permissions string (default: "0660")
+ *   charon.plugins.vici.permissions - octal permissions string (default: "0770")
  *
  * Note: Setting group ownership requires root privileges or CAP_CHOWN capability.
  * When running as non-root without CAP_CHOWN, the group setting is silently
@@ -736,11 +736,11 @@ static void apply_socket_permissions(const char *uri)
 	socket_group = lib->settings->get_str(lib->settings,
 		"%s.plugins.vici.group", NULL, lib->ns);
 	perms_str = lib->settings->get_str(lib->settings,
-		"%s.plugins.vici.permissions", "0660", lib->ns);
+		"%s.plugins.vici.permissions", "0770", lib->ns);
 	socket_mode = (mode_t)strtol(perms_str, NULL, 8);
 	if (socket_mode == 0)
 	{
-		socket_mode = 0660;
+		socket_mode = 0770;
 	}
 
 	/* Extract socket path from URI (unix:///path/to/socket) */
