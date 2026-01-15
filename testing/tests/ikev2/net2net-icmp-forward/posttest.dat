@@ -1,0 +1,13 @@
+moon::swanctl --terminate --ike gw-gw 2> /dev/null
+moon::swanctl --terminate --ike venus 2> /dev/null
+venus::systemctl stop strongswan
+moon::systemctl stop strongswan
+sun::systemctl stop strongswan
+venus::iptables-restore < /etc/iptables.flush
+moon::iptables-restore < /etc/iptables.flush
+sun::iptables-restore < /etc/iptables.flush
+sun::ip route del 10.2.0.16/30 via PH_IP_BOB
+moon::ip route del 10.2.0.8/30 via PH_IP_SUN
+sun::ip route del PH_IP_VENUS/32 via PH_IP_MOON
+sun::ip route del 10.2.0.8/30 dev eth1 src PH_IP_SUN1
+winnetou::ip route del 10.1.0.0/16 via PH_IP_MOON
