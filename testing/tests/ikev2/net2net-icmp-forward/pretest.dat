@@ -1,0 +1,21 @@
+venus::iptables-restore < /etc/iptables.rules
+moon::iptables-restore < /etc/iptables.rules
+sun::iptables-restore < /etc/iptables.rules
+venus::systemctl start --no-block strongswan
+moon::systemctl start --no-block strongswan
+sun::systemctl start --no-block strongswan
+# add a route for part of the private subnet via bob
+sun::ip route add 10.2.0.16/30 via PH_IP_BOB
+# setup routes to test with venus
+winnetou::ip route add 10.1.0.0/16 via PH_IP_MOON
+moon::ip route add 10.2.0.8/30 via PH_IP_SUN
+sun::ip route add PH_IP_VENUS/32 via PH_IP_MOON
+# force a lower MTU for traffic to bob
+sun::ip route add 10.2.0.8/30 dev eth1 src PH_IP_SUN1 mtu 1280
+# allow decrypted ICMPs from any source IP (rules for sun and moon are in iptables.rules)
+venus::iptables -A INPUT -p icmp -m policy --dir in -j ACCEPT
+venus::expect-connection rw
+moon::expect-connection gw-gw
+sun::expect-connection gw-gw
+moon::swanctl --initiate --child net-net 2> /dev/null
+venus::swanctl --initiate --child rw 2> /dev/null
