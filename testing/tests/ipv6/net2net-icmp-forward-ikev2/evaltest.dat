@@ -1,0 +1,8 @@
+moon::swanctl --list-sas --raw 2> /dev/null::net-net.*version=2 state=ESTABLISHED local-host=fec0:\:1 local-port=500 local-id=moon.strongswan.org remote-host=fec0:\:2 remote-port=500 remote-id=sun.strongswan.org initiator=yes.*encr-alg=AES_CBC encr-keysize=128 integ-alg=HMAC_SHA2_256_128 prf-alg=PRF_HMAC_SHA2_256 dh-group=CURVE_25519.*child-sas.*net-net.*reqid=1 state=INSTALLED mode=TUNNEL protocol=ESP.*encr-alg=AES_CBC encr-keysize=128 integ-alg=HMAC_SHA2_256_128.*local-ts=\[fec1:\:/16] remote-ts=\[fec2:\:20/124]::YES
+sun ::swanctl --list-sas --raw 2> /dev/null::net-net.*version=2 state=ESTABLISHED local-host=fec0:\:2 local-port=500 local-id=sun.strongswan.org remote-host=fec0:\:1 remote-port=500 remote-id=moon.strongswan.org.*encr-alg=AES_CBC encr-keysize=128 integ-alg=HMAC_SHA2_256_128 prf-alg=PRF_HMAC_SHA2_256 dh-group=CURVE_25519.*child-sas.*net-net.*reqid=1 state=INSTALLED mode=TUNNEL protocol=ESP.*encr-alg=AES_CBC encr-keysize=128 integ-alg=HMAC_SHA2_256_128.*local-ts=\[fec2:\:20/124] remote-ts=\[fec1:\:/16]::YES
+alice::ping6 -c 1 -W 4 -p deadbeef fec2:\:25::From fec0:\:2 icmp_seq=1 Destination unreachable: Address unreachable::YES
+moon::ping6 -c 1 -W 4 -p deadbeef fec2:\:22::From fec2:\:10 icmp_seq=1 Destination unreachable: Address unreachable::YES
+sun::tcpdump::IP6 ip6-moon.strongswan.org > ip6-sun.strongswan.org: ESP::2
+sun::tcpdump::IP6 ip6-sun.strongswan.org > ip6-moon.strongswan.org: ESP::2
+sun::tcpdump::IP6 ip6-sun.strongswan.org > ip6-alice.strongswan.org: ICMP6, destination unreachable, unreachable address fec2:\:25::NO
+sun::tcpdump::IP6 ip6-bob.strongswan.org > ip6-moon1.strongswan.org: ICMP6, destination unreachable, unreachable address fec2:\:22::NO

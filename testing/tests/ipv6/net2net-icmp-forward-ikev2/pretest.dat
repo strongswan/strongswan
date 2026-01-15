@@ -1,0 +1,21 @@
+moon::iptables-restore < /etc/iptables.drop
+sun::iptables-restore < /etc/iptables.drop
+moon::ip6tables-restore < /etc/ip6tables.rules
+sun::ip6tables-restore < /etc/ip6tables.rules
+# explicitly allow ICMPv6 responses we don't actually want to see as they should get encrypted
+sun::ip6tables -A OUTPUT -p icmpv6 --icmpv6-type destination-unreachable -j ACCEPT
+sun::ip6tables -A FORWARD -p icmpv6 --icmpv6-type destination-unreachable -j ACCEPT
+# allow decrypted ICMPv6s from any source IP
+moon::ip6tables -A INPUT -p icmpv6 --icmpv6-type destination-unreachable -m policy --dir in -j ACCEPT
+moon::ip6tables -A FORWARD -p icmpv6 --icmpv6-type destination-unreachable -m policy --dir in -j ACCEPT
+alice::"ip route add fec2:\:/16 via fec1:\:1"
+moon::"ip route add fec2:\:/16 via fec0:\:2"
+sun::"ip route add fec1:\:/16 via fec0:\:1"
+bob::"ip route add fec1:\:/16 via fec2:\:1"
+# add a route for part of the private subnet via bob
+sun::"ip route add fec2:\:20/126 via fec2:\:10"
+moon::systemctl start strongswan
+sun::systemctl start strongswan
+moon::expect-connection net-net
+sun::expect-connection net-net
+moon::swanctl --initiate --child net-net

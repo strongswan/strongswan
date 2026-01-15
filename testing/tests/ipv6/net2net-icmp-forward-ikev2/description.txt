@@ -1,0 +1,12 @@
+A connection between the subnets behind the gateways <b>moon</b> and <b>sun</b> is set up.
+The authentication is based on <b>X.509 certificates</b>.
+<p/>
+Upon the successful establishment of the IPsec tunnel, the updown script automatically
+inserts ip6tables-based firewall rules that let pass the tunneled traffic.
+<p/>
+In order to test ICMPv6 error forwarding, which <b>moon</b> and <b>sun</b> both
+enabled, <b>alice</b> and <b>moon</b> ping unreachable IPs behind gateway
+<b>sun</b> and behind host <b>bob</b>, respectively. The corresponding ICMPv6
+Destination Unreachable messages, with source IP addresses outside the IPsec
+tunnel traffic selectors are expected to be forwarded by <b>sun</b> and
+<b>moon</b>.

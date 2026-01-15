@@ -1,0 +1,15 @@
+moon::iptables-restore < /etc/iptables.rules
+sun::iptables-restore < /etc/iptables.rules
+# explicitly allow ICMP responses we don't actually want to see as they should get encrypted
+sun::iptables -A OUTPUT -p icmp --icmp-type destination-unreachable -j ACCEPT
+sun::iptables -A FORWARD -p icmp --icmp-type destination-unreachable -j ACCEPT
+# allow decrypted ICMPs from any source IP
+moon::iptables -A INPUT -p icmp --icmp-type destination-unreachable -m policy --dir in -j ACCEPT
+moon::iptables -A FORWARD -p icmp --icmp-type destination-unreachable -m policy --dir in -j ACCEPT
+# add a route for part of the private subnet via bob
+sun::ip route add 10.2.0.16/30 via PH_IP_BOB
+moon::systemctl start strongswan
+sun::systemctl start strongswan
+moon::expect-connection gw-gw
+sun::expect-connection gw-gw
+moon::swanctl --initiate --child net-net 2> /dev/null
