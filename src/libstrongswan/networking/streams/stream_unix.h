@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2026 Tobias Brunner
  * Copyright (C) 2013 Martin Willi
  *
  * Copyright (C) secunet Security Networks AG
@@ -27,10 +28,10 @@
 /**
  * Create a stream for UNIX sockets.
  *
- * UNIX URIs start with unix://, followed by the socket path. For absolute
- * paths, an URI looks something like:
+ * UNIX URIs start with unix://, followed by an optional group name (ending
+ * with @) and the socket path. For absolute paths, an URI looks something like:
  *
- *   unix:///path/to/socket
+ *   unix://[group@]/path/to/socket
  *
  * @param uri		UNIX socket specific URI, must start with "unix://"
  * @return			stream instance, NULL on failure
@@ -38,12 +39,13 @@
 stream_t *stream_create_unix(char *uri);
 
 /**
- * Helper function to parse a unix:// URI to a sockaddr
+ * Helper function to parse a unix:// URI to a sockaddr/gid
  *
  * @param uri		URI
  * @param addr		sockaddr
+ * @param gid		optional group ID
  * @return			length of sockaddr, -1 on error
  */
-int stream_parse_uri_unix(char *uri, struct sockaddr_un *addr);
+int stream_parse_uri_unix(char *uri, struct sockaddr_un *addr, gid_t *gid);
 
 #endif /** STREAM_UNIX_H_ @}*/

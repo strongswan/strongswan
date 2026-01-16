@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2026 Tobias Brunner
  * Copyright (C) 2013 Martin Willi
  *
  * Copyright (C) secunet Security Networks AG
@@ -30,9 +31,10 @@ stream_service_t *stream_service_create_unix(char *uri, int backlog)
 {
 	struct sockaddr_un addr;
 	mode_t old;
+	gid_t gid = -1;
 	int fd, len;
 
-	len = stream_parse_uri_unix(uri, &addr);
+	len = stream_parse_uri_unix(uri, &addr, &gid);
 	if (len == -1)
 	{
 		DBG1(DBG_NET, "invalid stream URI: '%s'", uri);
@@ -60,6 +62,11 @@ stream_service_t *stream_service_create_unix(char *uri, int backlog)
 		return NULL;
 	}
 	umask(old);
+
+	if (gid == -1)
+	{
+		gid = lib->caps->get_gid(lib->caps);
+	}
 	/* Only attempt to change owner of socket if we have CAP_CHOWN. Otherwise,
 	 * attempt to change group of socket to group under which charon runs after
 	 * dropping caps. This requires the user that charon starts as to:
@@ -67,8 +74,7 @@ stream_service_t *stream_service_create_unix(char *uri, int backlog)
 	 * b) Belong to the group that charon will run under after dropping caps. */
 	if (lib->caps->check(lib->caps, CAP_CHOWN))
 	{
-		if (chown(addr.sun_path, lib->caps->get_uid(lib->caps),
-				  lib->caps->get_gid(lib->caps)) != 0)
+		if (chown(addr.sun_path, lib->caps->get_uid(lib->caps), gid) != 0)
 		{
 			DBG1(DBG_NET, "changing socket owner/group for '%s' failed: %s",
 				 uri, strerror(errno));
@@ -76,7 +82,7 @@ stream_service_t *stream_service_create_unix(char *uri, int backlog)
 	}
 	else
 	{
-		if (chown(addr.sun_path, -1, lib->caps->get_gid(lib->caps)) != 0)
+		if (chown(addr.sun_path, -1, gid) != 0)
 		{
 			DBG1(DBG_NET, "changing socket group for '%s' failed: %s",
 				 uri, strerror(errno));
