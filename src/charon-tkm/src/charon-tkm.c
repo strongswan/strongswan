@@ -160,7 +160,7 @@ static bool lookup_uid_gid()
 	}
 #endif
 #ifdef IPSEC_GROUP
-	if (!lib->caps->resolve_gid(lib->caps, IPSEC_GROUP))
+	if (!lib->caps->resolve_gid(lib->caps, IPSEC_GROUP, NULL))
 	{
 		return FALSE;
 	}

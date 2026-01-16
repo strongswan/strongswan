@@ -274,7 +274,7 @@ static bool lookup_uid_gid()
 	}
 	name = lib->settings->get_str(lib->settings, "%s.group", IPSEC_GROUP,
 								  lib->ns);
-	if (name && !lib->caps->resolve_gid(lib->caps, name))
+	if (name && !lib->caps->resolve_gid(lib->caps, name, NULL))
 	{
 		return FALSE;
 	}

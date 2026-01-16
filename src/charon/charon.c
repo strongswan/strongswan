@@ -151,7 +151,7 @@ static bool lookup_uid_gid()
 		return FALSE;
 	}
 	name = lib->settings->get_str(lib->settings, "charon.group", IPSEC_GROUP);
-	if (name && !lib->caps->resolve_gid(lib->caps, name))
+	if (name && !lib->caps->resolve_gid(lib->caps, name, NULL))
 	{
 		return FALSE;
 	}

@@ -121,12 +121,14 @@ struct capabilities_t {
 	bool (*resolve_uid)(capabilities_t *this, char *username);
 
 	/**
-	 * Resolve a groupname and set the group ID accordingly.
+	 * Resolve a groupname and optionally set the group ID accordingly.
 	 *
 	 * @param groupname	groupname to get the gid for
-	 * @return			TRUE if groupname resolved and gid set
+	 * @param gid		optionally returns the resolved group ID instead of
+	 *					setting it
+	 * @return			TRUE if groupname resolved
 	 */
-	bool (*resolve_gid)(capabilities_t *this, char *groupname);
+	bool (*resolve_gid)(capabilities_t *this, char *groupname, gid_t *gid);
 
 	/**
 	 * Drop all capabilities not previously passed to keep(), switch to UID/GID.

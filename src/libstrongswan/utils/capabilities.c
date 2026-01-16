@@ -328,7 +328,7 @@ METHOD(capabilities_t, resolve_uid, bool,
 }
 
 METHOD(capabilities_t, resolve_gid, bool,
-	private_capabilities_t *this, char *groupname)
+	private_capabilities_t *this, char *groupname, gid_t *gid)
 {
 #ifndef WIN32
 	struct group *grp;
@@ -350,7 +350,14 @@ METHOD(capabilities_t, resolve_gid, bool,
 		}
 		if (grp)
 		{
-			this->gid = grp->gr_gid;
+			if (gid)
+			{
+				*gid = grp->gr_gid;
+			}
+			else
+			{
+				this->gid = grp->gr_gid;
+			}
 		}
 		break;
 	}
@@ -360,7 +367,14 @@ METHOD(capabilities_t, resolve_gid, bool,
 	grp = getgrnam(groupname);
 	if (grp)
 	{
-		this->gid = grp->gr_gid;
+		if (gid)
+		{
+			*gid = grp->gr_gid;
+		}
+		else
+		{
+			this->gid = grp->gr_gid;
+		}
 	}
 	err = errno;
 	this->mutex->unlock(this->mutex);
