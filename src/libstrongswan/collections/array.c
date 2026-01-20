@@ -453,8 +453,12 @@ void array_sort(array_t *array, int (*cmp)(const void*,const void*,void*),
 		qsort_r(start, array->count, get_size(array, 1), &data,
 				compare_elements);
 #else /* !HAVE_QSORT_R */
+		sort_data_t *recursive;
+
+		recursive = sort_data->get(sort_data);
 		sort_data->set(sort_data, &data);
 		qsort(start, array->count, get_size(array, 1), compare_elements);
+		sort_data->set(sort_data, recursive);
 #endif
 	}
 }
