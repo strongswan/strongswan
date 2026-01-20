@@ -29,6 +29,8 @@ install:
       IF "%IMG%" == "2017" set OPENSSL=OpenSSL-v11
       set OPENSSL_DIR=/c/%OPENSSL%-%TEST%
       C:\%OPENSSL%-%TEST%\bin\openssl.exe version -a
+  # lld doesn't read .lib files
+  - IF NOT "%IMG%" == "2015" copy C:\%OPENSSL%-%TEST%\lib\libcrypto.lib C:\%OPENSSL%-%TEST%\lib\libcrypto.dll.a
   # newer versions of msys2 don't provide autotools or gperf via base-devel anymore
   - IF "%IMG%" == "2019" %MSYS_SH% --login -c ". /etc/profile && pacman --noconfirm -S --needed autotools gperf"
 

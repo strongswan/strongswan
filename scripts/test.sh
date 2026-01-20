@@ -352,7 +352,7 @@ win*)
 	else
 		CONFIG="$CONFIG --enable-openssl"
 		CFLAGS="$CFLAGS -I$OPENSSL_DIR/include"
-		LDFLAGS="-L$OPENSSL_DIR/lib"
+		LDFLAGS="-L$OPENSSL_DIR/lib -fuse-ld=lld"
 		case "$IMG" in
 		2015)
 			# gcc/ld might be too old to find libeay32 via .lib instead of .dll
@@ -543,7 +543,7 @@ apidoc)
 	;;
 esac
 
-echo "$ make $TARGET"
+echo "$ make -j$(nproc) $TARGET"
 case "$TEST" in
 sonarcloud)
 	# without target, coverage is currently not supported anyway because
