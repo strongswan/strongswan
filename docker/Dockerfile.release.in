@@ -1,0 +1,2 @@
+arg SWAN_VERSION=5.9.11
+run wget -O- https://download.strongswan.org/strongswan-${SWAN_VERSION}.tar.bz2 | tar xj --strip-components=1
