@@ -199,6 +199,9 @@ enum notify_type_t {
 	ME_RESPONSE = 40968,
 	/* RADIUS attribute received/to send to a AAA backend */
 	RADIUS_ATTRIBUTE = 40969,
+
+	/* Downgrade Prevention via Full Transcript, draft-ietf-ipsecme-ikev2-downgrade-prevention */
+	IKE_SA_INIT_FULL_TRANSCRIPT_AUTH = 50500,
 };
 
 /**
