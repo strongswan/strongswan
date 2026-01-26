@@ -165,6 +165,10 @@ charon.fragment_size_v6 = charon.fragment_size
 	Maximum size (complete IPv6 datagram size in bytes) of a sent IKE fragment
 	when using proprietary IKEv1 or standardized IKEv2 fragmentation.
 
+charon.full_transcript_auth = yes
+	Whether to support IKEv2 authentication that includes both IKE_SA_INIT
+	messages in order to prevent some downgrade attacks.
+
 charon.group
 	Name of the group the daemon changes to after startup.
 

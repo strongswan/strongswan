@@ -140,6 +140,11 @@ struct private_ike_init_t {
 	bool signature_authentication;
 
 	/**
+	 * Whether to support downgrade prevention via full auth transcript per draft-ietf-ipsecme-ikev2-downgrade-prevention
+	 */
+	bool full_transcript_auth;
+
+	/**
 	 * Whether to follow IKEv2 redirects as per RFC 5685
 	 */
 	bool follow_redirects;
@@ -483,6 +488,12 @@ static bool build_payloads(private_ike_init_t *this, message_t *message)
 		message->add_notify(message, FALSE, INTERMEDIATE_EXCHANGE_SUPPORTED,
 							chunk_empty);
 	}
+	/* unlike other extensions, we always announce this, unless disabled */
+	if (this->full_transcript_auth)
+	{
+		message->add_notify(message, FALSE, IKE_SA_INIT_FULL_TRANSCRIPT_AUTH,
+							chunk_empty);
+	}
 	return TRUE;
 }
 
@@ -747,6 +758,13 @@ static void process_payloads(private_ike_init_t *this, message_t *message)
 						{
 							this->ike_sa->enable_extension(this->ike_sa,
 														   EXT_IKE_INTERMEDIATE);
+						}
+						break;
+					case IKE_SA_INIT_FULL_TRANSCRIPT_AUTH:
+						if (this->full_transcript_auth && !this->old_sa)
+						{
+							this->ike_sa->enable_extension(this->ike_sa,
+													EXT_FULL_TRANSCRIPT_AUTH);
 						}
 						break;
 					default:
@@ -1535,6 +1553,8 @@ ike_init_t *ike_init_create(ike_sa_t *ike_sa, bool initiator, ike_sa_t *old_sa)
 		.old_sa = old_sa,
 		.signature_authentication = lib->settings->get_bool(lib->settings,
 								"%s.signature_authentication", TRUE, lib->ns),
+		.full_transcript_auth = lib->settings->get_bool(lib->settings,
+								"%s.full_transcript_auth", TRUE, lib->ns),
 		.follow_redirects = lib->settings->get_bool(lib->settings,
 								"%s.follow_redirects", TRUE, lib->ns),
 	);
