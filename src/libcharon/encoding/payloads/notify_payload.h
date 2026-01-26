@@ -177,6 +177,9 @@ enum notify_type_t {
 	/* Resource info for CHILD_SAs, RFC 9611 */
 	SA_RESOURCE_INFO = 16444,
 
+	/* Downgrade Prevention via Full Transcript, draft-ietf-ipsecme-ikev2-downgrade-prevention */
+	IKE_SA_INIT_FULL_TRANSCRIPT_AUTH = 16447,
+
 	/* IKEv1 initial contact */
 	INITIAL_CONTACT_IKEV1 = 24578,
 
