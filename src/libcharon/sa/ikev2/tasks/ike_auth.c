@@ -72,14 +72,16 @@ struct private_ike_auth_t {
 	chunk_t ppk;
 
 	/**
-	 * IKE_SA_INIT message sent by us
+	 * IKE_SA_INIT message sent by us (will be prefixed with zero and other's
+	 * message if full transcript is used)
 	 */
-	packet_t *my_packet;
+	chunk_t my_packet_data;
 
 	/**
-	 * IKE_SA_INIT message sent by peer
+	 * IKE_SA_INIT message sent by peer (will be prefixed with zero and our
+	 * message if full transcript is used)
 	 */
-	packet_t *other_packet;
+	chunk_t other_packet_data;
 
 	/**
 	 * IntAuth data from IKE_INTERMEDIATE exchanges: IntAuth_i | IntAuth_r | MID
@@ -182,7 +184,7 @@ static status_t collect_my_init_data(private_ike_auth_t *this,
 		return FAILED;
 	}
 	this->my_nonce = nonce->get_nonce(nonce);
-	this->my_packet = message->get_packet(message);
+	this->my_packet_data = chunk_clone(message->get_packet_data(message));
 	return NEED_MORE;
 }
 
@@ -204,8 +206,29 @@ static status_t collect_other_init_data(private_ike_auth_t *this,
 	this->other_nonce = nonce->get_nonce(nonce);
 
 	/* keep a copy of the received packet */
-	this->other_packet = message->get_packet(message);
+	this->other_packet_data = chunk_clone(message->get_packet_data(message));
 	return NEED_MORE;
+}
+
+/**
+ * Combine packet data if full transcript is used.
+ */
+static void prepare_packet_data(private_ike_auth_t *this)
+{
+	chunk_t my_data, other_data;
+	uint64_t zero_prefix = 0;
+
+	if (!this->ike_sa->supports_extension(this->ike_sa,
+										  EXT_FULL_TRANSCRIPT_AUTH))
+	{
+		return;
+	}
+	my_data = this->my_packet_data;
+	other_data = this->other_packet_data;
+	this->my_packet_data = chunk_cat("ccc", chunk_from_thing(zero_prefix),
+									 other_data, my_data);
+	this->other_packet_data = chunk_cat("cmm", chunk_from_thing(zero_prefix),
+										my_data, other_data);
 }
 
 /**
@@ -849,6 +872,8 @@ METHOD(task_t, build_i, status_t,
 		}
 		/* set MID in IntAuth data if used */
 		set_ike_auth_mid(this, message);
+		/* prepare packet data if full transcript is used */
+		prepare_packet_data(this);
 	}
 
 	if (!this->do_another_auth && !this->my_auth)
@@ -912,8 +937,7 @@ METHOD(task_t, build_i, status_t,
 		/* build authentication data */
 		this->my_auth = authenticator_create_builder(this->ike_sa, cfg,
 							this->other_nonce, this->my_nonce,
-							this->other_packet->get_data(this->other_packet),
-							this->my_packet->get_data(this->my_packet),
+							this->other_packet_data, this->my_packet_data,
 							this->reserved);
 		if (!this->my_auth)
 		{
@@ -1038,6 +1062,8 @@ METHOD(task_t, process_r, status_t,
 		}
 		/* set MID in IntAuth data if used */
 		set_ike_auth_mid(this, message);
+		/* prepare packet data if full transcript is used */
+		prepare_packet_data(this);
 		this->first_auth = TRUE;
 	}
 
@@ -1079,8 +1105,7 @@ METHOD(task_t, process_r, status_t,
 		/* verify authentication data */
 		this->other_auth = authenticator_create_verifier(this->ike_sa,
 							message, this->other_nonce, this->my_nonce,
-							this->other_packet->get_data(this->other_packet),
-							this->my_packet->get_data(this->my_packet),
+							this->other_packet_data, this->my_packet_data,
 							this->reserved);
 		if (!this->other_auth)
 		{
@@ -1278,8 +1303,7 @@ METHOD(task_t, build_r, status_t,
 			/* build authentication data */
 			this->my_auth = authenticator_create_builder(this->ike_sa, cfg,
 								this->other_nonce, this->my_nonce,
-								this->other_packet->get_data(this->other_packet),
-								this->my_packet->get_data(this->my_packet),
+								this->other_packet_data, this->my_packet_data,
 								this->reserved);
 			if (!this->my_auth)
 			{
@@ -1593,8 +1617,7 @@ METHOD(task_t, process_i, status_t,
 				/* verify authentication data */
 				this->other_auth = authenticator_create_verifier(this->ike_sa,
 								message, this->other_nonce, this->my_nonce,
-								this->other_packet->get_data(this->other_packet),
-								this->my_packet->get_data(this->my_packet),
+								this->other_packet_data, this->my_packet_data,
 								this->reserved);
 				if (!this->other_auth)
 				{
@@ -1762,16 +1785,14 @@ METHOD(task_t, migrate, void,
 	chunk_free(&this->int_auth);
 	this->int_auth_i = chunk_empty;
 	this->int_auth_r = chunk_empty;
-	DESTROY_IF(this->my_packet);
-	DESTROY_IF(this->other_packet);
+	chunk_free(&this->my_packet_data);
+	chunk_free(&this->other_packet_data);
 	DESTROY_IF(this->peer_cfg);
 	DESTROY_IF(this->my_auth);
 	DESTROY_IF(this->other_auth);
 	DESTROY_IF(this->redirect_to);
 	this->candidates->destroy_offset(this->candidates, offsetof(peer_cfg_t, destroy));
 
-	this->my_packet = NULL;
-	this->other_packet = NULL;
 	this->ike_sa = ike_sa;
 	this->peer_cfg = NULL;
 	this->my_auth = NULL;
@@ -1791,8 +1812,8 @@ METHOD(task_t, destroy, void,
 	chunk_free(&this->my_nonce);
 	chunk_free(&this->other_nonce);
 	chunk_free(&this->int_auth);
-	DESTROY_IF(this->my_packet);
-	DESTROY_IF(this->other_packet);
+	chunk_free(&this->my_packet_data);
+	chunk_free(&this->other_packet_data);
 	DESTROY_IF(this->my_auth);
 	DESTROY_IF(this->other_auth);
 	DESTROY_IF(this->peer_cfg);
