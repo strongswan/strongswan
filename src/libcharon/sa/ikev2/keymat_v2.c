@@ -746,7 +746,7 @@ METHOD(keymat_v2_t, get_auth_octets, bool,
 		 */
 		chunk_t zero_prefix = chunk_alloca(FULL_TRANSCRIPT_ZERO_PREFIX_LEN);
 		memset(zero_prefix.ptr, 0, FULL_TRANSCRIPT_ZERO_PREFIX_LEN);
-		*octets = chunk_cat("cccccmc", zero_prefix, peer_ike_sa_init,
+		*octets = chunk_cat("ccccmc", zero_prefix, peer_ike_sa_init,
 							ike_sa_init, nonce, chunk, int_auth);
 		DBG3(DBG_IKE, "octets (full transcript) = zero_prefix + peer_message + "
 			 "message + nonce + prf(Sk_px, IDx') + IntAuth %B", octets);

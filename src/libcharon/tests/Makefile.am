@@ -32,6 +32,7 @@ exchange_tests_SOURCES = \
   suites/test_ike_mid_sync.c \
   suites/test_ike_rekey.c \
   suites/test_childless.c \
+  suites/test_downgrade_prevention.c \
   utils/exchange_test_asserts.h utils/exchange_test_asserts.c \
   utils/exchange_test_helper.h utils/exchange_test_helper.c \
   utils/job_asserts.h \
