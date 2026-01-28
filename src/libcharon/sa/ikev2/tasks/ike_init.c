@@ -143,6 +143,11 @@ struct private_ike_init_t {
 	 * Whether to follow IKEv2 redirects as per RFC 5685
 	 */
 	bool follow_redirects;
+
+	/**
+	 * Whether to use full transcript authentication for downgrade prevention
+	 */
+	bool full_transcript_auth;
 };
 
 /**
@@ -485,7 +490,8 @@ static bool build_payloads(private_ike_init_t *this, message_t *message)
 	}
 	/* notify peer of full transcript authentication support for downgrade
 	 * prevention (draft-ietf-ipsecme-ikev2-downgrade-prevention) */
-	if (initiator_or_extension(this, EXT_IKE_SA_INIT_FULL_TRANSCRIPT_AUTH))
+	if (this->full_transcript_auth &&
+		initiator_or_extension(this, EXT_IKE_SA_INIT_FULL_TRANSCRIPT_AUTH))
 	{
 		message->add_notify(message, FALSE, IKE_SA_INIT_FULL_TRANSCRIPT_AUTH,
 							chunk_empty);
@@ -757,7 +763,15 @@ static void process_payloads(private_ike_init_t *this, message_t *message)
 					}
 					break;
 				case IKE_SA_INIT_FULL_TRANSCRIPT_AUTH:
-					if (!this->old_sa)
+					/* Only enable extension if:
+					 * - Not rekeying (!this->old_sa)
+					 * - AND (we're initiator receiving response from responder,
+					 *        OR we're responder and support full transcript auth)
+					 * The responder only echoes if it supports the extension,
+					 * so if we receive this as initiator, both sides support it.
+					 * As responder, we only enable if we'll actually echo it. */
+					if (!this->old_sa &&
+						(this->initiator || this->full_transcript_auth))
 					{
 						this->ike_sa->enable_extension(this->ike_sa,
 										EXT_IKE_SA_INIT_FULL_TRANSCRIPT_AUTH);
@@ -1551,6 +1565,8 @@ ike_init_t *ike_init_create(ike_sa_t *ike_sa, bool initiator, ike_sa_t *old_sa)
 								"%s.signature_authentication", TRUE, lib->ns),
 		.follow_redirects = lib->settings->get_bool(lib->settings,
 								"%s.follow_redirects", TRUE, lib->ns),
+		.full_transcript_auth = lib->settings->get_bool(lib->settings,
+								"%s.full_transcript_auth", TRUE, lib->ns),
 	);
 	this->nonceg = this->keymat->keymat.create_nonce_gen(&this->keymat->keymat);
 
