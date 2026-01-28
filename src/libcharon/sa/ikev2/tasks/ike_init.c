@@ -489,9 +489,11 @@ static bool build_payloads(private_ike_init_t *this, message_t *message)
 							chunk_empty);
 	}
 	/* notify peer of full transcript authentication support for downgrade
-	 * prevention (draft-ietf-ipsecme-ikev2-downgrade-prevention) */
-	if (this->full_transcript_auth &&
-		initiator_or_extension(this, EXT_IKE_SA_INIT_FULL_TRANSCRIPT_AUTH))
+	 * prevention (draft-ietf-ipsecme-ikev2-downgrade-prevention).
+	 * Both initiator and responder send this if they support it, regardless
+	 * of whether the peer sent it. This prevents an attacker from stripping
+	 * the notify to hide that a peer supports the extension. */
+	if (this->full_transcript_auth && !this->old_sa)
 	{
 		message->add_notify(message, FALSE, IKE_SA_INIT_FULL_TRANSCRIPT_AUTH,
 							chunk_empty);
@@ -763,15 +765,12 @@ static void process_payloads(private_ike_init_t *this, message_t *message)
 					}
 					break;
 				case IKE_SA_INIT_FULL_TRANSCRIPT_AUTH:
-					/* Only enable extension if:
-					 * - Not rekeying (!this->old_sa)
-					 * - AND (we're initiator receiving response from responder,
-					 *        OR we're responder and support full transcript auth)
-					 * The responder only echoes if it supports the extension,
-					 * so if we receive this as initiator, both sides support it.
-					 * As responder, we only enable if we'll actually echo it. */
-					if (!this->old_sa &&
-						(this->initiator || this->full_transcript_auth))
+					/* Enable extension only if we support it AND peer sent the
+					 * notify AND not rekeying. Both sides must support it for the
+					 * extension to be used. Since we always send the notify when
+					 * we support it (to prevent stripping attacks), receiving it
+					 * means the peer supports it too. */
+					if (!this->old_sa && this->full_transcript_auth)
 					{
 						this->ike_sa->enable_extension(this->ike_sa,
 										EXT_IKE_SA_INIT_FULL_TRANSCRIPT_AUTH);

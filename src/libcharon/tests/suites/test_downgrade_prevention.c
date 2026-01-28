@@ -146,12 +146,13 @@ START_TEST(test_initiator_no_support)
 	lib->settings->set_bool(lib->settings,
 							"%s.full_transcript_auth", TRUE, lib->ns);
 
-	/* Responder processes request but doesn't echo (initiator didn't send) */
-	assert_no_notify(OUT, IKE_SA_INIT_FULL_TRANSCRIPT_AUTH);
+	/* Responder processes request and sends notify (always sends if supported,
+	 * regardless of whether initiator sent it - prevents stripping attacks) */
+	assert_notify(OUT, IKE_SA_INIT_FULL_TRANSCRIPT_AUTH);
 	exchange_test_helper->process_message(exchange_test_helper, b, NULL);
 
-	/* <-- IKE_SA_INIT (initiator receives response) */
-	assert_no_notify(IN, IKE_SA_INIT_FULL_TRANSCRIPT_AUTH);
+	/* <-- IKE_SA_INIT (initiator receives response with notify) */
+	assert_notify(IN, IKE_SA_INIT_FULL_TRANSCRIPT_AUTH);
 	id_a->set_responder_spi(id_a, id_b->get_responder_spi(id_b));
 	exchange_test_helper->process_message(exchange_test_helper, a, NULL);
 
