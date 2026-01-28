@@ -690,10 +690,17 @@ METHOD(keymat_v2_t, get_int_auth, bool,
 	return TRUE;
 }
 
+/**
+ * Length of zero prefix for full transcript authentication
+ * (draft-ietf-ipsecme-ikev2-downgrade-prevention)
+ */
+#define FULL_TRANSCRIPT_ZERO_PREFIX_LEN 8
+
 METHOD(keymat_v2_t, get_auth_octets, bool,
 	private_keymat_v2_t *this, bool verify, chunk_t ike_sa_init,
 	chunk_t nonce, chunk_t int_auth, chunk_t ppk, identification_t *id,
-	char reserved[3], chunk_t *octets, array_t *schemes)
+	char reserved[3], chunk_t peer_ike_sa_init, bool full_transcript,
+	chunk_t *octets, array_t *schemes)
 {
 	chunk_t chunk, idx;
 	chunk_t skp_ppk = chunk_empty;
@@ -724,9 +731,32 @@ METHOD(keymat_v2_t, get_auth_octets, bool,
 		return FALSE;
 	}
 	chunk_clear(&skp_ppk);
-	*octets = chunk_cat("ccmc", ike_sa_init, nonce, chunk, int_auth);
-	DBG3(DBG_IKE, "octets = message + nonce + prf(Sk_px, IDx') + IntAuth %B",
-		 octets);
+
+	if (full_transcript && peer_ike_sa_init.len)
+	{
+		/* Full transcript authentication as per
+		 * draft-ietf-ipsecme-ikev2-downgrade-prevention:
+		 *   InitiatorSignedOctets = ZeroPrefix | RealMessage2 | RealMessage1 |
+		 *                           NonceRData | MACedIDForI
+		 *   ResponderSignedOctets = ZeroPrefix | RealMessage1 | RealMessage2 |
+		 *                           NonceIData | MACedIDForR
+		 * where ZeroPrefix is 8 zero bytes, and for initiator verify=FALSE
+		 * means building InitiatorSignedOctets (RealMessage1=ike_sa_init,
+		 * RealMessage2=peer_ike_sa_init).
+		 */
+		chunk_t zero_prefix = chunk_alloca(FULL_TRANSCRIPT_ZERO_PREFIX_LEN);
+		memset(zero_prefix.ptr, 0, FULL_TRANSCRIPT_ZERO_PREFIX_LEN);
+		*octets = chunk_cat("cccccmc", zero_prefix, peer_ike_sa_init,
+							ike_sa_init, nonce, chunk, int_auth);
+		DBG3(DBG_IKE, "octets (full transcript) = zero_prefix + peer_message + "
+			 "message + nonce + prf(Sk_px, IDx') + IntAuth %B", octets);
+	}
+	else
+	{
+		*octets = chunk_cat("ccmc", ike_sa_init, nonce, chunk, int_auth);
+		DBG3(DBG_IKE, "octets = message + nonce + prf(Sk_px, IDx') + IntAuth %B",
+			 octets);
+	}
 	return TRUE;
 }
 
@@ -739,7 +769,8 @@ METHOD(keymat_v2_t, get_auth_octets, bool,
 METHOD(keymat_v2_t, get_psk_sig, bool,
 	private_keymat_v2_t *this, bool verify, chunk_t ike_sa_init,
 	chunk_t nonce, chunk_t int_auth, chunk_t secret, chunk_t ppk,
-	identification_t *id, char reserved[3], chunk_t *sig)
+	identification_t *id, char reserved[3], chunk_t peer_ike_sa_init,
+	bool full_transcript, chunk_t *sig)
 {
 	chunk_t skp_ppk = chunk_empty, key = chunk_empty, octets = chunk_empty;
 	chunk_t key_pad;
@@ -758,7 +789,8 @@ METHOD(keymat_v2_t, get_psk_sig, bool,
 		}
 	}
 	if (!get_auth_octets(this, verify, ike_sa_init, nonce, int_auth, ppk, id,
-						 reserved, &octets, NULL))
+						 reserved, peer_ike_sa_init, full_transcript,
+						 &octets, NULL))
 	{
 		goto failure;
 	}

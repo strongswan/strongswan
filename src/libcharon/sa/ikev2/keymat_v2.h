@@ -123,22 +123,31 @@ struct keymat_v2_t {
 	 * key. PSK and EAP authentication include a secret into the data, use
 	 * the get_psk_sig() method instead.
 	 *
-	 * @param verify		TRUE to create for verification, FALSE to sign
-	 * @param ike_sa_init	encoded IKE_SA_INIT message
-	 * @param nonce			nonce value
-	 * @param int_auth		concatenated data of IKE_INTERMEDIATE exchanges
-	 * @param ppk			optional postquantum preshared key
-	 * @param id			identity
-	 * @param reserved		reserved bytes of id_payload
-	 * @param octets		chunk receiving allocated auth octets
-	 * @param schemes		array containing signature schemes
-	 * 						(signature_params_t*) in case they need to be
-	 *						modified by the keymat implementation
-	 * @return				TRUE if octets created successfully
+	 * If full_transcript is TRUE (draft-ietf-ipsecme-ikev2-downgrade-prevention),
+	 * both IKE_SA_INIT messages are authenticated using:
+	 *   InitiatorSignedOctets = ZeroPrefix | RealMessage2 | RealMessage1 | ...
+	 *   ResponderSignedOctets = ZeroPrefix | RealMessage1 | RealMessage2 | ...
+	 * where ZeroPrefix is 8 zero bytes.
+	 *
+	 * @param verify			TRUE to create for verification, FALSE to sign
+	 * @param ike_sa_init		encoded IKE_SA_INIT message
+	 * @param nonce				nonce value
+	 * @param int_auth			concatenated data of IKE_INTERMEDIATE exchanges
+	 * @param ppk				optional postquantum preshared key
+	 * @param id				identity
+	 * @param reserved			reserved bytes of id_payload
+	 * @param peer_ike_sa_init	peer's encoded IKE_SA_INIT message (for full transcript)
+	 * @param full_transcript	TRUE for full transcript auth (downgrade prevention)
+	 * @param octets			chunk receiving allocated auth octets
+	 * @param schemes			array containing signature schemes
+	 * 							(signature_params_t*) in case they need to be
+	 *							modified by the keymat implementation
+	 * @return					TRUE if octets created successfully
 	 */
 	bool (*get_auth_octets)(keymat_v2_t *this, bool verify, chunk_t ike_sa_init,
 							chunk_t nonce, chunk_t int_auth, chunk_t ppk,
 							identification_t *id, char reserved[3],
+							chunk_t peer_ike_sa_init, bool full_transcript,
 							chunk_t *octets, array_t *schemes);
 
 	/**
@@ -148,20 +157,23 @@ struct keymat_v2_t {
 	 * includes the secret into the signature. If no secret is given, SK_p is
 	 * used as secret (used for EAP methods without MSK).
 	 *
-	 * @param verify		TRUE to create for verification, FALSE to sign
-	 * @param ike_sa_init	encoded IKE_SA_INIT message
-	 * @param nonce			nonce value
-	 * @param int_auth		concatenated data of IKE_INTERMEDIATE exchanges
-	 * @param secret		optional secret to include into signature
-	 * @param ppk			optional postquantum preshared key
-	 * @param id			identity
-	 * @param reserved		reserved bytes of id_payload
-	 * @param sign			chunk receiving allocated signature octets
-	 * @return				TRUE if signature created successfully
+	 * @param verify			TRUE to create for verification, FALSE to sign
+	 * @param ike_sa_init		encoded IKE_SA_INIT message
+	 * @param nonce				nonce value
+	 * @param int_auth			concatenated data of IKE_INTERMEDIATE exchanges
+	 * @param secret			optional secret to include into signature
+	 * @param ppk				optional postquantum preshared key
+	 * @param id				identity
+	 * @param reserved			reserved bytes of id_payload
+	 * @param peer_ike_sa_init	peer's encoded IKE_SA_INIT message (for full transcript)
+	 * @param full_transcript	TRUE for full transcript auth (downgrade prevention)
+	 * @param sign				chunk receiving allocated signature octets
+	 * @return					TRUE if signature created successfully
 	 */
 	bool (*get_psk_sig)(keymat_v2_t *this, bool verify, chunk_t ike_sa_init,
 						chunk_t nonce, chunk_t int_auth, chunk_t secret,
 						chunk_t ppk, identification_t *id, char reserved[3],
+						chunk_t peer_ike_sa_init, bool full_transcript,
 						chunk_t *sig);
 
 	/**

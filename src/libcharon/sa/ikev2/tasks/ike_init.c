@@ -483,6 +483,13 @@ static bool build_payloads(private_ike_init_t *this, message_t *message)
 		message->add_notify(message, FALSE, INTERMEDIATE_EXCHANGE_SUPPORTED,
 							chunk_empty);
 	}
+	/* notify peer of full transcript authentication support for downgrade
+	 * prevention (draft-ietf-ipsecme-ikev2-downgrade-prevention) */
+	if (initiator_or_extension(this, EXT_IKE_SA_INIT_FULL_TRANSCRIPT_AUTH))
+	{
+		message->add_notify(message, FALSE, IKE_SA_INIT_FULL_TRANSCRIPT_AUTH,
+							chunk_empty);
+	}
 	return TRUE;
 }
 
@@ -742,16 +749,23 @@ static void process_payloads(private_ike_init_t *this, message_t *message)
 														   EXT_IKE_CHILDLESS);
 						}
 						break;
-					case INTERMEDIATE_EXCHANGE_SUPPORTED:
-						if (!this->old_sa)
-						{
-							this->ike_sa->enable_extension(this->ike_sa,
-														   EXT_IKE_INTERMEDIATE);
-						}
-						break;
-					default:
-						/* other notifies are handled elsewhere */
-						break;
+				case INTERMEDIATE_EXCHANGE_SUPPORTED:
+					if (!this->old_sa)
+					{
+						this->ike_sa->enable_extension(this->ike_sa,
+													   EXT_IKE_INTERMEDIATE);
+					}
+					break;
+				case IKE_SA_INIT_FULL_TRANSCRIPT_AUTH:
+					if (!this->old_sa)
+					{
+						this->ike_sa->enable_extension(this->ike_sa,
+										EXT_IKE_SA_INIT_FULL_TRANSCRIPT_AUTH);
+					}
+					break;
+				default:
+					/* other notifies are handled elsewhere */
+					break;
 				}
 
 			}

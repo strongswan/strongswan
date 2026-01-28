@@ -180,6 +180,21 @@ struct authenticator_t {
 	void (*set_int_auth)(authenticator_t *this, chunk_t int_auth);
 
 	/**
+	 * Optional method to enable full transcript authentication for downgrade
+	 * prevention (draft-ietf-ipsecme-ikev2-downgrade-prevention).
+	 *
+	 * When enabled, both IKE_SA_INIT messages (ours and the peer's) are
+	 * included in the authentication blob:
+	 *   InitiatorSignedOctets = ZeroPrefix | RealMessage2 | RealMessage1 | ...
+	 *   ResponderSignedOctets = ZeroPrefix | RealMessage1 | RealMessage2 | ...
+	 *
+	 * Has to be called before the final call to process()/build().
+	 *
+	 * @param peer_init		peer's IKE_SA_INIT message data
+	 */
+	void (*use_full_transcript)(authenticator_t *this, chunk_t peer_init);
+
+	/**
 	 * Check if the authenticator is capable of mutual authentication.
 	 *
 	 * Some authenticator authenticate both peers, e.g. EAP. To support

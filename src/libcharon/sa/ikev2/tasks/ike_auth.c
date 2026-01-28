@@ -924,6 +924,14 @@ METHOD(task_t, build_i, status_t,
 		{
 			this->my_auth->set_int_auth(this->my_auth, this->int_auth);
 		}
+		/* enable full transcript auth for downgrade prevention */
+		if (this->ike_sa->supports_extension(this->ike_sa,
+					EXT_IKE_SA_INIT_FULL_TRANSCRIPT_AUTH) &&
+			this->my_auth->use_full_transcript)
+		{
+			this->my_auth->use_full_transcript(this->my_auth,
+							this->other_packet->get_data(this->other_packet));
+		}
 	}
 	/* for authentication methods that return NEED_MORE, the PPK will be reset
 	 * in process_i() for messages without PPK_ID notify, so we always set it
@@ -1090,6 +1098,14 @@ METHOD(task_t, process_r, status_t,
 		if (this->int_auth.ptr && this->other_auth->set_int_auth)
 		{
 			this->other_auth->set_int_auth(this->other_auth, this->int_auth);
+		}
+		/* enable full transcript auth for downgrade prevention */
+		if (this->ike_sa->supports_extension(this->ike_sa,
+					EXT_IKE_SA_INIT_FULL_TRANSCRIPT_AUTH) &&
+			this->other_auth->use_full_transcript)
+		{
+			this->other_auth->use_full_transcript(this->other_auth,
+							this->my_packet->get_data(this->my_packet));
 		}
 	}
 	if (message->get_payload(message, PLV2_AUTH) &&
@@ -1288,6 +1304,14 @@ METHOD(task_t, build_r, status_t,
 			if (this->int_auth.ptr && this->my_auth->set_int_auth)
 			{
 				this->my_auth->set_int_auth(this->my_auth, this->int_auth);
+			}
+			/* enable full transcript auth for downgrade prevention */
+			if (this->ike_sa->supports_extension(this->ike_sa,
+						EXT_IKE_SA_INIT_FULL_TRANSCRIPT_AUTH) &&
+				this->my_auth->use_full_transcript)
+			{
+				this->my_auth->use_full_transcript(this->my_auth,
+								this->other_packet->get_data(this->other_packet));
 			}
 		}
 	}
@@ -1604,6 +1628,14 @@ METHOD(task_t, process_i, status_t,
 				{
 					this->other_auth->set_int_auth(this->other_auth,
 												   this->int_auth);
+				}
+				/* enable full transcript auth for downgrade prevention */
+				if (this->ike_sa->supports_extension(this->ike_sa,
+							EXT_IKE_SA_INIT_FULL_TRANSCRIPT_AUTH) &&
+					this->other_auth->use_full_transcript)
+				{
+					this->other_auth->use_full_transcript(this->other_auth,
+									this->my_packet->get_data(this->my_packet));
 				}
 			}
 			else

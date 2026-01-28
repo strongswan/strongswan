@@ -68,6 +68,16 @@ struct private_psk_authenticator_t {
 	 * Add a NO_PPK_AUTH notify
 	 */
 	bool no_ppk_auth;
+
+	/**
+	 * Peer's IKE_SA_INIT message for full transcript authentication
+	 */
+	chunk_t peer_ike_sa_init;
+
+	/**
+	 * Use full transcript authentication (downgrade prevention)
+	 */
+	bool full_transcript;
 };
 
 METHOD(authenticator_t, build, status_t,
@@ -92,7 +102,8 @@ METHOD(authenticator_t, build, status_t,
 	}
 	if (!keymat->get_psk_sig(keymat, FALSE, this->ike_sa_init, this->nonce,
 							 this->int_auth, key->get_key(key), this->ppk,
-							 my_id, this->reserved, &auth_data))
+							 my_id, this->reserved, this->peer_ike_sa_init,
+							 this->full_transcript, &auth_data))
 	{
 		key->destroy(key);
 		return FAILED;
@@ -109,7 +120,8 @@ METHOD(authenticator_t, build, status_t,
 	{
 		if (!keymat->get_psk_sig(keymat, FALSE, this->ike_sa_init, this->nonce,
 							 this->int_auth, key->get_key(key), chunk_empty,
-							 my_id, this->reserved, &auth_data))
+							 my_id, this->reserved, this->peer_ike_sa_init,
+							 this->full_transcript, &auth_data))
 		{
 			DBG1(DBG_IKE, "failed adding NO_PPK_AUTH notify");
 			key->destroy(key);
@@ -166,7 +178,8 @@ METHOD(authenticator_t, process, status_t,
 
 		if (!keymat->get_psk_sig(keymat, TRUE, this->ike_sa_init, this->nonce,
 								 this->int_auth, key->get_key(key), this->ppk,
-								 other_id, this->reserved, &auth_data))
+								 other_id, this->reserved, this->peer_ike_sa_init,
+								 this->full_transcript, &auth_data))
 		{
 			continue;
 		}
@@ -210,6 +223,13 @@ METHOD(authenticator_t, set_int_auth, void,
 	this->int_auth = int_auth;
 }
 
+METHOD(authenticator_t, use_full_transcript, void,
+	private_psk_authenticator_t *this, chunk_t peer_init)
+{
+	this->peer_ike_sa_init = peer_init;
+	this->full_transcript = peer_init.len > 0;
+}
+
 METHOD(authenticator_t, destroy, void,
 	private_psk_authenticator_t *this)
 {
@@ -232,6 +252,7 @@ psk_authenticator_t *psk_authenticator_create_builder(ike_sa_t *ike_sa,
 				.process = (void*)return_failed,
 				.use_ppk = _use_ppk,
 				.set_int_auth = _set_int_auth,
+				.use_full_transcript = _use_full_transcript,
 				.is_mutual = (void*)return_false,
 				.destroy = _destroy,
 			},
@@ -261,6 +282,7 @@ psk_authenticator_t *psk_authenticator_create_verifier(ike_sa_t *ike_sa,
 				.process = _process,
 				.use_ppk = _use_ppk,
 				.set_int_auth = _set_int_auth,
+				.use_full_transcript = _use_full_transcript,
 				.is_mutual = (void*)return_false,
 				.destroy = _destroy,
 			},

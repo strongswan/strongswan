@@ -178,6 +178,12 @@ enum ike_extension_t {
 	EXT_IKE_INTERMEDIATE = (1<<17),
 
 	/**
+	 * IKEv2 Downgrade Prevention,
+	 * draft-ietf-ipsecme-ikev2-downgrade-prevention
+	 */
+	EXT_IKE_SA_INIT_FULL_TRANSCRIPT_AUTH = (1<<18),
+
+	/**
 	 * MSB marker to separate private extensions
 	 */
 	EXT_PRIVATE_MARKER = (1<<31),

@@ -72,6 +72,16 @@ struct private_pubkey_authenticator_t {
 	 * Add a NO_PPK_AUTH notify
 	 */
 	bool no_ppk_auth;
+
+	/**
+	 * Peer's IKE_SA_INIT message for full transcript authentication
+	 */
+	chunk_t peer_ike_sa_init;
+
+	/**
+	 * Use full transcript authentication (downgrade prevention)
+	 */
+	bool full_transcript;
 };
 
 /**
@@ -331,6 +341,7 @@ static status_t sign_signature_auth(private_pubkey_authenticator_t *this,
 
 	if (keymat->get_auth_octets(keymat, FALSE, this->ike_sa_init, this->nonce,
 								this->int_auth, this->ppk, id, this->reserved,
+								this->peer_ike_sa_init, this->full_transcript,
 								&octets, schemes))
 	{
 		enumerator = array_create_enumerator(schemes);
@@ -355,6 +366,8 @@ static status_t sign_signature_auth(private_pubkey_authenticator_t *this,
 				if (keymat->get_auth_octets(keymat, FALSE, this->ike_sa_init,
 											this->nonce, this->int_auth,
 											chunk_empty, id, this->reserved,
+											this->peer_ike_sa_init,
+											this->full_transcript,
 											&octets, schemes) &&
 					private->sign(private, params->scheme, params->params,
 								  octets, &auth_data) &&
@@ -419,8 +432,9 @@ static bool get_auth_octets_scheme(private_pubkey_authenticator_t *this,
 
 	keymat = (keymat_v2_t*)this->ike_sa->get_keymat(this->ike_sa);
 	if (keymat->get_auth_octets(keymat, verify, this->ike_sa_init, this->nonce,
-								this->int_auth, ppk, id, this->reserved, octets,
-								schemes) &&
+								this->int_auth, ppk, id, this->reserved,
+								this->peer_ike_sa_init, this->full_transcript,
+								octets, schemes) &&
 		array_remove(schemes, 0, scheme))
 	{
 		success = TRUE;
@@ -709,6 +723,13 @@ METHOD(authenticator_t, set_int_auth, void,
 	this->int_auth = int_auth;
 }
 
+METHOD(authenticator_t, use_full_transcript, void,
+	private_pubkey_authenticator_t *this, chunk_t peer_init)
+{
+	this->peer_ike_sa_init = peer_init;
+	this->full_transcript = peer_init.len > 0;
+}
+
 METHOD(authenticator_t, destroy, void,
 	private_pubkey_authenticator_t *this)
 {
@@ -731,6 +752,7 @@ pubkey_authenticator_t *pubkey_authenticator_create_builder(ike_sa_t *ike_sa,
 				.process = (void*)return_failed,
 				.use_ppk = _use_ppk,
 				.set_int_auth = _set_int_auth,
+				.use_full_transcript = _use_full_transcript,
 				.is_mutual = (void*)return_false,
 				.destroy = _destroy,
 			},
@@ -760,6 +782,7 @@ pubkey_authenticator_t *pubkey_authenticator_create_verifier(ike_sa_t *ike_sa,
 				.process = _process,
 				.use_ppk = _use_ppk,
 				.set_int_auth = _set_int_auth,
+				.use_full_transcript = _use_full_transcript,
 				.is_mutual = (void*)return_false,
 				.destroy = _destroy,
 			},
