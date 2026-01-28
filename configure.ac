@@ -68,6 +68,7 @@ ARG_WITH_SET([dev-headers],          [no], [install strongSwan development heade
 ARG_WITH_SET([printf-hooks],         [auto], [force the use of a specific printf hook implementation (auto, builtin, glibc, vstr).])
 ARG_WITH_SET([rubygemdir],           ["gem environment gemdir"], [path to install ruby gems to])
 ARG_WITH_SET([testable-ke],          [yes], [make key exchange implementations testable by providing a set_seed() method])
+ARG_WITH_SET([plugins-packaged-seperately], [no], [changes e.g. log messages for distributions that package plugins seperately])
 
 if test -n "$PKG_CONFIG"; then
 	systemdsystemunitdir_default=$($PKG_CONFIG --variable=systemdsystemunitdir systemd)
@@ -1944,6 +1945,10 @@ fi
 if test x$imc_swima = xtrue -o x$imv_swima = xtrue; then
 	AC_DEFINE([USE_JSON], [], [build code for JSON])
 fi
+if test "x$plugins_packaged_seperately" != xno; then
+	AC_DEFINE([PLUGINS_PACKAGED_SEPARATELY], [], [distribution ships plugins in multiple packages])
+fi
+
 
 # ====================================================
 #  options for enabled modules (see conf/Makefile.am)
