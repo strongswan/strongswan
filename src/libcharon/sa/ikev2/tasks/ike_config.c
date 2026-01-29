@@ -111,7 +111,7 @@ static configuration_attribute_t *build_vip(host_t *vip)
 /**
  * Handle a received attribute as initiator
  */
-static void handle_attribute(private_ike_config_t *this,
+static void handle_attribute_initiator(private_ike_config_t *this,
 							 configuration_attribute_t *ca)
 {
 	attribute_handler_t *handler = NULL;
@@ -139,6 +139,13 @@ static void handle_attribute(private_ike_config_t *this,
 							handler, ca->get_type(ca), ca->get_chunk(ca));
 }
 
+static void handle_attribute_responder(private_ike_config_t *this,
+							 configuration_attribute_t *ca)
+{
+	this->ike_sa->add_configuration_attribute(this->ike_sa,
+							NULL, ca->get_type(ca), ca->get_chunk(ca));
+}
+
 /**
  * process a single configuration attribute
  */
@@ -158,7 +165,7 @@ static void process_attribute(private_ike_config_t *this,
 		{
 			if (this->initiator && !this->vip_requested)
 			{
-				handle_attribute(this, ca);
+				handle_attribute_initiator(this, ca);
 				return;
 			}
 
@@ -191,7 +198,11 @@ static void process_attribute(private_ike_config_t *this,
 		{
 			if (this->initiator)
 			{
-				handle_attribute(this, ca);
+				handle_attribute_initiator(this, ca);
+			}
+			else
+			{
+				handle_attribute_responder(this, ca);
 			}
 		}
 	}
