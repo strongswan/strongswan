@@ -117,6 +117,18 @@ void dbg_default_set_level_group(debug_t group, level_t level)
 /*
  * Described in header
  */
+level_t dbg_default_get_level_group(debug_t group)
+{
+	if (group < DBG_ANY)
+	{
+		return default_level[group] + 1;
+	}
+	return default_level[0];
+}
+
+/*
+ * Described in header
+ */
 void dbg_default_set_level(level_t level)
 {
 	dbg_default_set_level_group(DBG_ANY, level);
