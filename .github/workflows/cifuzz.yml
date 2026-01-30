@@ -16,6 +16,10 @@ jobs:
     needs: pre-check
     if: ${{ needs.pre-check.outputs.should_skip != 'true' }}
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        sanitizer: [address, undefined]
     permissions:
       security-events: write
     steps:
@@ -25,6 +29,7 @@ jobs:
       with:
         oss-fuzz-project-name: 'strongswan'
         language: c
+        sanitizer: ${{ matrix.sanitizer }}
 
     - name: Run Fuzzers
       uses: google/oss-fuzz/infra/cifuzz/actions/run_fuzzers@master
@@ -32,12 +37,13 @@ jobs:
         oss-fuzz-project-name: 'strongswan'
         output-sarif: true
         language: c
+        sanitizer: ${{ matrix.sanitizer }}
 
     - name: Upload Crash
       uses: actions/upload-artifact@v4
       if: failure() && steps.build.outcome == 'success'
       with:
-        name: artifacts
+        name: ${{ matrix.sanitizer }}-artifacts
         path: ./out/artifacts
 
     - name: Upload Sarif
