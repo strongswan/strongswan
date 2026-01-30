@@ -1,5 +1,6 @@
 fuzz_certs
 fuzz_crls
+fuzz_esp
 fuzz_ids
 fuzz_ike
 fuzz_ocsp_req
