@@ -1,5 +1,5 @@
+# dave already disconnected in evaltest
 carol::swanctl --terminate --ike home
-dave::swanctl --terminate --ike home
 carol::systemctl stop strongswan
 dave::systemctl stop strongswan
 moon::systemctl stop strongswan
