@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2015-2026 Tobias Brunner
  * Copyright (C) 2009 Martin Willi
  *
  * Copyright (C) secunet Security Networks AG
@@ -71,11 +72,50 @@ static char command_optstring[(MAX_COMMANDS > MAX_OPTIONS ?
 								MAX_COMMANDS : MAX_OPTIONS) * 3];
 
 /**
+ * Common options
+ */
+static command_option_t shared_options[] = {
+	{
+		"debug", 'v', 1, "set debug level, default: 1"
+	},
+	{
+		"options", '+', 1, "read command line options from file"
+	},
+	{
+		"uri", 'u', 1, "service URI to connect to"
+	},
+};
+
+/**
+ * Add a single option to command_opts/command_optstr at the current locations.
+ */
+static void build_option(command_option_t *option, int i, int *pos)
+{
+	command_opts[i].name = option->name;
+	command_opts[i].has_arg = option->arg;
+	command_opts[i].val = option->op;
+
+	command_optstring[(*pos)++] = option->op;
+	switch (option->arg)
+	{
+		case optional_argument:
+			command_optstring[(*pos)++] = ':';
+			/* FALL */
+		case required_argument:
+			command_optstring[(*pos)++] = ':';
+			/* FALL */
+		case no_argument:
+		default:
+			break;
+	}
+}
+
+/**
  * Build command_opts/command_optstr for the active command
  */
 static void build_opts()
 {
-	int i, pos = 0;
+	int i, j, pos = 0;
 
 	memset(command_opts, 0, sizeof(command_opts));
 	memset(command_optstring, 0, sizeof(command_optstring));
@@ -87,27 +127,26 @@ static void build_opts()
 			command_opts[i].val = cmds[i].op;
 			command_optstring[i] = cmds[i].op;
 		}
+		/* add shared options not as actual option but as commands with
+		 * argument (which commands usually don't take) */
+		if (i > MAX_COMMANDS - countof(shared_options))
+		{
+			fprintf(stderr, "unable to add global shared options, please "
+					"increase MAX_COMMANDS\n");
+		}
+		else
+		{
+			for (j = 0, pos = i; j < countof(shared_options); j++, i++)
+			{
+				build_option(&shared_options[j], i, &pos);
+			}
+		}
 	}
 	else
 	{
 		for (i = 0; cmds[active].options[i].name; i++)
 		{
-			command_opts[i].name = cmds[active].options[i].name;
-			command_opts[i].has_arg = cmds[active].options[i].arg;
-			command_opts[i].val = cmds[active].options[i].op;
-			command_optstring[pos++] = cmds[active].options[i].op;
-			switch (cmds[active].options[i].arg)
-			{
-				case optional_argument:
-					command_optstring[pos++] = ':';
-					/* FALL */
-				case required_argument:
-					command_optstring[pos++] = ':';
-					/* FALL */
-				case no_argument:
-				default:
-					break;
-			}
+			build_option(&cmds[active].options[i], i, &pos);
 		}
 	}
 }
@@ -129,10 +168,57 @@ int command_getopt(char **arg)
 			case 'u':
 				continue;
 			default:
-				*arg = optarg;
+				if (arg)
+				{
+					*arg = optarg;
+				}
 				return op;
 		}
 	}
+}
+
+/**
+ * Pre-process options common for all commands
+ */
+static bool process_common_opts(bool init)
+{
+	int prevoptind = optind;
+	bool success = TRUE;
+
+	while (TRUE)
+	{
+		switch (getopt_long(argc, argv, command_optstring, command_opts, NULL))
+		{
+			case '+':
+				if (!options->from(options, optarg, &argc, &argv, optind))
+				{
+					success = FALSE;
+					break;
+				}
+				continue;
+			case 'v':
+				dbg_default_set_level(atoi(optarg));
+				continue;
+			case 'u':
+				uri = optarg;
+				continue;
+			default:
+				if (init)
+				{	/* stop if we found a known command during initialization,
+					 * otherwise we'd process e.g. --options twice */
+					break;
+				}
+				continue;
+			case '?':
+			case EOF:
+				break;
+		}
+		break;
+	}
+	/* restore option parser state after pre-processing */
+	optind = prevoptind;
+	opterr = 1;
+	return success;
 }
 
 /**
@@ -140,7 +226,7 @@ int command_getopt(char **arg)
  */
 void command_register(command_t command)
 {
-	int i;
+	int i, j;
 
 	if (registered == MAX_COMMANDS)
 	{
@@ -162,29 +248,24 @@ void command_register(command_t command)
 	/* append default options, but not to --help */
 	if (!active)
 	{
-		for (i = 0; i < countof(cmds[registered].options) - 1; i++)
+		for (i = 0; i < MAX_OPTIONS; i++)
 		{
 			if (!cmds[registered].options[i].name)
 			{
 				break;
 			}
 		}
-		if (i > countof(cmds[registered].options) - 3)
+		if (i > MAX_OPTIONS - countof(shared_options))
 		{
 			fprintf(stderr, "command '%s' registered too many options, please "
 					"increase MAX_OPTIONS\n", command.cmd);
 		}
 		else
 		{
-			cmds[registered].options[i++] = (command_option_t) {
-				"debug",	'v', 1, "set debug level, default: 1"
-			};
-			cmds[registered].options[i++] = (command_option_t) {
-				"options",	'+', 1, "read command line options from file"
-			};
-			cmds[registered].options[i++] = (command_option_t) {
-				"uri",		'u', 1, "service URI to connect to"
-			};
+			for (j = 0; j < countof(shared_options); j++)
+			{
+				cmds[registered].options[i++] = shared_options[j];
+			}
 		}
 		for (i = 0; cmds[registered].line[i]; i++)
 		{
@@ -216,13 +297,24 @@ int command_usage(char *error, ...)
 
 	if (active == help_idx)
 	{
-		fprintf(out, "\nloaded plugins: %s\nusage:\n"
-				"  swanctl command [options]\ncommands:\n",
-				lib->plugins->loaded_plugins(lib->plugins));
+		fprintf(out, "\n");
+		if (lib)
+		{
+			fprintf(out, "loaded plugins: %s\nusage:\n"
+					"  swanctl command [options]\ncommands:\n",
+					lib->plugins->loaded_plugins(lib->plugins));
+		}
 		for (i = 0; i < MAX_COMMANDS && cmds[i].cmd; i++)
 		{
 			fprintf(out, "  --%-16s (-%c)  %s\n",
 					cmds[i].cmd, cmds[i].op, cmds[i].description);
+		}
+		fprintf(out, "options:\n");
+		for (i = 0; i < countof(shared_options); i++)
+		{
+			fprintf(out, "  --%-16s (-%c)  %s\n",
+					shared_options[i].name, shared_options[i].op,
+					shared_options[i].desc);
 		}
 	}
 	else
@@ -242,7 +334,7 @@ int command_usage(char *error, ...)
 			}
 		}
 		fprintf(out, "options:\n");
-		for (i = 0; cmds[active].options[i].name; i++)
+		for (i = 0; i < MAX_OPTIONS && cmds[active].options[i].name; i++)
 		{
 			fprintf(out, "  --%-15s (-%c)  %s\n",
 					cmds[active].options[i].name, cmds[active].options[i].op,
@@ -269,37 +361,6 @@ static void cleanup()
 }
 
 /**
- * Process options common for all commands
- */
-static bool process_common_opts()
-{
-	while (TRUE)
-	{
-		switch (getopt_long(argc, argv, command_optstring, command_opts, NULL))
-		{
-			case '+':
-				if (!options->from(options, optarg, &argc, &argv, optind))
-				{
-					return FALSE;
-				}
-				continue;
-			case 'v':
-				dbg_default_set_level(atoi(optarg));
-				continue;
-			case 'u':
-				uri = optarg;
-				continue;
-			default:
-				continue;
-			case '?':
-				return FALSE;
-			case EOF:
-				return TRUE;
-		}
-	}
-}
-
-/**
  * Open vici connection, call a command
  */
 static int call_command(command_t *cmd)
@@ -320,43 +381,65 @@ static int call_command(command_t *cmd)
 	return ret;
 }
 
-/**
- * Dispatch commands.
+/*
+ * Described in header
  */
-int command_dispatch(int c, char *v[])
+int command_init(int c, char *v[])
 {
 	int op, i;
 
-	uri = lib->settings->get_str(lib->settings, "%s.socket",
-			lib->settings->get_str(lib->settings, "%s.plugins.vici.socket",
-								   NULL, lib->ns), lib->ns);
+	argc = c;
+	argv = v;
 
 	options = options_create();
 	atexit(cleanup);
+
 	active = help_idx = registered;
-	argc = c;
-	argv = v;
-	command_register((command_t){NULL, 'h', "help", "show usage information"});
+	command_register((command_t){NULL, 'h', "help", "show usage, version and "
+					 "plugin information"});
 
 	build_opts();
-	op = getopt_long(c, v, command_optstring, command_opts, NULL);
+	/* handle common options until we find a command */
+	if (!process_common_opts(TRUE))
+	{
+		return command_usage("invalid --options");
+	}
+	op = command_getopt(NULL);
 	for (i = 0; i < MAX_COMMANDS && cmds[i].cmd; i++)
 	{
 		if (cmds[i].op == op)
 		{
 			active = i;
 			build_opts();
-			if (help_idx == i)
+			/* handle common options again, now with specific options loaded */
+			if (!process_common_opts(FALSE))
 			{
-				return command_usage(NULL);
+				return command_usage("invalid --options");
 			}
-			if (!process_common_opts())
-			{
-				return command_usage("invalid options");
-			}
-			optind = 2;
-			return call_command(&cmds[i]);
+			return 0;
 		}
 	}
-	return command_usage(c > 1 ? "invalid operation" : NULL);
+	return command_usage(op != EOF ? "invalid command" : NULL);
+}
+
+
+/*
+ * Described in header
+ */
+int command_dispatch()
+{
+	/* no callback registered for --help and we don't want to connect to the
+	 * socket anyway */
+	if (active == help_idx)
+	{
+		return command_usage(NULL);
+	}
+
+	if (!uri)
+	{
+		uri = lib->settings->get_str(lib->settings, "%s.socket",
+				lib->settings->get_str(lib->settings, "%s.plugins.vici.socket",
+									   NULL, lib->ns), lib->ns);
+	}
+	return call_command(&cmds[active]);
 }

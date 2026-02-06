@@ -477,8 +477,13 @@ static plugin_entry_t *load_plugin(private_plugin_loader_t *this, char *name,
 			{	/* try to load the plugin from a file */
 				break;
 			}
+#ifndef PLUGINS_PACKAGED_SEPARATELY
 			DBG1(DBG_LIB, "plugin '%s': failed to load - %s not found and no "
 				 "plugin file available", name, create);
+#else
+			DBG2(DBG_LIB, "plugin '%s': failed to load - %s not found, plugin "
+				 "may be shipped in a separate package", name, create);
+#endif
 			/* fall-through */
 		default:
 			return NULL;
