@@ -24,18 +24,12 @@
 
 int LLVMFuzzerInitialize(int *argc, char ***argv)
 {
-	plugin_loader_t *loader;
-
 	dbg_default_set_level(-1);
 	library_init(NULL, "fuzz_esp");
 	libipsec_init();
+	plugin_loader_add_plugindirs(PLUGINDIR, PLUGINS);
 
-	loader = lib->plugins;
-	if (!loader->load(loader, "sha1") ||
-		!loader->load(loader, "aes") ||
-		!loader->load(loader, "hmac") ||
-		!loader->load(loader, "nonce") ||
-		!loader->load(loader, "random"))
+	if (!lib->plugins->load(lib->plugins, PLUGINS))
 	{
 		return 1;
 	}
@@ -43,106 +37,65 @@ int LLVMFuzzerInitialize(int *argc, char ***argv)
 	return 0;
 }
 
-static void create_host_pair(host_t **src, host_t **dst)
-{
-	*src = host_create_from_string("192.0.2.1", 4500);
-	*dst = host_create_from_string("192.0.2.2", 4500);
-}
+
 
 int LLVMFuzzerTestOneInput(const uint8_t *buf, size_t len)
 {
 	esp_packet_t *esp_packet;
-	esp_context_t *esp_ctx;
-	ip_packet_t *ip_packet, *payload_ip;
+	esp_context_t *esp_ctx_out, *esp_ctx_in;
+	ip_packet_t *payload_ip;
 	host_t *src, *dst;
 	uint32_t spi;
-	chunk_t enc_key, int_key;
+	chunk_t enc_key, int_key, packet_data;
 
-	if (len < 48)
+	if (len < 32)
 	{
 		return 0;
 	}
 
-	/* Extract encryption and integrity keys from fuzzer input */
-	enc_key = chunk_clone(chunk_create((u_char*)buf, 16));
-	int_key = chunk_clone(chunk_create((u_char*)(buf + 16), 16));
+	/* Extract encryption and integrity keys from fuzzer input (no clone needed) */
+	enc_key = chunk_create((u_char*)buf, 16);
+	int_key = chunk_create((u_char*)(buf + 16), 16);
 
-	/* Create IP packet from remaining fuzzer data */
-	ip_packet = ip_packet_create(chunk_clone(chunk_create((u_char*)(buf + 32), len - 32)));
-	if (!ip_packet)
-	{
-		chunk_free(&enc_key);
-		chunk_free(&int_key);
-		return 0;
-	}
-
-	/* Test IP packet operations */
-	ip_packet->get_version(ip_packet);
-	ip_packet->get_source(ip_packet);
-	ip_packet->get_destination(ip_packet);
-	ip_packet->get_next_header(ip_packet);
-
-	/* Create host pair for ESP packet */
-	create_host_pair(&src, &dst);
-	if (!src || !dst)
-	{
-		ip_packet->destroy(ip_packet);
-		chunk_free(&enc_key);
-		chunk_free(&int_key);
-		DESTROY_IF(src);
-		DESTROY_IF(dst);
-		return 0;
-	}
-
-	/* Create ESP packet from IP payload */
-	esp_packet = esp_packet_create_from_payload(src, dst, ip_packet);
+	/* Create ESP packet from remaining fuzzer data (inbound path) */
+	packet_data = chunk_clone(chunk_create((u_char*)(buf + 32), len - 32));
+	src = host_create_from_string("192.0.2.1", 4500);
+	dst = host_create_from_string("192.0.2.2", 4500);
+	esp_packet = esp_packet_create_from_packet(packet_create_from_data(src, dst, packet_data));
 	if (!esp_packet)
 	{
-		ip_packet->destroy(ip_packet);
 		src->destroy(src);
 		dst->destroy(dst);
-		chunk_free(&enc_key);
-		chunk_free(&int_key);
 		return 0;
 	}
 
-	/* Test ESP packet operations before encryption */
-	esp_packet->get_source(esp_packet);
-	esp_packet->get_destination(esp_packet);
-
+	/* Parse ESP header */
 	if (esp_packet->parse_header(esp_packet, &spi))
 	{
 		esp_packet->get_next_header(esp_packet);
 	}
 
-	/* Create ESP context and perform encryption/decryption */
-	esp_ctx = esp_context_create(12, enc_key, 2, int_key, FALSE);
-	if (esp_ctx)
+	/* Create outbound and inbound ESP contexts */
+	esp_ctx_out = esp_context_create(ENCR_AES_CBC, enc_key, AUTH_HMAC_SHA2_256_128, int_key, FALSE);
+	esp_ctx_in = esp_context_create(ENCR_AES_CBC, enc_key, AUTH_HMAC_SHA2_256_128, int_key, TRUE);
+
+	if (esp_ctx_out && esp_ctx_in)
 	{
-		/* Encrypt the ESP packet */
-		if (esp_packet->encrypt(esp_packet, esp_ctx, 0x12345678) == SUCCESS)
+		/* Try to decrypt with inbound context (fuzzer provides encrypted ESP packets) */
+		if (esp_packet->decrypt(esp_packet, esp_ctx_in) == SUCCESS)
 		{
-			/* Test operations on encrypted packet */
-			esp_packet->get_source(esp_packet);
-			esp_packet->get_destination(esp_packet);
+			payload_ip = esp_packet->get_payload(esp_packet);
+			DESTROY_IF(payload_ip);
 
-			/* Decrypt and extract payload */
-			if (esp_packet->decrypt(esp_packet, esp_ctx) == SUCCESS)
-			{
-				payload_ip = esp_packet->get_payload(esp_packet);
-				DESTROY_IF(payload_ip);
-
-				payload_ip = esp_packet->extract_payload(esp_packet);
-				DESTROY_IF(payload_ip);
-			}
+			payload_ip = esp_packet->extract_payload(esp_packet);
+			DESTROY_IF(payload_ip);
 		}
-		esp_ctx->destroy(esp_ctx);
 	}
 
 	/* Cleanup */
+	DESTROY_IF(esp_ctx_out);
+	DESTROY_IF(esp_ctx_in);
 	esp_packet->destroy(esp_packet);
-	chunk_free(&enc_key);
-	chunk_free(&int_key);
 
 	return 0;
 }
