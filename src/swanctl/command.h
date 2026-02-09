@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2016-2026 Tobias Brunner
  * Copyright (C) 2009 Martin Willi
  *
  * Copyright (C) secunet Security Networks AG
@@ -26,9 +27,9 @@
 #include <library.h>
 
 /**
- * Maximum number of commands (+1).
+ * Maximum number of commands (+3).
  */
-#define MAX_COMMANDS 26
+#define MAX_COMMANDS 29
 
 /**
  * Maximum number of options in a command (+3)
@@ -97,9 +98,14 @@ int command_getopt(char **arg);
 void command_register(command_t command);
 
 /**
+ * Initialize command parsing/dispatching.
+ */
+int command_init(int argc, char *argv[]);
+
+/**
  * Dispatch commands.
  */
-int command_dispatch(int argc, char *argv[]);
+int command_dispatch();
 
 /**
  * Show usage information of active command.

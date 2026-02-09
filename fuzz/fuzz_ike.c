@@ -14,6 +14,7 @@
  * for more details.
  */
 
+#include <daemon.h>
 #include <library.h>
 #include <encoding/message.h>
 
@@ -21,6 +22,7 @@ int LLVMFuzzerInitialize(int *argc, char ***argv)
 {
 	dbg_default_set_level(-1);
 	library_init(NULL, "fuzz_ike");
+	libcharon_init();
 	return 0;
 }
 

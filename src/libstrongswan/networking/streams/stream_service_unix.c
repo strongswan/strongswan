@@ -52,7 +52,7 @@ stream_service_t *stream_service_create_unix(char *uri, int backlog)
 	}
 	unlink(addr.sun_path);
 
-	old = umask(S_IRWXO);
+	old = umask(S_IXUSR | S_IXGRP | S_IRWXO);
 	if (bind(fd, (struct sockaddr*)&addr, len) < 0)
 	{
 		DBG1(DBG_NET, "binding socket '%s' failed: %s", uri, strerror(errno));

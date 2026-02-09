@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 Tobias Brunner
+ * Copyright (C) 2018-2026 Tobias Brunner
  * Copyright (C) 2014 Martin Willi
  *
  * Copyright (C) secunet Security Networks AG
@@ -95,6 +95,14 @@ static void cleanup()
  */
 int main(int argc, char *argv[])
 {
+	level_t level;
+	int status;
+
+	status = command_init(argc, argv);
+	if (status)
+	{
+		return status;
+	}
 	atexit(cleanup);
 	if (!library_init(NULL, "swanctl"))
 	{
@@ -114,9 +122,14 @@ int main(int argc, char *argv[])
 
 	swanctl_dir = strdup(getenv("SWANCTL_DIR") ?: SWANCTLDIR);
 
-	dbg_default_set_level(0);
+	/* suppress log message when spawning threads by default */
+	level = dbg_default_get_level_group(DBG_JOB);
+	if (level == 1)
+	{
+		dbg_default_set_level_group(DBG_JOB, 0);
+	}
 	lib->processor->set_threads(lib->processor, 4);
-	dbg_default_set_level(1);
+	dbg_default_set_level_group(DBG_JOB, level);
 
-	return command_dispatch(argc, argv);
+	return command_dispatch();
 }

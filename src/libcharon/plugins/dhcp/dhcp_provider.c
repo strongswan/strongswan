@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2025 Tobias Brunner
  * Copyright (C) 2010 Martin Willi
  *
  * Copyright (C) secunet Security Networks AG
@@ -32,12 +33,12 @@ struct private_dhcp_provider_t {
 	dhcp_provider_t public;
 
 	/**
-	 * Completed DHCP transactions
+	 * Completed DHCP transactions/leases
 	 */
 	hashtable_t *transactions;
 
 	/**
-	 * Lock for transactions
+	 * Lock for transactions/leases
 	 */
 	mutex_t *mutex;
 
@@ -48,60 +49,85 @@ struct private_dhcp_provider_t {
 };
 
 /**
- * Hash ID and host to a key
+ * Entry to keep track of leases/DHCP transactions
  */
-static uintptr_t hash_id_host(identification_t *id, host_t *host)
+typedef struct {
+	/* Latest transaction */
+	dhcp_transaction_t *transaction;
+	/* Cached identity from the latest transaction (internal data) */
+	identification_t *id;
+	/* Cached address from the latest transaction (internal data) */
+	host_t *addr;
+	/* Reference counter */
+	u_int refs;
+} entry_t;
+
+/**
+ * Hash an entry
+ */
+static u_int hash(const void *key)
 {
-	return chunk_hash_inc(id->get_encoding(id),
-						  chunk_hash(host->get_address(host)));
+	const entry_t *entry = (const entry_t*)key;
+	return entry->id->hash(entry->id,
+						   chunk_hash(entry->addr->get_address(entry->addr)));
 }
 
 /**
- * Hash a DHCP transaction to a key, using address and id
+ * Compare two entries
  */
-static uintptr_t hash_transaction(dhcp_transaction_t *transaction)
+static bool equals(const void *a, const void *b)
 {
-	return hash_id_host(transaction->get_identity(transaction),
-						transaction->get_address(transaction));
+	const entry_t *entry_a = (const entry_t*)a;
+	const entry_t *entry_b = (const entry_t*)b;
+	return entry_a->addr->ip_equals(entry_a->addr, entry_b->addr) &&
+		   entry_a->id->equals(entry_a->id, entry_b->id);
 }
 
 METHOD(attribute_provider_t, acquire_address, host_t*,
 	private_dhcp_provider_t *this, linked_list_t *pools,
 	ike_sa_t *ike_sa, host_t *requested)
 {
-	dhcp_transaction_t *transaction, *old;
-	enumerator_t *enumerator;
+	dhcp_transaction_t *transaction;
 	identification_t *id;
-	char *pool;
 	host_t *vip = NULL;
+	entry_t lookup, *entry;
 
-	if (requested->get_family(requested) != AF_INET)
+	if (requested->get_family(requested) != AF_INET ||
+		!pools->find_first(pools, linked_list_match_str, NULL, "dhcp"))
 	{
 		return NULL;
 	}
 	id = ike_sa->get_other_eap_id(ike_sa);
-	enumerator = pools->create_enumerator(pools);
-	while (enumerator->enumerate(enumerator, &pool))
+	transaction = this->socket->enroll(this->socket, id);
+	if (!transaction)
 	{
-		if (!streq(pool, "dhcp"))
-		{
-			continue;
-		}
-		transaction = this->socket->enroll(this->socket, id);
-		if (!transaction)
-		{
-			continue;
-		}
-		vip = transaction->get_address(transaction);
-		vip = vip->clone(vip);
-		this->mutex->lock(this->mutex);
-		old = this->transactions->put(this->transactions,
-							(void*)hash_transaction(transaction), transaction);
-		this->mutex->unlock(this->mutex);
-		DESTROY_IF(old);
-		break;
+		return NULL;
 	}
-	enumerator->destroy(enumerator);
+	lookup.id = transaction->get_identity(transaction);
+	lookup.addr = transaction->get_address(transaction);
+	vip = lookup.addr->clone(lookup.addr);
+
+	this->mutex->lock(this->mutex);
+	entry = this->transactions->get(this->transactions, &lookup);
+	if (!entry)
+	{
+		INIT(entry,
+			.transaction = transaction,
+			.addr = lookup.addr,
+			.id = lookup.id,
+		);
+		this->transactions->put(this->transactions, entry, entry);
+	}
+	else
+	{
+		/* always store the latest transaction, update cached data */
+		entry->transaction->destroy(entry->transaction);
+		entry->transaction = transaction;
+		entry->addr = lookup.addr;
+		entry->id = lookup.id;
+	}
+	entry->refs++;
+	this->mutex->unlock(this->mutex);
 	return vip;
 }
 
@@ -109,47 +135,41 @@ METHOD(attribute_provider_t, release_address, bool,
 	private_dhcp_provider_t *this, linked_list_t *pools,
 	host_t *address, ike_sa_t *ike_sa)
 {
-	dhcp_transaction_t *transaction;
-	enumerator_t *enumerator;
-	identification_t *id;
-	bool found = FALSE;
-	char *pool;
+	entry_t lookup, *entry = NULL;
+	bool release = FALSE;
 
-	if (address->get_family(address) != AF_INET)
+	if (address->get_family(address) != AF_INET ||
+		!pools->find_first(pools, linked_list_match_str, NULL, "dhcp"))
 	{
 		return FALSE;
 	}
-	id = ike_sa->get_other_eap_id(ike_sa);
-	enumerator = pools->create_enumerator(pools);
-	while (enumerator->enumerate(enumerator, &pool))
+	lookup.id = ike_sa->get_other_eap_id(ike_sa);
+	lookup.addr = address;
+
+	this->mutex->lock(this->mutex);
+	entry = this->transactions->get(this->transactions, &lookup);
+	if (entry && --entry->refs == 0)
 	{
-		if (!streq(pool, "dhcp"))
-		{
-			continue;
-		}
-		this->mutex->lock(this->mutex);
-		transaction = this->transactions->remove(this->transactions,
-										(void*)hash_id_host(id, address));
-		this->mutex->unlock(this->mutex);
-		if (transaction)
-		{
-			this->socket->release(this->socket, transaction);
-			transaction->destroy(transaction);
-			found = TRUE;
-			break;
-		}
+		this->transactions->remove(this->transactions, entry);
+		release = TRUE;
 	}
-	enumerator->destroy(enumerator);
-	return found;
+	this->mutex->unlock(this->mutex);
+
+	if (release)
+	{
+		this->socket->release(this->socket, entry->transaction);
+		entry->transaction->destroy(entry->transaction);
+		free(entry);
+	}
+	return entry != NULL;
 }
 
 METHOD(attribute_provider_t, create_attribute_enumerator, enumerator_t*,
 	private_dhcp_provider_t *this, linked_list_t *pools, ike_sa_t *ike_sa,
 	linked_list_t *vips)
 {
-	dhcp_transaction_t *transaction = NULL;
+	entry_t lookup, *entry = NULL;
 	enumerator_t *enumerator;
-	identification_t *id;
 	host_t *vip;
 
 	if (!pools->find_first(pools, linked_list_match_str, NULL, "dhcp"))
@@ -157,40 +177,40 @@ METHOD(attribute_provider_t, create_attribute_enumerator, enumerator_t*,
 		return NULL;
 	}
 
-	id = ike_sa->get_other_eap_id(ike_sa);
+	lookup.id = ike_sa->get_other_eap_id(ike_sa);
 	this->mutex->lock(this->mutex);
 	enumerator = vips->create_enumerator(vips);
 	while (enumerator->enumerate(enumerator, &vip))
 	{
-		transaction = this->transactions->get(this->transactions,
-											  (void*)hash_id_host(id, vip));
-		if (transaction)
+		lookup.addr = vip;
+		entry = this->transactions->get(this->transactions, &lookup);
+		if (entry)
 		{
 			break;
 		}
 	}
 	enumerator->destroy(enumerator);
-	if (!transaction)
+	if (!entry)
 	{
 		this->mutex->unlock(this->mutex);
 		return NULL;
 	}
 	return enumerator_create_cleaner(
-						transaction->create_attribute_enumerator(transaction),
-						(void*)this->mutex->unlock, this->mutex);
+			entry->transaction->create_attribute_enumerator(entry->transaction),
+			(void*)this->mutex->unlock, this->mutex);
 }
 
 METHOD(dhcp_provider_t, destroy, void,
 	private_dhcp_provider_t *this)
 {
 	enumerator_t *enumerator;
-	dhcp_transaction_t *value;
-	void *key;
+	entry_t *entry;
 
 	enumerator = this->transactions->create_enumerator(this->transactions);
-	while (enumerator->enumerate(enumerator, &key, &value))
+	while (enumerator->enumerate(enumerator, NULL, &entry))
 	{
-		value->destroy(value);
+		entry->transaction->destroy(entry->transaction);
+		free(entry);
 	}
 	enumerator->destroy(enumerator);
 	this->transactions->destroy(this->transactions);
@@ -216,8 +236,7 @@ dhcp_provider_t *dhcp_provider_create(dhcp_socket_t *socket)
 		},
 		.socket = socket,
 		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
-		.transactions = hashtable_create(hashtable_hash_ptr,
-										 hashtable_equals_ptr, 8),
+		.transactions = hashtable_create(hash, equals, 8),
 	);
 
 	return &this->public;

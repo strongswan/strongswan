@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2023 Tobias Brunner
+ * Copyright (C) 2012-2026 Tobias Brunner
  * Copyright (C) 2009 Martin Willi
  *
  * Copyright (C) secunet Security Networks AG
@@ -485,6 +485,13 @@ static void remove_callback()
 int main(int argc, char *argv[])
 {
 	char *plugins;
+	int status;
+
+	status = command_init(argc, argv);
+	if (status)
+	{
+		return status;
+	}
 
 	atexit(library_deinit);
 	if (!library_init(NULL, "pki"))
@@ -509,5 +516,5 @@ int main(int argc, char *argv[])
 
 	add_callback();
 	atexit(remove_callback);
-	return command_dispatch(argc, argv);
+	return command_dispatch();
 }
