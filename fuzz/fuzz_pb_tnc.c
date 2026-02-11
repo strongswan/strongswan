@@ -33,7 +33,6 @@ int LLVMFuzzerTestOneInput(const uint8_t *buf, size_t len)
 
 	dbg_default_set_level(-1);
 	library_init(NULL, "fuzz_pb_tnc");
-	plugin_loader_add_plugindirs(PLUGINDIR, PLUGINS);
 	if (!lib->plugins->load(lib->plugins, PLUGINS))
 	{
 		return 1;
