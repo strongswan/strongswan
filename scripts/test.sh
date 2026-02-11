@@ -433,6 +433,8 @@ fuzzing)
 	CFLAGS="$CFLAGS -DNO_CHECK_MEMWIPE"
 	CONFIG="--enable-fuzzing --enable-static --disable-shared --disable-scripts
 			--enable-imc-test --enable-tnccs-20"
+	# enable the custom crypto plugins
+	CONFIG="$CONFIG --enable-sha1 --enable-sha2 --enable-sha3 --enable-mgf1 --enable-gmp"
 	# don't run any of the unit tests
 	export TESTS_RUNNERS=
 	# prepare corpora

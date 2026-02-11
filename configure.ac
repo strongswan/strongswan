@@ -1419,6 +1419,9 @@ if test x$asan = xtrue; then
 	if test x$botan = xtrue; then
 		LDFLAGS="$LDFLAGS -lstdc++"
 	fi
+fi
+
+if test x$asan = xtrue -o x$fuzzing = xtrue; then
 	if test x$openssl = xtrue; then
 		# we need to suppress some leaks with OpenSSL 3 as we don't deinitialze
 		# it properly
@@ -1525,12 +1528,14 @@ pool_plugins=
 attest_plugins=
 pki_plugins=
 scripts_plugins=
-fuzz_plugins=
 manager_plugins=
 medsrv_plugins=
 nm_plugins=
 cmd_plugins=
 aikgen_plugins=
+# plugin lists for fuzzing, one with the default, the other with the custom plugins
+fd_plugins=
+fc_plugins=
 
 # location specific lists for checksumming,
 # for src/libcharon, src/libstrongswan, src/libtnccs and src/libtpmtss
@@ -1549,21 +1554,21 @@ ADD_PLUGIN([aes],                  [s charon swanctl pki scripts nm cmd])
 ADD_PLUGIN([des],                  [s charon swanctl pki scripts nm cmd])
 ADD_PLUGIN([blowfish],             [s charon swanctl pki scripts nm cmd])
 ADD_PLUGIN([rc2],                  [s charon swanctl pki scripts nm cmd])
-ADD_PLUGIN([sha2],                 [s charon swanctl pki scripts medsrv attest nm cmd aikgen fuzz])
-ADD_PLUGIN([sha3],                 [s charon swanctl pki scripts medsrv attest nm cmd aikgen fuzz])
-ADD_PLUGIN([sha1],                 [s charon swanctl pki scripts manager medsrv attest nm cmd aikgen fuzz])
+ADD_PLUGIN([sha2],                 [s charon swanctl pki scripts medsrv attest nm cmd aikgen fc])
+ADD_PLUGIN([sha3],                 [s charon swanctl pki scripts medsrv attest nm cmd aikgen fc])
+ADD_PLUGIN([sha1],                 [s charon swanctl pki scripts manager medsrv attest nm cmd aikgen fc])
 ADD_PLUGIN([md4],                  [s charon swanctl pki nm cmd])
 ADD_PLUGIN([md5],                  [s charon swanctl pki scripts attest nm cmd aikgen])
-ADD_PLUGIN([mgf1],                 [s charon swanctl pki scripts medsrv attest nm cmd aikgen])
+ADD_PLUGIN([mgf1],                 [s charon swanctl pki scripts medsrv attest nm cmd aikgen fc])
 ADD_PLUGIN([rdrand],               [s charon swanctl pki scripts medsrv attest nm cmd aikgen])
 ADD_PLUGIN([random],               [s charon swanctl pki scripts manager medsrv attest nm cmd aikgen])
 ADD_PLUGIN([nonce],                [s charon nm cmd aikgen])
-ADD_PLUGIN([x509],                 [s charon swanctl pki scripts attest nm cmd aikgen fuzz])
+ADD_PLUGIN([x509],                 [s charon swanctl pki scripts attest nm cmd aikgen fd fc])
 ADD_PLUGIN([revocation],           [s charon pki nm cmd])
 ADD_PLUGIN([constraints],          [s charon pki nm cmd])
 ADD_PLUGIN([acert],                [s charon])
 ADD_PLUGIN([pubkey],               [s charon swanctl pki cmd aikgen])
-ADD_PLUGIN([pkcs1],                [s charon swanctl pki scripts manager medsrv attest nm cmd aikgen fuzz])
+ADD_PLUGIN([pkcs1],                [s charon swanctl pki scripts manager medsrv attest nm cmd aikgen fd fc])
 ADD_PLUGIN([pkcs7],                [s charon swanctl pki scripts nm cmd])
 ADD_PLUGIN([pkcs12],               [s charon swanctl pki scripts cmd])
 ADD_PLUGIN([pgp],                  [s charon])
@@ -1571,16 +1576,16 @@ ADD_PLUGIN([dnskey],               [s charon swanctl pki])
 ADD_PLUGIN([sshkey],               [s charon swanctl pki nm cmd])
 ADD_PLUGIN([dnscert],              [c charon])
 ADD_PLUGIN([ipseckey],             [c charon])
-ADD_PLUGIN([pem],                  [s charon swanctl pki scripts manager medsrv attest nm cmd aikgen fuzz])
+ADD_PLUGIN([pem],                  [s charon swanctl pki scripts manager medsrv attest nm cmd aikgen fd fc])
 ADD_PLUGIN([padlock],              [s charon])
-ADD_PLUGIN([openssl],              [s charon swanctl pki scripts manager medsrv attest nm cmd aikgen])
+ADD_PLUGIN([openssl],              [s charon swanctl pki scripts manager medsrv attest nm cmd aikgen fd])
 ADD_PLUGIN([wolfssl],              [s charon swanctl pki scripts manager medsrv attest nm cmd aikgen])
 ADD_PLUGIN([gcrypt],               [s charon swanctl pki scripts manager medsrv attest nm cmd aikgen])
 ADD_PLUGIN([botan],                [s charon swanctl pki scripts manager medsrv attest nm cmd aikgen])
 ADD_PLUGIN([pkcs8],                [s charon swanctl pki scripts manager medsrv attest nm cmd])
 ADD_PLUGIN([af-alg],               [s charon swanctl pki scripts medsrv attest nm cmd aikgen])
 ADD_PLUGIN([fips-prf],             [s charon nm cmd])
-ADD_PLUGIN([gmp],                  [s charon swanctl pki scripts manager medsrv attest nm cmd aikgen fuzz])
+ADD_PLUGIN([gmp],                  [s charon swanctl pki scripts manager medsrv attest nm cmd aikgen fc])
 ADD_PLUGIN([curve25519],           [s charon swanctl pki scripts nm cmd])
 ADD_PLUGIN([agent],                [s charon nm cmd])
 ADD_PLUGIN([keychain],             [s charon cmd])
@@ -1684,12 +1689,13 @@ AC_SUBST(pool_plugins)
 AC_SUBST(attest_plugins)
 AC_SUBST(pki_plugins)
 AC_SUBST(scripts_plugins)
-AC_SUBST(fuzz_plugins)
 AC_SUBST(manager_plugins)
 AC_SUBST(medsrv_plugins)
 AC_SUBST(nm_plugins)
 AC_SUBST(cmd_plugins)
 AC_SUBST(aikgen_plugins)
+AC_SUBST(fd_plugins)
+AC_SUBST(fc_plugins)
 
 AC_SUBST(c_plugins)
 AC_SUBST(p_plugins)
