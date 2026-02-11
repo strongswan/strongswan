@@ -20,7 +20,6 @@
 #include <state_machine/pb_tnc_state_machine.h>
 #include <utils/debug.h>
 
-
 int LLVMFuzzerTestOneInput(const uint8_t *buf, size_t len)
 {
 	pb_tnc_batch_t *batch;
@@ -33,11 +32,7 @@ int LLVMFuzzerTestOneInput(const uint8_t *buf, size_t len)
 
 	dbg_default_set_level(-1);
 	library_init(NULL, "fuzz_pb_tnc");
-	plugin_loader_add_plugindirs(PLUGINDIR, PLUGINS);
-	if (!lib->plugins->load(lib->plugins, PLUGINS))
-	{
-		return 1;
-	}
+
 	chunk = chunk_create((u_char*)buf, len);
 
 	INIT(state,
@@ -73,7 +68,6 @@ int LLVMFuzzerTestOneInput(const uint8_t *buf, size_t len)
 	batch->destroy(batch);
 
 	free(state);
-	lib->plugins->unload(lib->plugins);
 	library_deinit();
 	return 0;
 }

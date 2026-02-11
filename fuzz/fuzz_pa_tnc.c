@@ -31,12 +31,8 @@ int LLVMFuzzerTestOneInput(const uint8_t *buf, size_t len)
 
 	dbg_default_set_level(-1);
 	library_init(NULL, "fuzz_pa_tnc");
-	plugin_loader_add_plugindirs(PLUGINDIR, PLUGINS);
-	if (!lib->plugins->load(lib->plugins, PLUGINS))
-	{
-		return 1;
-	}
 	libimcv_init(FALSE);
+
 	chunk = chunk_create((u_char*)buf, len);
 
 	/* Parse incoming PA-TNC message */
@@ -68,7 +64,6 @@ int LLVMFuzzerTestOneInput(const uint8_t *buf, size_t len)
 	msg->destroy(msg);
 
 	libimcv_deinit();
-	lib->plugins->unload(lib->plugins);
 	library_deinit();
 	return 0;
 }
