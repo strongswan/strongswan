@@ -5,6 +5,7 @@ AM_CPPFLAGS = @CPPFLAGS@ \
 	-I$(top_srcdir)/src/libimcv \
 	-I$(top_srcdir)/src/libtncif \
 	-I$(top_srcdir)/src/libtpmtss \
+	-I$(top_srcdir)/src/libtls \
 	-I$(top_srcdir)/src/libtnccs \
 	-I$(top_srcdir)/src/libtnccs/plugins/tnccs_20 \
 	-DPLUGINDIR=\""$(abs_top_builddir)/src/libstrongswan/plugins\"" \
@@ -30,8 +31,12 @@ ike_ldflags = \
 	$(top_builddir)/src/libcharon/.libs/libcharon.a \
 	$(fuzz_ldflags)
 
+tls_ldflags = \
+	$(top_builddir)/src/libtls/.libs/libtls.a \
+	$(fuzz_ldflags)
+
 FUZZ_TARGETS=fuzz_certs fuzz_crls fuzz_ocsp_req fuzz_ocsp_rsp \
-	fuzz_ids fuzz_pa_tnc fuzz_pb_tnc fuzz_ike
+	fuzz_ids fuzz_pa_tnc fuzz_pb_tnc fuzz_ike fuzz_tls
 
 all-local: $(FUZZ_TARGETS)
 
@@ -60,6 +65,9 @@ fuzz_pb_tnc: fuzz_pb_tnc.c ${libfuzzer}
 
 fuzz_ike: fuzz_ike.c ${libfuzzer}
 	$(CC) $(AM_CPPFLAGS) $(CFLAGS) -o $@ $< $(ike_ldflags)
+
+fuzz_tls: fuzz_tls.c ${libfuzzer}
+	$(CC) $(AM_CPPFLAGS) $(CFLAGS) -o $@ $< $(tls_ldflags)
 
 noinst_LIBRARIES = libFuzzerLocal.a
 libFuzzerLocal_a_SOURCES = libFuzzerLocal.c
