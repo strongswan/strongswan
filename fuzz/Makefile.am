@@ -6,8 +6,7 @@ AM_CPPFLAGS = @CPPFLAGS@ \
 	-I$(top_srcdir)/src/libtncif \
 	-I$(top_srcdir)/src/libtpmtss \
 	-I$(top_srcdir)/src/libtnccs \
-	-I$(top_srcdir)/src/libtnccs/plugins/tnccs_20 \
-	-DPLUGINDIR=\""$(abs_top_builddir)/src/libstrongswan/plugins\""
+	-I$(top_srcdir)/src/libtnccs/plugins/tnccs_20
 
 fuzz_cppflags_def = ${AM_CPPFLAGS} \
 	-DPLUGINS="\"${fd_plugins}\""
