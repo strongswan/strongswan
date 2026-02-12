@@ -1706,6 +1706,7 @@ Suite *threading_suite_create()
 	s = suite_create("threading");
 
 	tc = tcase_create("recursive mutex");
+	tcase_set_timeout(tc, 4);
 	tcase_add_test(tc, test_mutex);
 	suite_add_tcase(s, tc);
 
@@ -1759,6 +1760,7 @@ Suite *threading_suite_create()
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("thread cancellation point");
+	tcase_set_timeout(tc, 4);
 	tcase_add_loop_test(tc, test_cancellation_point,
 						0, countof(cancellation_points));
 	tcase_add_loop_test(tc, test_cancellation_point_pre,
