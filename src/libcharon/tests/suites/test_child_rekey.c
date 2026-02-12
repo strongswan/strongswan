@@ -1090,6 +1090,64 @@ START_TEST(test_regular_responder_incorrect_delete)
 END_TEST
 
 /**
+ * Check that a delete timeout after rekeying does not cause a duplicate
+ * child-down event for the rekeyed SA.
+ */
+START_TEST(test_regular_delete_timeout)
+{
+	ike_sa_t *a, *b;
+	message_t *msg;
+	status_t s;
+
+	exchange_test_helper->establish_sa(exchange_test_helper, &a, &b, NULL);
+	initiate_rekey(a, 1);
+	assert_ipsec_sas_installed(a, 1, 2);
+
+	/* this should never get called as this results in a successful rekeying */
+	assert_hook_not_called(child_updown);
+
+	/* CREATE_CHILD_SA { N(REKEY_SA), SA, Ni, [KEi,] TSi, TSr } --> */
+	assert_hook_not_called(child_rekey);
+	assert_notify(IN, REKEY_SA);
+	exchange_test_helper->process_message(exchange_test_helper, b, NULL);
+	assert_child_sa_state(b, 2, CHILD_REKEYED, CHILD_OUTBOUND_INSTALLED);
+	assert_child_sa_state(b, 4, CHILD_INSTALLED, CHILD_OUTBOUND_REGISTERED);
+	assert_ipsec_sas_installed(b, 1, 2, 4);
+	assert_hook();
+
+	/* <-- CREATE_CHILD_SA { SA, Nr, [KEr,] TSi, TSr } */
+	assert_hook_rekey(child_rekey, 1, 3);
+	assert_no_notify(IN, REKEY_SA);
+	exchange_test_helper->process_message(exchange_test_helper, a, NULL);
+	assert_child_sa_state(a, 3, CHILD_INSTALLED, CHILD_OUTBOUND_INSTALLED);
+	assert_ipsec_sas_installed(a, 1, 3, 4);
+	assert_hook();
+	assert_hook();
+
+	/* trigger retransmits until the request times out */
+	assert_hook_updown(child_updown, FALSE);
+	msg = exchange_test_helper->sender->dequeue(exchange_test_helper->sender);
+	while (msg)
+	{
+		charon->bus->set_sa(charon->bus, a);
+		s = a->retransmit(a, msg->get_message_id(msg));
+		charon->bus->set_sa(charon->bus, NULL);
+		msg->destroy(msg);
+		if (s == DESTROY_ME)
+		{
+			break;
+		}
+		msg = exchange_test_helper->sender->dequeue(
+												exchange_test_helper->sender);
+	}
+	assert_hook();
+
+	call_ikesa(a, destroy);
+	call_ikesa(b, destroy);
+}
+END_TEST
+
+/**
  * Both peers initiate the CHILD_SA rekeying concurrently and should handle
  * the collision properly depending on the nonces.
  */
@@ -4368,6 +4426,7 @@ Suite *child_rekey_suite_create()
 	tcase_add_test(tc, test_regular_responder_delete);
 	tcase_add_test(tc, test_regular_responder_lost_sa);
 	tcase_add_test(tc, test_regular_responder_incorrect_delete);
+	tcase_add_test(tc, test_regular_delete_timeout);
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("collisions rekey");
