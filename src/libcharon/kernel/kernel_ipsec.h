@@ -115,6 +115,8 @@ struct kernel_ipsec_add_sa_t {
 	dscp_copy_t copy_dscp;
 	/** TRUE if the peer doesn't support receiving fragments in AGGFRAG pkts */
 	bool iptfs_dont_frag;
+	/** Whether to automatically forward certain ICMP error messages */
+	bool forward_icmp;
 	/** TRUE if initiator of the exchange creating the SA */
 	bool initiator;
 	/** TRUE if this is an inbound SA */
@@ -190,6 +192,8 @@ struct kernel_ipsec_manage_policy_t {
 	hw_offload_t hw_offload;
 	/** Enable per-CPU acquires */
 	bool pcpu_acquires;
+	/** Whether to automatically forward certain ICMP error messages */
+	bool forward_icmp;
 	/** Source address of the SA(s) tied to this policy */
 	host_t *src;
 	/** Destination address of the SA(s) tied to this policy */
