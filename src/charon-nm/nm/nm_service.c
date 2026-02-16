@@ -850,7 +850,7 @@ static gboolean connect_(NMVpnServicePlugin *plugin, NMConnection *connection,
 	NMSettingVpn *vpn;
 	enumerator_t *enumerator;
 	identification_t *gateway = NULL;
-	const char *str, *method, *user;
+	const char *str, *remote_psk, *method, *user;
 	chunk_t safe_file;
 	bool virtual, proposal;
 	proposal_t *prop;
@@ -931,6 +931,7 @@ static gboolean connect_(NMVpnServicePlugin *plugin, NMConnection *connection,
 	 * Register credentials
 	 */
 	priv->creds->clear(priv->creds);
+	remote_psk = nm_setting_vpn_get_data_item(vpn, "remote-psk");
 
 	/* gateway/CA cert */
 	str = nm_setting_vpn_get_data_item(vpn, "certificate");
@@ -953,7 +954,7 @@ static gboolean connect_(NMVpnServicePlugin *plugin, NMConnection *connection,
 		}
 		priv->creds->add_certificate(priv->creds, cert);
 	}
-	else
+	else if (!remote_psk || !strlen(remote_psk))
 	{
 		/* no certificate defined, fall back to system-wide CA certificates */
 		priv->creds->load_ca_dir(priv->creds, lib->settings->get_str(
@@ -1061,7 +1062,14 @@ static gboolean connect_(NMVpnServicePlugin *plugin, NMConnection *connection,
 	}
 
 	auth = auth_cfg_create();
-	if (streq(method, "psk"))
+	/* Check for remote-psk option */
+	if (remote_psk && strlen(remote_psk))
+	{
+		/* Set up remote PSK authentication */
+		priv->creds->set_remote_psk(priv->creds, gateway, (char*)remote_psk);
+		auth->add(auth, AUTH_RULE_AUTH_CLASS, AUTH_CLASS_PSK);
+	}
+	else if (streq(method, "psk"))
 	{
 		auth->add(auth, AUTH_RULE_AUTH_CLASS, AUTH_CLASS_PSK);
 	}

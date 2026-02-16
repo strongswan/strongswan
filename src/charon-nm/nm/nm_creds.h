@@ -74,6 +74,14 @@ struct nm_creds_t {
 	void (*set_pin)(nm_creds_t *this, chunk_t keyid, char *pin);
 
 	/**
+	 * Set the pre-shared key for remote peer authentication.
+	 *
+	 * @param id		ID of the remote peer
+	 * @param psk		pre-shared key
+	 */
+	void (*set_remote_psk)(nm_creds_t *this, identification_t *id, char *psk);
+
+	/**
 	 * Set the certificate and private key to use for client authentication.
 	 *
 	 * @param cert		client certificate

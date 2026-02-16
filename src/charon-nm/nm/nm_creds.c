@@ -60,6 +60,16 @@ struct private_nm_creds_t {
 	chunk_t keyid;
 
 	/**
+	 * Remote peer ID for PSK authentication
+	 */
+	identification_t *remote_id;
+
+	/**
+	 * Remote peer PSK
+	 */
+	char *remote_psk;
+
+	/**
 	 * users certificate
 	 */
 	certificate_t *usercert;
@@ -238,8 +248,17 @@ METHOD(credential_set_t, create_shared_enumerator, enumerator_t*,
 
 	switch (type)
 	{
-		case SHARED_EAP:
 		case SHARED_IKE:
+			/* Check for remote PSK */
+			if (this->remote_psk && this->remote_id &&
+				other && this->remote_id->equals(this->remote_id, other))
+			{
+				key = chunk_create(this->remote_psk, strlen(this->remote_psk));
+				break;
+			}
+			/* Fall-through is intentional, to use password also as PSK if no
+			 * dedicated remote PSK has been set */
+		case SHARED_EAP:
 			if (!this->pass || !this->user)
 			{
 				goto no_secret;
@@ -379,6 +398,17 @@ METHOD(nm_creds_t, set_pin, void,
 	this->lock->unlock(this->lock);
 }
 
+METHOD(nm_creds_t, set_remote_psk, void,
+	private_nm_creds_t *this, identification_t *id, char *psk)
+{
+	this->lock->write_lock(this->lock);
+	DESTROY_IF(this->remote_id);
+	this->remote_id = id ? id->clone(id) : NULL;
+	free(this->remote_psk);
+	this->remote_psk = strdupnull(psk);
+	this->lock->unlock(this->lock);
+}
+
 METHOD(nm_creds_t, set_cert_and_key, void,
 	private_nm_creds_t *this, certificate_t *cert, private_key_t *key)
 {
@@ -403,6 +433,8 @@ METHOD(nm_creds_t, clear, void,
 	free(this->pass);
 	free(this->keypass);
 	free(this->keyid.ptr);
+	free(this->remote_psk);
+	DESTROY_IF(this->remote_id);
 	DESTROY_IF(this->usercert);
 	DESTROY_IF(this->key);
 	this->key = NULL;
@@ -411,6 +443,8 @@ METHOD(nm_creds_t, clear, void,
 	this->user = NULL;
 	this->keypass = NULL;
 	this->keyid = chunk_empty;
+	this->remote_psk = NULL;
+	this->remote_id = NULL;
 }
 
 METHOD(nm_creds_t, destroy, void,
@@ -443,6 +477,7 @@ nm_creds_t *nm_creds_create()
 			.set_username_password = _set_username_password,
 			.set_key_password = _set_key_password,
 			.set_pin = _set_pin,
+			.set_remote_psk = _set_remote_psk,
 			.set_cert_and_key = _set_cert_and_key,
 			.clear = _clear,
 			.destroy = _destroy,
@@ -450,6 +485,8 @@ nm_creds_t *nm_creds_create()
 		.lock = rwlock_create(RWLOCK_TYPE_DEFAULT),
 		.certs = linked_list_create(),
 	);
+	this->remote_id = NULL;
+	this->remote_psk = NULL;
 	return &this->public;
 }
 
