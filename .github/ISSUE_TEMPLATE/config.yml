@@ -2,4 +2,7 @@ blank_issues_enabled: false
 contact_links:
   - name: "🤔 Question and Help"
     url: https://github.com/strongswan/strongswan/discussions
-    about: This issue tracker is not for support questions. Please refer to the strongSwan community's help and discussion forum
+    about: Questions should go to the strongSwan community's help and discussion forum. GitHub issues are for bug reports and feature suggestions
+  - name: "📖 Documentation"
+    url: https://github.com/strongswan/strongswan-docs/issues
+    about: Suggest improvements or report errors regarding https://docs.strongswan.org
