@@ -263,13 +263,28 @@ void *return_null();
 void nop();
 
 /**
+ * No-Operation function
+ */
+void nop_with_args(void *, void *);
+
+/**
  * returns TRUE
  */
 bool return_true();
 
 /**
+ * returns TRUE
+ */
+bool return_true_with_arg(void *);
+
+/**
  * returns FALSE
  */
 bool return_false();
+
+/**
+ * returns FALSE
+ */
+bool return_false_with_arg(void *);
 
 #endif /** UTILS_H_ @}*/
