@@ -1,6 +1,7 @@
 AM_CPPFLAGS = @CPPFLAGS@ \
 	@FUZZING_CFLAGS@ \
 	-I$(top_srcdir)/src/libcharon \
+	-I$(top_srcdir)/src/libipsec \
 	-I$(top_srcdir)/src/libstrongswan \
 	-I$(top_srcdir)/src/libimcv \
 	-I$(top_srcdir)/src/libtncif \
@@ -30,8 +31,12 @@ ike_ldflags = \
 	$(top_builddir)/src/libcharon/.libs/libcharon.a \
 	$(fuzz_ldflags)
 
+esp_ldflags = \
+	$(top_builddir)/src/libipsec/.libs/libipsec.a \
+	$(fuzz_ldflags)
+
 FUZZ_TARGETS=fuzz_certs fuzz_crls fuzz_ocsp_req fuzz_ocsp_rsp \
-	fuzz_ids fuzz_pa_tnc fuzz_pb_tnc fuzz_ike
+	fuzz_ids fuzz_pa_tnc fuzz_pb_tnc fuzz_ike fuzz_esp
 
 all-local: $(FUZZ_TARGETS)
 
@@ -60,6 +65,9 @@ fuzz_pb_tnc: fuzz_pb_tnc.c ${libfuzzer}
 
 fuzz_ike: fuzz_ike.c ${libfuzzer}
 	$(CC) $(AM_CPPFLAGS) $(CFLAGS) -o $@ $< $(ike_ldflags)
+
+fuzz_esp: fuzz_esp.c ${libfuzzer}
+	$(CC) $(AM_CPPFLAGS) $(CFLAGS) -o $@ $< $(esp_ldflags)
 
 noinst_LIBRARIES = libFuzzerLocal.a
 libFuzzerLocal_a_SOURCES = libFuzzerLocal.c
