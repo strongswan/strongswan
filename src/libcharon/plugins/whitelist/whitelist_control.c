@@ -52,6 +52,50 @@ struct private_whitelist_control_t {
 	stream_service_t *service;
 };
 
+/**
+ * Information about a client connection.
+ */
+typedef struct {
+	private_whitelist_control_t *this;
+	whitelist_msg_t msg;
+	size_t read;
+} whitelist_conn_t;
+
+
+/**
+ * Information needed to delete client connection.
+ */
+typedef struct {
+	whitelist_conn_t *conn;
+	stream_t* stream;
+} whitelist_conn_del_t;
+
+
+
+/**
+ * Asynchronous callback to disconnect client
+ */
+CALLBACK(disconnect_async, job_requeue_t,
+	whitelist_conn_del_t *wcd)
+{
+	wcd->stream->destroy(wcd->stream);
+	free(wcd->conn);
+	return JOB_REQUEUE_NONE;
+}
+
+/**
+ * Disconnect a connected client
+ */
+static void disconnect(whitelist_conn_t *conn, stream_t *stream){
+	whitelist_conn_del_t *wcd;
+	INIT(wcd,
+		.conn = conn,
+		.stream = stream,
+	);
+	lib->processor->queue_job(lib->processor,
+		(job_t*)callback_job_create(disconnect_async, wcd, free, NULL));
+}
+
 /*
  * List whitelist entries using a read-copy
  */
@@ -93,14 +137,6 @@ static void list(private_whitelist_control_t *this,
 	stream->write_all(stream, &msg, sizeof(msg));
 }
 
-/**
- * Information about a client connection.
- */
-typedef struct {
-	private_whitelist_control_t *this;
-	whitelist_msg_t msg;
-	size_t read;
-} whitelist_conn_t;
 
 /**
  * Information needed for async disconnect job.
