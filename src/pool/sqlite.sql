@@ -23,7 +23,22 @@ CREATE TABLE child_configs (
   dpd_action INTEGER NOT NULL DEFAULT '0',
   close_action INTEGER NOT NULL DEFAULT '0',
   ipcomp INTEGER NOT NULL DEFAULT '0',
-  reqid INTEGER NOT NULL DEFAULT '0'
+  reqid INTEGER NOT NULL DEFAULT '0',
+  if_id_in INTEGER NOT NULL DEFAULT '0',
+  if_id_out INTEGER NOT NULL DEFAULT '0',
+  mark_in INTEGER NOT NULL DEFAULT '0',
+  mark_in_mask INTEGER NOT NULL DEFAULT '0',
+  mark_out INTEGER NOT NULL DEFAULT '0',
+  mark_out_mask INTEGER NOT NULL DEFAULT '0',
+  set_mark_in INTEGER NOT NULL DEFAULT '0',
+  set_mark_in_mask INTEGER NOT NULL DEFAULT '0',
+  set_mark_out INTEGER NOT NULL DEFAULT '0',
+  set_mark_out_mask INTEGER NOT NULL DEFAULT '0',
+  inactivity INTEGER NOT NULL DEFAULT '0',
+  tfc INTEGER NOT NULL DEFAULT '0',
+  interface TEXT DEFAULT NULL,
+  hw_offload INTEGER NOT NULL DEFAULT '0',
+  copy_dscp INTEGER NOT NULL DEFAULT '0'
 );
 DROP INDEX IF EXISTS child_configs_name;
 CREATE INDEX child_configs_name ON child_configs (
@@ -99,7 +114,9 @@ CREATE TABLE peer_configs (
   pool TEXT DEFAULT NULL,
   mediation INTEGER NOT NULL DEFAULT '0',
   mediated_by INTEGER NOT NULL DEFAULT '0',
-  peer_id INTEGER NOT NULL DEFAULT '0'
+  peer_id INTEGER NOT NULL DEFAULT '0',
+  if_id_in INTEGER NOT NULL DEFAULT '0',
+  if_id_out INTEGER NOT NULL DEFAULT '0'
 );
 DROP INDEX IF EXISTS peer_configs_name;
 CREATE INDEX peer_configs_name ON peer_configs (
