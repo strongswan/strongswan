@@ -6,3 +6,4 @@ fuzz_ocsp_req
 fuzz_ocsp_rsp
 fuzz_pa_tnc
 fuzz_pb_tnc
+fuzz_tls
