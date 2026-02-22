@@ -87,7 +87,7 @@ static int version(vici_conn_t *conn)
 static void __attribute__ ((constructor))reg()
 {
 	command_register((command_t) {
-		version, 'v', "version", "show version information",
+		version, 'V', "version", "show version information",
 		{"[--raw|--pretty]"},
 		{
 			{"help",		'h', 0, "show usage information"},
