@@ -283,7 +283,7 @@ METHOD(public_key_t, destroy, void,
 /**
  * Generic private constructor
  */
-static private_public_key_t *create_empty(key_type_t type)
+static public_key_t *create_internal(key_type_t type, EVP_PKEY *key)
 {
 	private_public_key_t *this;
 
@@ -301,10 +301,27 @@ static private_public_key_t *create_empty(key_type_t type)
 			.destroy = _destroy,
 		},
 		.type = type,
+		.key = key,
 		.ref = 1,
 	);
 
-	return this;
+	return &this->public;
+}
+
+/*
+ * Described in header
+ */
+public_key_t *openssl_ml_dsa_public_key_create(EVP_PKEY *key)
+{
+	key_type_t type;
+
+	type = openssl_ml_dsa_evp_pkey_key_type(key);
+	if (type == KEY_ANY)
+	{
+		EVP_PKEY_free(key);
+		return NULL;
+	}
+	return create_internal(type, key);
 }
 
 /*
@@ -312,8 +329,7 @@ static private_public_key_t *create_empty(key_type_t type)
  */
 public_key_t *openssl_ml_dsa_public_key_load(key_type_t type, va_list args)
 {
-	private_public_key_t *this;
-	chunk_t pkcs1, blob = chunk_empty;
+	chunk_t pkcs1 = chunk_empty, blob = chunk_empty;
 	EVP_PKEY *key = NULL;
 
 	while (TRUE)
@@ -338,25 +354,24 @@ public_key_t *openssl_ml_dsa_public_key_load(key_type_t type, va_list args)
 	{
 		key = EVP_PKEY_new_raw_public_key(openssl_ml_dsa_key_type(type), NULL,
 										  blob.ptr, blob.len);
+		if (key)
+		{
+			return create_internal(type, key);
+		}
 	}
 	else if (pkcs1.len)
 	{
 		key = d2i_PUBKEY(NULL, (const u_char**)&pkcs1.ptr, pkcs1.len);
-		type = openssl_ml_dsa_evp_pkey_key_type(key);
-		if (key && type == KEY_ANY)
+		if (key)
 		{
+			if (type == openssl_ml_dsa_evp_pkey_key_type(key))
+			{
+				return create_internal(type, key);
+			}
 			EVP_PKEY_free(key);
-			return NULL;
 		}
 	}
-	if (!key)
-	{
-		return NULL;
-	}
-	this = create_empty(type);
-	this->key = key;
-
-	return &this->public;
+	return NULL;
 }
 
 #endif /* OPENSSL_VERSION_NUMBER */
