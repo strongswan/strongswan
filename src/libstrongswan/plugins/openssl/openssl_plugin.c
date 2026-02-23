@@ -808,10 +808,10 @@ static int add_ml_dsa_ossl_params(OSSL_PROVIDER *provider, void *cbdata)
 		!OSSL_PROVIDER_add_conf_parameter(provider,
 						OSSL_PKEY_PARAM_ML_DSA_OUTPUT_FORMATS, "seed-only"))
 	{
-		DBG1(DBG_LIB, "failed to set ml.dsa parameters in default provider");
-		return 1;
+		DBG1(DBG_LIB, "failed to set ml.dsa parameters in '%s' provider",
+			 OSSL_PROVIDER_get0_name(provider));
 	}
-	return 0;
+	return 1;
 }
 #endif /* OPENSSL_NO_ML_DSA */
 
