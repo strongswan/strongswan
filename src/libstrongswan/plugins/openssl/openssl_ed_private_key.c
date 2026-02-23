@@ -67,6 +67,7 @@ int asn1_unwrap(chunk_t*, chunk_t*);
 
 /* from ed public key */
 int openssl_ed_key_type(key_type_t type);
+key_type_t openssl_ed_evp_pkey_key_type(EVP_PKEY *key);
 int openssl_ed_keysize(key_type_t type);
 bool openssl_ed_fingerprint(EVP_PKEY *key, cred_encoding_type_t type, chunk_t *fp);
 
@@ -258,17 +259,11 @@ private_key_t *openssl_ed_private_key_create(EVP_PKEY *key, bool engine)
 	private_private_key_t *this;
 	key_type_t type;
 
-	switch (EVP_PKEY_base_id(key))
+	type = openssl_ed_evp_pkey_key_type(key);
+	if (type == KEY_ANY)
 	{
-		case EVP_PKEY_ED25519:
-			type = KEY_ED25519;
-			break;
-		case EVP_PKEY_ED448:
-			type = KEY_ED448;
-			break;
-		default:
-			EVP_PKEY_free(key);
-			return NULL;
+		EVP_PKEY_free(key);
+		return NULL;
 	}
 
 	this = create_internal(type, key);

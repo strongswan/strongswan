@@ -36,4 +36,12 @@
  */
 public_key_t *openssl_ml_dsa_public_key_load(key_type_t type, va_list args);
 
+/**
+ * Wrap an EVP_PKEY object of type ML-DSA-44/64/87.
+ *
+ * @param key		EVP_PKEY object (adopted)
+ * @return 			generated key, NULL on failure
+ */
+public_key_t *openssl_ml_dsa_public_key_create(EVP_PKEY *key);
+
 #endif /** OPENSSL_ML_DSA_PUBLIC_KEY_H_ @}*/
