@@ -57,7 +57,8 @@ struct private_private_key_t {
 };
 
 /* from openssl_ml_dsa public key */
-char* openssl_ml_dsa_alg_name(key_type_t type);
+char *openssl_ml_dsa_alg_name(key_type_t type);
+key_type_t openssl_ml_dsa_evp_pkey_key_type(EVP_PKEY *key);
 bool openssl_ml_dsa_fingerprint(EVP_PKEY *key, cred_encoding_type_t type, chunk_t *fp);
 
 METHOD(private_key_t, sign, bool,
@@ -222,11 +223,56 @@ METHOD(private_key_t, destroy, void,
 }
 
 /**
- * Create an ML-DSA private_key_t instance
+ * Internal generic constructor
+ */
+static private_key_t *create_internal(key_type_t type, EVP_PKEY *key)
+{
+	private_private_key_t *this;
+
+	INIT(this,
+		.public = {
+			.get_type = _get_type,
+			.sign = _sign,
+			.decrypt = _decrypt,
+			.get_keysize = _get_keysize,
+			.get_public_key = _get_public_key,
+			.equals = private_key_equals,
+			.belongs_to = private_key_belongs_to,
+			.get_fingerprint = _get_fingerprint,
+			.has_fingerprint = private_key_has_fingerprint,
+			.get_encoding = _get_encoding,
+			.get_ref = _get_ref,
+			.destroy = _destroy,
+		},
+		.type = type,
+		.key = key,
+		.ref = 1,
+	);
+
+	return &this->public;
+}
+
+/*
+ * Described in header
+ */
+private_key_t *openssl_ml_dsa_private_key_create(EVP_PKEY *key, bool engine)
+{
+	key_type_t type;
+
+	type = openssl_ml_dsa_evp_pkey_key_type(key);
+	if (type == KEY_ANY)
+	{
+		EVP_PKEY_free(key);
+		return NULL;
+	}
+	return create_internal(type, key);
+}
+
+/**
+ * Create an ML-DSA private_key_t instance from a seed
  */
 static private_key_t *create_instance(key_type_t type, chunk_t keyseed)
 {
-	private_private_key_t *this = NULL;
 	EVP_PKEY_CTX *ctx = NULL;
 	EVP_PKEY *key = NULL;
 
@@ -258,30 +304,9 @@ static private_key_t *create_instance(key_type_t type, chunk_t keyseed)
 		goto end;
 	}
 
-	INIT(this,
-		.public = {
-			.get_type = _get_type,
-			.sign = _sign,
-			.decrypt = _decrypt,
-			.get_keysize = _get_keysize,
-			.get_public_key = _get_public_key,
-			.equals = private_key_equals,
-			.belongs_to = private_key_belongs_to,
-			.get_fingerprint = _get_fingerprint,
-			.has_fingerprint = private_key_has_fingerprint,
-			.get_encoding = _get_encoding,
-			.get_ref = _get_ref,
-			.destroy = _destroy,
-		},
-		.type = type,
-		.key = key,
-		.ref = 1,
-	);
-
 end:
 	EVP_PKEY_CTX_free(ctx);
-
-	return this ? &this->public : NULL;
+	return key ? create_internal(type, key) : NULL;
 }
 
 /*

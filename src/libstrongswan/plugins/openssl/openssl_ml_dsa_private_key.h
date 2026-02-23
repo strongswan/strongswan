@@ -47,4 +47,13 @@ private_key_t *openssl_ml_dsa_private_key_gen(key_type_t type, va_list args);
  */
 private_key_t *openssl_ml_dsa_private_key_load(key_type_t type, va_list args);
 
+/**
+ * Wrap an EVP_PKEY object of type ML-DSA-44/64/87.
+ *
+ * @param key		EVP_PKEY object (adopted)
+ * @param engine	whether the key was loaded via an engine
+ * @return 			generated key, NULL on failure
+ */
+private_key_t *openssl_ml_dsa_private_key_create(EVP_PKEY *key, bool engine);
+
 #endif /** OPENSSL_ML_DSA_PRIVATE_KEY_H_ @}*/
