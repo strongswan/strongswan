@@ -54,9 +54,9 @@ struct private_public_key_t {
 };
 
 /**
- * Map a key type to an algorithm name
+ * Map a key type to an algorithm name (also used by private key)
  */
-char* openssl_ml_dsa_alg_name(key_type_t type)
+char *openssl_ml_dsa_alg_name(key_type_t type)
 {
 	switch (type)
 	{
@@ -72,9 +72,29 @@ char* openssl_ml_dsa_alg_name(key_type_t type)
 }
 
 /**
+ * Determine the ML-DSA key type for the given key (also used by private key)
+ */
+key_type_t openssl_ml_dsa_evp_pkey_key_type(EVP_PKEY *key)
+{
+	if (EVP_PKEY_is_a(key, "ML-DSA-44"))
+	{
+		return KEY_ML_DSA_44;
+	}
+	else if (EVP_PKEY_is_a(key, "ML-DSA-65"))
+	{
+		return KEY_ML_DSA_65;
+	}
+	else if (EVP_PKEY_is_a(key, "ML-DSA-87"))
+	{
+		return KEY_ML_DSA_87;
+	}
+	return KEY_ANY;
+}
+
+/**
  * Map a key type to an EVP key type
  */
-int openssl_ml_dsa_key_type(key_type_t type)
+static int openssl_ml_dsa_key_type(key_type_t type)
 {
 	switch (type)
 	{
@@ -305,7 +325,6 @@ public_key_t *openssl_ml_dsa_public_key_load(key_type_t type, va_list args)
 				continue;
 			case BUILD_BLOB_ASN1_DER:
 				pkcs1 = va_arg(args, chunk_t);
-				type = public_key_info_decode(pkcs1, &blob);
 				continue;
 			case BUILD_END:
 				break;
@@ -323,7 +342,8 @@ public_key_t *openssl_ml_dsa_public_key_load(key_type_t type, va_list args)
 	else if (pkcs1.len)
 	{
 		key = d2i_PUBKEY(NULL, (const u_char**)&pkcs1.ptr, pkcs1.len);
-		if (key && EVP_PKEY_base_id(key) != openssl_ml_dsa_key_type(type))
+		type = openssl_ml_dsa_evp_pkey_key_type(key);
+		if (key && type == KEY_ANY)
 		{
 			EVP_PKEY_free(key);
 			return NULL;

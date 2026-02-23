@@ -290,7 +290,6 @@ static private_key_t *openssl_private_key_load(key_type_t type, va_list args)
 		}
 		break;
 	}
-
 	if (blob.ptr)
 	{
 		key = d2i_AutoPrivateKey(NULL, (const u_char**)&blob.ptr, blob.len);
@@ -679,6 +678,7 @@ METHOD(plugin_t, get_features, int,
 			PLUGIN_PROVIDE(PUBKEY, KEY_ML_DSA_44),
 			PLUGIN_PROVIDE(PUBKEY, KEY_ML_DSA_65),
 			PLUGIN_PROVIDE(PUBKEY, KEY_ML_DSA_87),
+			PLUGIN_PROVIDE(PUBKEY, KEY_ANY),
 		PLUGIN_REGISTER(PRIVKEY, openssl_ml_dsa_private_key_load, TRUE),
 			PLUGIN_PROVIDE(PRIVKEY, KEY_ML_DSA_44),
 			PLUGIN_PROVIDE(PRIVKEY, KEY_ML_DSA_65),
@@ -801,7 +801,6 @@ static int concat_ossl_providers(OSSL_PROVIDER *provider, void *cbdata)
  */
 static int add_ml_dsa_ossl_params(OSSL_PROVIDER *provider, void *cbdata)
 {
-
 	if (!OSSL_PROVIDER_add_conf_parameter(provider,
 						OSSL_PKEY_PARAM_ML_DSA_RETAIN_SEED, "yes") ||
 		!OSSL_PROVIDER_add_conf_parameter(provider,

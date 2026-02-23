@@ -31,6 +31,7 @@
 #include "openssl_ec_private_key.h"
 #include "openssl_ed_private_key.h"
 #include "openssl_rsa_private_key.h"
+#include "openssl_ml_dsa_private_key.h"
 
 /* these were added with 1.1.0 when ASN1_OBJECT was made opaque */
 #if OPENSSL_VERSION_NUMBER < 0x10100000L
@@ -165,6 +166,16 @@ private_key_t *openssl_wrap_private_key(EVP_PKEY *key, bool engine)
 				return openssl_ed_private_key_create(key, FALSE);
 #endif /* OPENSSL_VERSION_NUMBER && !OPENSSL_NO_EC && !OPENSSL_IS_AWSLC */
 			default:
+#if (OPENSSL_VERSION_NUMBER >= 0x30500000L && !defined(OPENSSL_NO_ML_DSA))
+				/* OpenSSL does not provide an ID for ML-DSA keys, which is
+				 * apparently a legacy feature */
+				if (EVP_PKEY_is_a(key, "ML-DSA-44") ||
+					EVP_PKEY_is_a(key, "ML-DSA-65") ||
+					EVP_PKEY_is_a(key, "ML-DSA-87"))
+				{
+					return openssl_ml_dsa_private_key_create(key, FALSE);
+				}
+#endif
 				EVP_PKEY_free(key);
 				break;
 		}
