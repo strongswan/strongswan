@@ -47,10 +47,11 @@ typedef struct private_openssl_rsa_public_key_t private_openssl_rsa_public_key_t
  * Private data structure with signing context.
  */
 struct private_openssl_rsa_public_key_t {
+
 	/**
-	 * Public interface for this signer.
+	 * Public interface
 	 */
-	openssl_rsa_public_key_t public;
+	public_key_t public;
 
 	/**
 	 * RSA key object
@@ -479,7 +480,7 @@ METHOD(public_key_t, get_ref, public_key_t*,
 	private_openssl_rsa_public_key_t *this)
 {
 	ref_get(&this->ref);
-	return &this->public.key;
+	return &this->public;
 }
 
 METHOD(public_key_t, destroy, void,
@@ -505,18 +506,16 @@ static private_openssl_rsa_public_key_t *create_internal(EVP_PKEY *key)
 
 	INIT(this,
 		.public = {
-			.key = {
-				.get_type = _get_type,
-				.verify = _verify,
-				.encrypt = _encrypt,
-				.equals = public_key_equals,
-				.get_keysize = _get_keysize,
-				.get_fingerprint = _get_fingerprint,
-				.has_fingerprint = public_key_has_fingerprint,
-				.get_encoding = _get_encoding,
-				.get_ref = _get_ref,
-				.destroy = _destroy,
-			},
+			.get_type = _get_type,
+			.verify = _verify,
+			.encrypt = _encrypt,
+			.equals = public_key_equals,
+			.get_keysize = _get_keysize,
+			.get_fingerprint = _get_fingerprint,
+			.has_fingerprint = public_key_has_fingerprint,
+			.get_encoding = _get_encoding,
+			.get_ref = _get_ref,
+			.destroy = _destroy,
 		},
 		.ref = 1,
 		.key = key,
@@ -525,10 +524,26 @@ static private_openssl_rsa_public_key_t *create_internal(EVP_PKEY *key)
 	return this;
 }
 
+/*
+ * Described in header
+ */
+public_key_t *openssl_rsa_public_key_create(EVP_PKEY *key)
+{
+	private_openssl_rsa_public_key_t *this;
+
+	if (EVP_PKEY_base_id(key) != EVP_PKEY_RSA)
+	{
+		EVP_PKEY_free(key);
+		return NULL;
+	}
+	this = create_internal(key);
+	return &this->public;
+}
+
 /**
  * See header.
  */
-openssl_rsa_public_key_t *openssl_rsa_public_key_load(key_type_t type,
+public_key_t *openssl_rsa_public_key_load(key_type_t type,
 													  va_list args)
 {
 	private_openssl_rsa_public_key_t *this;
@@ -559,40 +574,23 @@ openssl_rsa_public_key_t *openssl_rsa_public_key_load(key_type_t type,
 
 	if (blob.ptr)
 	{
-		switch (type)
-		{
-			case KEY_ANY:
-				key = d2i_PUBKEY(NULL, (const u_char**)&blob.ptr, blob.len);
-				if (key && EVP_PKEY_base_id(key) != EVP_PKEY_RSA)
-				{
-					EVP_PKEY_free(key);
-					key = NULL;
-				}
-				break;
-			case KEY_RSA:
 #if defined(OPENSSL_IS_BORINGSSL) && \
 	(!defined(BORINGSSL_API_VERSION) || BORINGSSL_API_VERSION < 10)
-			{
-				RSA *rsa = d2i_RSAPublicKey(NULL, (const u_char**)&blob.ptr,
-											blob.len);
-				key = EVP_PKEY_new();
-				if (!key || !EVP_PKEY_assign_RSA(key, rsa))
-				{
-					RSA_free(rsa);
-					EVP_PKEY_free(key);
-					key = NULL;
-				}
-			}
-#else
-				key = d2i_PublicKey(EVP_PKEY_RSA, NULL, (const u_char**)&blob.ptr,
+		RSA *rsa = d2i_RSAPublicKey(NULL, (const u_char**)&blob.ptr,
 									blob.len);
-#endif
-				break;
-			default:
-				break;
+		key = EVP_PKEY_new();
+		if (!key || !EVP_PKEY_assign_RSA(key, rsa))
+		{
+			RSA_free(rsa);
+			EVP_PKEY_free(key);
+			key = NULL;
 		}
+#else
+		key = d2i_PublicKey(EVP_PKEY_RSA, NULL, (const u_char**)&blob.ptr,
+							blob.len);
+#endif
 	}
-	else if (n.ptr && e.ptr && type == KEY_RSA)
+	else if (n.ptr && e.ptr)
 	{
 		BIGNUM *bn_n, *bn_e;
 
