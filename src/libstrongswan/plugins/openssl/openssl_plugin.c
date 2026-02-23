@@ -24,6 +24,7 @@
 
 #include <openssl/err.h>
 #include <openssl/evp.h>
+#include <openssl/x509.h>
 #include <openssl/conf.h>
 #include <openssl/rand.h>
 #include <openssl/crypto.h>
@@ -269,7 +270,7 @@ static bool seed_rng()
 #endif /* OPENSSL_VERSION_NUMBER */
 
 /**
- * Generic key loader
+ * Generic private key loader
  */
 static private_key_t *openssl_private_key_load(key_type_t type, va_list args)
 {
@@ -294,6 +295,36 @@ static private_key_t *openssl_private_key_load(key_type_t type, va_list args)
 	{
 		key = d2i_AutoPrivateKey(NULL, (const u_char**)&blob.ptr, blob.len);
 		return openssl_wrap_private_key(key, FALSE);
+	}
+	return NULL;
+}
+
+/**
+ * Generic public key loader
+ */
+static public_key_t *openssl_public_key_load(key_type_t type, va_list args)
+{
+	chunk_t blob = chunk_empty;
+	EVP_PKEY *key;
+
+	while (TRUE)
+	{
+		switch (va_arg(args, builder_part_t))
+		{
+			case BUILD_BLOB_ASN1_DER:
+				blob = va_arg(args, chunk_t);
+				continue;
+			case BUILD_END:
+				break;
+			default:
+				return NULL;
+		}
+		break;
+	}
+	if (blob.ptr)
+	{
+		key = d2i_PUBKEY(NULL, (const u_char**)&blob.ptr, blob.len);
+		return openssl_wrap_public_key(key);
 	}
 	return NULL;
 }
@@ -547,8 +578,6 @@ METHOD(plugin_t, get_features, int,
 			PLUGIN_PROVIDE(PRIVKEY_GEN, KEY_RSA),
 		PLUGIN_REGISTER(PUBKEY, openssl_rsa_public_key_load, TRUE),
 			PLUGIN_PROVIDE(PUBKEY, KEY_RSA),
-		PLUGIN_REGISTER(PUBKEY, openssl_rsa_public_key_load, TRUE),
-			PLUGIN_PROVIDE(PUBKEY, KEY_ANY),
 		/* signature/encryption schemes */
 		PLUGIN_PROVIDE(PRIVKEY_SIGN, SIGN_RSA_EMSA_PKCS1_NULL),
 		PLUGIN_PROVIDE(PUBKEY_VERIFY, SIGN_RSA_EMSA_PKCS1_NULL),
@@ -678,7 +707,6 @@ METHOD(plugin_t, get_features, int,
 			PLUGIN_PROVIDE(PUBKEY, KEY_ML_DSA_44),
 			PLUGIN_PROVIDE(PUBKEY, KEY_ML_DSA_65),
 			PLUGIN_PROVIDE(PUBKEY, KEY_ML_DSA_87),
-			PLUGIN_PROVIDE(PUBKEY, KEY_ANY),
 		PLUGIN_REGISTER(PRIVKEY, openssl_ml_dsa_private_key_load, TRUE),
 			PLUGIN_PROVIDE(PRIVKEY, KEY_ML_DSA_44),
 			PLUGIN_PROVIDE(PRIVKEY, KEY_ML_DSA_65),
@@ -696,6 +724,8 @@ METHOD(plugin_t, get_features, int,
 #endif /* OPENSSL_NO_ML_DSA */
 
 		/* generic key loader */
+		PLUGIN_REGISTER(PUBKEY, openssl_public_key_load, TRUE),
+			PLUGIN_PROVIDE(PUBKEY, KEY_ANY),
 		PLUGIN_REGISTER(PRIVKEY, openssl_private_key_load, TRUE),
 			PLUGIN_PROVIDE(PRIVKEY, KEY_ANY),
 		PLUGIN_REGISTER(PRIVKEY, openssl_private_key_connect, FALSE),
