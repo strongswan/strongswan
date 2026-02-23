@@ -6,3 +6,4 @@ leak:OSSL_DECODER_do_all_provided
 leak:OSSL_ENCODER_do_all_provided
 leak:OSSL_PROVIDER_load
 leak:OSSL_PROVIDER_try_load
+leak:OSSL_PROVIDER_add_conf_parameter
