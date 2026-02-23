@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2015-2017 Tobias Brunner
- * Copyright (C) 2014-2020 Andreas Steffen
+ * Copyright (C) 2014-2024 Andreas Steffen
  * Copyright (C) 2007 Martin Willi
  *
  * Copyright (C) secunet Security Networks AG
@@ -37,17 +37,23 @@ typedef enum encryption_scheme_t encryption_scheme_t;
  */
 enum key_type_t {
 	/** key type wildcard */
-	KEY_ANY     = 0,
+	KEY_ANY       = 0,
 	/** RSA crypto system as in PKCS#1 */
-	KEY_RSA     = 1,
+	KEY_RSA       = 1,
 	/** ECDSA as in ANSI X9.62 */
-	KEY_ECDSA   = 2,
+	KEY_ECDSA     = 2,
 	/** DSA */
-	KEY_DSA     = 3,
+	KEY_DSA       = 3,
 	/** Ed25519 PureEdDSA instance as in RFC 8032 */
-	KEY_ED25519 = 4,
+	KEY_ED25519   = 4,
 	/** Ed448   PureEdDSA instance as in RFC 8032 */
-	KEY_ED448   = 5,
+	KEY_ED448     = 5,
+	/** ML-DSA-44 as in FIPS 204 */
+	KEY_ML_DSA_44 = 6,
+	/** ML-DSA-65 as in FIPS 204 */
+	KEY_ML_DSA_65 = 7,
+	/** ML-DSA-87 as in FIPS 204 */
+	KEY_ML_DSA_87 = 8,
 };
 
 /**
@@ -109,6 +115,12 @@ enum signature_scheme_t {
 	SIGN_ED25519,
 	/** PureEdDSA on Curve448 as in RFC 8410                           */
 	SIGN_ED448,
+	/** Pure ML-DSA-44 as in FIPS 204                                   */
+	SIGN_ML_DSA_44,
+	/** Pure ML-DSA-65 as in FIPS 204                                   */
+	SIGN_ML_DSA_65,
+	/** Pure ML-DSA-87 as in FIPS 204                                   */
+	SIGN_ML_DSA_87,
 };
 
 /**
@@ -252,6 +264,40 @@ bool public_key_equals(public_key_t *public, public_key_t *other);
 bool public_key_has_fingerprint(public_key_t *public, chunk_t fingerprint);
 
 /**
+ * ASN.1 encoding of public key info
+ *
+ * @param pubkey		public key blob
+ * @param oid			OID of the public key type
+ * @return				ASN.1 encoded public key info blob
+ */
+chunk_t public_key_info_encode(chunk_t pubkey, int oid);
+
+/**
+ * ASN.1 decoding of public key info
+ *
+ * @param pkcs1			ASN.1 encoded public key in PCKS#1 format
+ * @param pubkey		unwrapped public key blob
+ * @return				type of the key (KEY_ANY if failure)
+ */
+key_type_t public_key_info_decode(chunk_t pkcs1, chunk_t *pubkey);
+
+/**
+ * Return OID for a given key type
+ *
+ * @param type		type of the key
+ * @return			OID
+ */
+int key_type_to_oid(key_type_t type);
+
+/**
+ * Return key type for a given OID
+ *
+ * @param oid		OID
+ * @return			type of the key
+ */
+key_type_t key_type_from_oid(int oid);
+
+/**
  * Conversion of ASN.1 signature or hash OID to signature scheme.
  *
  * @param oid			ASN.1 OID
@@ -285,5 +331,12 @@ enumerator_t *signature_schemes_for_key(key_type_t type, int size);
  */
 key_type_t key_type_from_signature_scheme(signature_scheme_t scheme);
 
+/**
+ * Return the public key size in octets for key types with fixed sizes.
+ *
+ * @param type			type of the key
+ * @return				public key size in octets
+ */
+int get_public_key_size(key_type_t type);
 
 #endif /** PUBLIC_KEY_H_ @}*/

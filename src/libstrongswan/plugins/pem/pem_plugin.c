@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2009 Martin Willi
+ * Copyright (C) 2024 Andreas Steffen
  *
  * Copyright (C) secunet Security Networks AG
  *
@@ -67,6 +68,15 @@ METHOD(plugin_t, get_features, int,
 		PLUGIN_REGISTER(PRIVKEY, pem_private_key_load, FALSE),
 			PLUGIN_PROVIDE(PRIVKEY, KEY_ED448),
 				PLUGIN_DEPENDS(PRIVKEY, KEY_ED448),
+		PLUGIN_REGISTER(PRIVKEY, pem_private_key_load, FALSE),
+			PLUGIN_PROVIDE(PRIVKEY, KEY_ML_DSA_44),
+				PLUGIN_DEPENDS(PRIVKEY, KEY_ML_DSA_44),
+		PLUGIN_REGISTER(PRIVKEY, pem_private_key_load, FALSE),
+			PLUGIN_PROVIDE(PRIVKEY, KEY_ML_DSA_65),
+				PLUGIN_DEPENDS(PRIVKEY, KEY_ML_DSA_65),
+		PLUGIN_REGISTER(PRIVKEY, pem_private_key_load, FALSE),
+			PLUGIN_PROVIDE(PRIVKEY, KEY_ML_DSA_87),
+				PLUGIN_DEPENDS(PRIVKEY, KEY_ML_DSA_87),
 
 		/* public key PEM decoding */
 		PLUGIN_REGISTER(PUBKEY, pem_public_key_load, FALSE),
@@ -87,6 +97,15 @@ METHOD(plugin_t, get_features, int,
 		PLUGIN_REGISTER(PUBKEY, pem_public_key_load, FALSE),
 			PLUGIN_PROVIDE(PUBKEY, KEY_ED448),
 				PLUGIN_DEPENDS(PUBKEY, KEY_ED448),
+		PLUGIN_REGISTER(PUBKEY, pem_public_key_load, FALSE),
+			PLUGIN_PROVIDE(PUBKEY, KEY_ML_DSA_44),
+				PLUGIN_DEPENDS(PUBKEY, KEY_ML_DSA_44),
+		PLUGIN_REGISTER(PUBKEY, pem_public_key_load, FALSE),
+			PLUGIN_PROVIDE(PUBKEY, KEY_ML_DSA_65),
+				PLUGIN_DEPENDS(PUBKEY, KEY_ML_DSA_65),
+		PLUGIN_REGISTER(PUBKEY, pem_public_key_load, FALSE),
+			PLUGIN_PROVIDE(PUBKEY, KEY_ML_DSA_87),
+				PLUGIN_DEPENDS(PUBKEY, KEY_ML_DSA_87),
 
 		/* certificate PEM decoding */
 		PLUGIN_REGISTER(CERT_DECODE, pem_certificate_load, FALSE),

@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2009 Martin Willi
+ * Copyright (C) 2024 Andreas Steffen
  *
  * Copyright (C) secunet Security Networks AG
  *
@@ -55,6 +56,9 @@ METHOD(plugin_t, get_features, int,
 				PLUGIN_SDEPEND(PUBKEY, KEY_ECDSA),
 				PLUGIN_SDEPEND(PUBKEY, KEY_ED25519),
 				PLUGIN_SDEPEND(PUBKEY, KEY_ED448),
+				PLUGIN_SDEPEND(PUBKEY, KEY_ML_DSA_44),
+				PLUGIN_SDEPEND(PUBKEY, KEY_ML_DSA_65),
+				PLUGIN_SDEPEND(PUBKEY, KEY_ML_DSA_87),
 				PLUGIN_SDEPEND(PUBKEY, KEY_DSA),
 		PLUGIN_REGISTER(PUBKEY, pkcs1_public_key_load, FALSE),
 			PLUGIN_PROVIDE(PUBKEY, KEY_RSA),

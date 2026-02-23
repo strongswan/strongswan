@@ -619,6 +619,7 @@ static char *whitelist[] = {
 	"OSSL_PROVIDER_try_load",
 	"OSSL_PROVIDER_try_load_ex",
 	"OSSL_PROVIDER_load",
+	"OSSL_PROVIDER_add_conf_parameter",
 	"RAND_get0_private",
 	"RAND_get0_public",
 	"RAND_priv_bytes",

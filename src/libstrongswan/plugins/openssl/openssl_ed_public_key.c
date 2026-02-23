@@ -69,6 +69,22 @@ int openssl_ed_key_type(key_type_t type)
 }
 
 /**
+ * Map an EVP_PKEY type to a key type
+ */
+key_type_t openssl_ed_evp_pkey_key_type(EVP_PKEY *key)
+{
+	switch (EVP_PKEY_base_id(key))
+	{
+		case EVP_PKEY_ED25519:
+			return KEY_ED25519;
+		case EVP_PKEY_ED448:
+			return KEY_ED448;
+		default:
+			return KEY_ANY;
+	}
+}
+
+/**
  * Map a key type to a key size
  */
 int openssl_ed_keysize(key_type_t type)
@@ -250,6 +266,28 @@ static private_public_key_t *create_empty(key_type_t type)
 	);
 
 	return this;
+}
+
+/*
+ * Described in header
+ */
+public_key_t *openssl_ed_public_key_create(EVP_PKEY *key)
+{
+	private_public_key_t *this;
+	key_type_t type;
+
+	if (key)
+	{
+		type = openssl_ed_evp_pkey_key_type(key);
+		if (type != KEY_ANY)
+		{
+			this = create_empty(type);
+			this->key = key;
+			return &this->public;
+		}
+		EVP_PKEY_free(key);
+	}
+	return NULL;
 }
 
 /*

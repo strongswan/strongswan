@@ -30,6 +30,7 @@ CONFIG_OPTS = \
 	--enable-rsapss \
 	--enable-sha3 \
 	--enable-shake256 \
+	--enable-dilithium \
 	--with-max-rsa-bits=8192
 
 all: install
