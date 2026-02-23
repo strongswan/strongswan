@@ -105,7 +105,7 @@ static int install(vici_conn_t *conn)
 static void __attribute__ ((constructor))reg_uninstall()
 {
 	command_register((command_t) {
-		uninstall, 'u', "uninstall", "uninstall a trap or shunt policy",
+		uninstall, 'U', "uninstall", "uninstall a trap or shunt policy",
 		{"--child <name> [--ike <name>] [--raw|--pretty]"},
 		{
 			{"help",		'h', 0, "show usage information"},

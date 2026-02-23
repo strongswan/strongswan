@@ -49,7 +49,7 @@ redirect an IKE_SA
 .B "\-p, \-\-install"
 install a trap or shunt policy
 .TP
-.B "\-u, \-\-uninstall"
+.B "\-U, \-\-uninstall"
 uninstall a trap or shunt policy
 .TP
 .B "\-l, \-\-list\-sas"
@@ -100,10 +100,20 @@ flush cached certificates
 .B "\-r, \-\-reload\-settings"
 reload strongswan.conf(5) configuration
 .TP
-.B "\-v, \-\-version"
+.B "\-V, \-\-version"
 show daemon version information
 .TP
 .B "\-h, \-\-help"
-show usage information
+show usage, version and plugin information
+.SH GENERAL OPTIONS
+.TP
+.B "\-v, \-\-debug"
+set debug level, default: 1
+.TP
+.B "\-+, \-\-options"
+read command line options from file
+.TP
+.B "\-u, \-\-uri"
+service URI to connect to
 .SH SEE ALSO
 .BR swanctl.conf (5)
