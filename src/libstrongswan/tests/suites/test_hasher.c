@@ -26,7 +26,7 @@ typedef struct {
 	int oid;
 	hash_algorithm_t alg;
 	key_type_t key;
-}hasher_oid_t;
+} hasher_oid_t;
 
 /* make sure to adjust offsets in constructor when changing this array */
 static hasher_oid_t oids[] = {
@@ -109,7 +109,7 @@ static struct {
 	{ SIGN_ECDSA_521,             HASH_SHA512     },
 	{ SIGN_ED25519,               HASH_IDENTITY   },
 	{ SIGN_ED448,                 HASH_IDENTITY   },
-	{ 30,						  HASH_UNKNOWN    },
+	{ 50,						  HASH_UNKNOWN    },
 };
 
 START_TEST(test_hasher_from_sig_scheme)
@@ -259,7 +259,7 @@ Suite *hasher_suite_create()
 	s = suite_create("hasher");
 
 	tc = tcase_create("from_oid");
-	tcase_add_loop_test(tc, test_hasher_from_oid, 0, 26);
+	tcase_add_loop_test(tc, test_hasher_from_oid, 0, 21);
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("to_oid");

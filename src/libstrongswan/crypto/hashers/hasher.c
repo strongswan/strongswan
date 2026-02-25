@@ -146,12 +146,6 @@ hash_algorithm_t hasher_algorithm_from_oid(int oid)
 		case OID_SHA3_512:
 		case OID_RSASSA_PKCS1V15_WITH_SHA3_512:
 			return HASH_SHA3_512;
-		case OID_ED25519:
-		case OID_ED448:
-		case OID_ML_DSA_44:
-		case OID_ML_DSA_65:
-		case OID_ML_DSA_87:
-			return HASH_IDENTITY;
 		default:
 			return HASH_UNKNOWN;
 	}
@@ -489,6 +483,168 @@ int hasher_signature_algorithm_to_oid(hash_algorithm_t alg, key_type_t key)
 				default:
 					return OID_UNKNOWN;
 			}
+		case KEY_MLDSA44_RSA2048_PSS:
+			switch (alg)
+			{
+				case HASH_IDENTITY:
+				case HASH_SHA256:
+					return OID_MLDSA44_RSA2048_PSS_SHA256;
+				default:
+					return OID_UNKNOWN;
+			}
+		case KEY_MLDSA44_RSA2048_PKCS15:
+			switch (alg)
+			{
+				case HASH_IDENTITY:
+				case HASH_SHA256:
+					return OID_MLDSA44_RSA2048_PKCS15_SHA256;
+				default:
+					return OID_UNKNOWN;
+			}
+		case KEY_MLDSA44_ED25519:
+			switch (alg)
+			{
+				case HASH_IDENTITY:
+				case HASH_SHA512:
+					return OID_MLDSA44_ED25519_SHA512;
+				default:
+					return OID_UNKNOWN;
+			}
+		case KEY_MLDSA44_ECDSA_P256:
+			switch (alg)
+			{
+				case HASH_IDENTITY:
+				case HASH_SHA256:
+					return OID_MLDSA44_ECDSA_P256_SHA256;
+				default:
+					return OID_UNKNOWN;
+			}
+		case KEY_MLDSA65_RSA3072_PSS:
+			switch (alg)
+			{
+				case HASH_IDENTITY:
+				case HASH_SHA512:
+					return OID_MLDSA65_RSA3072_PSS_SHA512;
+				default:
+					return OID_UNKNOWN;
+			}
+		case KEY_MLDSA65_RSA3072_PKCS15:
+			switch (alg)
+			{
+				case HASH_IDENTITY:
+				case HASH_SHA512:
+					return OID_MLDSA65_RSA3072_PKCS15_SHA512;
+				default:
+					return OID_UNKNOWN;
+			}
+		case KEY_MLDSA65_RSA4096_PSS:
+			switch (alg)
+			{
+				case HASH_IDENTITY:
+				case HASH_SHA512:
+					return OID_MLDSA65_RSA4096_PSS_SHA512;
+				default:
+					return OID_UNKNOWN;
+			}
+		case KEY_MLDSA65_RSA4096_PKCS15:
+			switch (alg)
+			{
+				case HASH_IDENTITY:
+				case HASH_SHA512:
+					return OID_MLDSA65_RSA4096_PKCS15_SHA512;
+				default:
+					return OID_UNKNOWN;
+			}
+		case KEY_MLDSA65_ECDSA_P256:
+			switch (alg)
+			{
+				case HASH_IDENTITY:
+				case HASH_SHA512:
+					return OID_MLDSA65_ECDSA_P256_SHA512;
+				default:
+					return OID_UNKNOWN;
+			}
+		case KEY_MLDSA65_ECDSA_P384:
+			switch (alg)
+			{
+				case HASH_IDENTITY:
+				case HASH_SHA512:
+					return OID_MLDSA65_ECDSA_P384_SHA512;
+				default:
+					return OID_UNKNOWN;
+			}
+		case KEY_MLDSA65_ECDSA_BPP256R1:
+			switch (alg)
+			{
+				case HASH_IDENTITY:
+				case HASH_SHA512:
+					return OID_MLDSA65_ECDSA_BPP256R1_SHA512;
+				default:
+					return OID_UNKNOWN;
+			}
+		case KEY_MLDSA65_ED25519:
+			switch (alg)
+			{
+				case HASH_IDENTITY:
+				case HASH_SHA512:
+					return OID_MLDSA65_ED25519_SHA512;
+				default:
+					return OID_UNKNOWN;
+			}
+		case KEY_MLDSA87_ECDSA_P384:
+			switch (alg)
+			{
+				case HASH_IDENTITY:
+				case HASH_SHA512:
+					return OID_MLDSA87_ECDSA_P384_SHA512;
+				default:
+					return OID_UNKNOWN;
+			}
+		case KEY_MLDSA87_ECDSA_BPP384R1:
+			switch (alg)
+			{
+				case HASH_IDENTITY:
+				case HASH_SHA512:
+					return OID_MLDSA87_ECDSA_BPP384R1_SHA512;
+				default:
+					return OID_UNKNOWN;
+			}
+		case KEY_MLDSA87_ED448:
+			switch (alg)
+			{
+				case HASH_IDENTITY:
+					/* FIXME: define HASH_SHAKE256_64? */
+					return OID_MLDSA87_ED448_SHAKE256;
+				default:
+					return OID_UNKNOWN;
+			}
+		case KEY_MLDSA87_RSA3072_PSS:
+			switch (alg)
+			{
+				case HASH_IDENTITY:
+				case HASH_SHA512:
+					return OID_MLDSA87_RSA3072_PSS_SHA512;
+				default:
+					return OID_UNKNOWN;
+			}
+		case KEY_MLDSA87_RSA4096_PSS:
+			switch (alg)
+			{
+				case HASH_IDENTITY:
+				case HASH_SHA512:
+					return OID_MLDSA87_RSA4096_PSS_SHA512;
+				default:
+					return OID_UNKNOWN;
+			}
+		case KEY_MLDSA87_ECDSA_P521:
+			switch (alg)
+			{
+				case HASH_IDENTITY:
+				case HASH_SHA512:
+					return OID_MLDSA87_ECDSA_P521_SHA512;
+				default:
+					return OID_UNKNOWN;
+			}
 		default:
 			return OID_UNKNOWN;
 	}
@@ -518,6 +674,24 @@ hash_algorithm_t hasher_from_signature_scheme(signature_scheme_t scheme,
 		case SIGN_ML_DSA_44:
 		case SIGN_ML_DSA_65:
 		case SIGN_ML_DSA_87:
+		case SIGN_MLDSA44_RSA2048_PSS:
+		case SIGN_MLDSA44_RSA2048_PKCS15:
+		case SIGN_MLDSA44_ED25519:
+		case SIGN_MLDSA44_ECDSA_P256:
+		case SIGN_MLDSA65_RSA3072_PSS:
+		case SIGN_MLDSA65_RSA3072_PKCS15:
+		case SIGN_MLDSA65_RSA4096_PSS:
+		case SIGN_MLDSA65_RSA4096_PKCS15:
+		case SIGN_MLDSA65_ECDSA_P256:
+		case SIGN_MLDSA65_ECDSA_P384:
+		case SIGN_MLDSA65_ECDSA_BPP256R1:
+		case SIGN_MLDSA65_ED25519:
+		case SIGN_MLDSA87_ECDSA_P384:
+		case SIGN_MLDSA87_ECDSA_BPP384R1:
+		case SIGN_MLDSA87_ED448:
+		case SIGN_MLDSA87_RSA3072_PSS:
+		case SIGN_MLDSA87_RSA4096_PSS:
+		case SIGN_MLDSA87_ECDSA_P521:
 			return HASH_IDENTITY;
 		case SIGN_RSA_EMSA_PKCS1_MD5:
 			return HASH_MD5;
