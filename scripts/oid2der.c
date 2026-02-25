@@ -15,14 +15,48 @@
  */
 
 #include <stdio.h>
+#include <asn1/oid.h>
 #include <asn1/asn1.h>
+
+/**
+ * Print the path for the given OID
+ */
+static void print_path(FILE *out, int oid)
+{
+	if (oid == OID_UNKNOWN)
+	{
+		fprintf(out, "<unknown OID>:\n");
+	}
+	else
+	{
+		int level = oid_names[oid].level, path[level+1];
+
+		path[level] = oid;
+		while (level > 0)
+		{
+			if (oid_names[oid].level < level)
+			{
+				path[--level] = oid;
+			}
+			oid--;
+		}
+		for (level = 0; level < countof(path); level++)
+		{
+			const char *name = oid_names[path[level]].name;
+
+			fprintf(out, "%s%s", level > 0 ? "›" : "",
+					name[0] ? name : "…");
+		}
+		fprintf(out, ":\n", oid_names[oid].name);
+	}
+}
 
 /**
  * convert string OID to DER encoding
  */
 int main(int argc, char *argv[])
 {
-	int i, nr = 0;
+	int i, nr = 0, known;
 	chunk_t oid;
 	char *decoded;
 	bool decode = FALSE;
@@ -38,26 +72,44 @@ int main(int argc, char *argv[])
 		if (decode)
 		{
 			oid = chunk_from_hex(chunk_from_str(argv[nr]), NULL);
-			decoded = asn1_oid_to_string(oid);
-			printf("%s\n", decoded);
-			free(decoded);
-			free(oid.ptr);
-			continue;
 		}
-		oid = asn1_oid_from_string(argv[nr]);
+		else
+		{
+			oid = asn1_oid_from_string(argv[nr]);
+		}
+
 		if (oid.len)
+		{
+			known = asn1_known_oid(oid);
+			print_path(stderr, known);
+		}
+		else
+		{
+			return 1;
+		}
+
+		if (decode)
+		{
+			decoded = asn1_oid_to_string(oid);
+			if (decoded)
+			{
+				printf("%s\n", decoded);
+				free(decoded);
+			}
+			else
+			{
+				fprintf(stderr, "<unable to encode OID>\n");
+			}
+		}
+		else
 		{
 			for (i = 0; i < oid.len; i++)
 			{
 				printf("0x%02x,", oid.ptr[i]);
 			}
 			printf("\n");
-			free(oid.ptr);
 		}
-		else
-		{
-			return 1;
-		}
+		free(oid.ptr);
 	}
 	return 0;
 }
