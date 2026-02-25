@@ -241,6 +241,25 @@
               0x07           "ipsecUser"
               0x08           "timeStamping"
               0x09           "ocspSigning"				OID_OCSP_SIGNING
+            0x06             "algorithms"
+              0x25           "id-MLDSA44-RSA2048-PSS-SHA256"	OID_MLDSA44_RSA2048_PSS_SHA256
+              0x26           "id-MLDSA44-RSA2048-PKCS15-SHA256"	OID_MLDSA44_RSA2048_PKCS15_SHA256
+              0x27           "id-MLDSA44-Ed25519-SHA512"		OID_MLDSA44_ED25519_SHA512
+              0x28           "id-MLDSA44-ECDSA-P256-SHA256"		OID_MLDSA44_ECDSA_P256_SHA256
+              0x29           "id-MLDSA65-RSA3072-PSS-SHA512"	OID_MLDSA65_RSA3072_PSS_SHA512
+              0x2A           "id-MLDSA65-RSA3072-PKCS15-SHA512"	OID_MLDSA65_RSA3072_PKCS15_SHA512
+              0x2B           "id-MLDSA65-RSA4096-PSS-SHA512"	OID_MLDSA65_RSA4096_PSS_SHA512
+              0x2C           "id-MLDSA65-RSA4096-PKCS15-SHA512"	OID_MLDSA65_RSA4096_PKCS15_SHA512
+              0x2D           "id-MLDSA65-ECDSA-P256-SHA512"		OID_MLDSA65_ECDSA_P256_SHA512
+              0x2E           "id-MLDSA65-ECDSA-P384-SHA512"		OID_MLDSA65_ECDSA_P384_SHA512
+              0x2F           "id-MLDSA65-ECDSA-bpP256r1-SHA512"	OID_MLDSA65_ECDSA_BPP256R1_SHA512
+              0x30           "id-MLDSA65-Ed25519-SHA512"		OID_MLDSA65_ED25519_SHA512
+              0x31           "id-MLDSA87-ECDSA-P384-SHA512"		OID_MLDSA87_ECDSA_P384_SHA512
+              0x32           "id-MLDSA87-ECDSA-bpP384r1-SHA512"	OID_MLDSA87_ECDSA_BPP384R1_SHA512
+              0x33           "id-MLDSA87-Ed448-SHAKE256"		OID_MLDSA87_ED448_SHAKE256
+              0x34           "id-MLDSA87-RSA3072-PSS-SHA512"	OID_MLDSA87_RSA3072_PSS_SHA512
+              0x35           "id-MLDSA87-RSA4096-PSS-SHA512"	OID_MLDSA87_RSA4096_PSS_SHA512
+              0x36           "id-MLDSA87-ECDSA-P521-SHA512"		OID_MLDSA87_ECDSA_P521_SHA512
             0x08             "id-otherNames"
               0x01           "personalData"
               0x02           "userGroup"
