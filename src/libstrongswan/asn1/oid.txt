@@ -16,60 +16,7 @@
                 0x01         "pilotAttributeType"
                   0x01       "UID"						OID_PILOT_USERID
                   0x19       "DC"						OID_PILOT_DOMAIN_COMPONENT
-0x55                         "X.500"
-  0x04                       "X.509"
-    0x03                     "CN"						OID_COMMON_NAME
-    0x04                     "SN"						OID_SURNAME
-    0x05                     "serialNumber"				OID_SERIAL_NUMBER
-    0x06                     "C"						OID_COUNTRY
-    0x07                     "L"						OID_LOCALITY
-    0x08                     "ST"						OID_STATE_OR_PROVINCE
-    0x09                     "STREET"					OID_STREET_ADDRESS
-    0x0A                     "O"						OID_ORGANIZATION
-    0x0B                     "OU"						OID_ORGANIZATION_UNIT
-    0x0C                     "T"						OID_TITLE
-    0x0D                     "D"						OID_DESCRIPTION
-    0x10                     "postalAddress"			OID_POSTAL_ADDRESS
-    0x11                     "postalCode"				OID_POSTAL_CODE
-    0x24                     "userCertificate"			OID_USER_CERTIFICATE
-    0x29                     "N"						OID_NAME
-    0x2A                     "G"						OID_GIVEN_NAME
-    0x2B                     "I"						OID_INITIALS
-    0x2D                     "ID"						OID_UNIQUE_IDENTIFIER
-    0x2E                     "dnQualifier"				OID_DN_QUALIFIER
-    0x36                     "dmdName"					OID_DMD_NAME
-    0x41                     "pseudonym"				OID_PSEUDONYM
-    0x48                     "role"						OID_ROLE
-    0x61                     "organizationIdentifier"   OID_ORGANIZATION_ID
-  0x1D                       "id-ce"
-    0x09                     "subjectDirectoryAttrs"
-    0x0E                     "subjectKeyIdentifier"		OID_SUBJECT_KEY_ID
-    0x0F                     "keyUsage"					OID_KEY_USAGE
-    0x10                     "privateKeyUsagePeriod"
-    0x11                     "subjectAltName"			OID_SUBJECT_ALT_NAME
-    0x12                     "issuerAltName"
-    0x13                     "basicConstraints"			OID_BASIC_CONSTRAINTS
-    0x14                     "crlNumber"				OID_CRL_NUMBER
-    0x15                     "reasonCode"				OID_CRL_REASON_CODE
-    0x17                     "holdInstructionCode"
-    0x18                     "invalidityDate"
-    0x1B                     "deltaCrlIndicator"		OID_DELTA_CRL_INDICATOR
-    0x1C                     "issuingDistributionPoint"	OID_ISSUING_DIST_POINT
-    0x1D                     "certificateIssuer"
-    0x1E                     "nameConstraints"			OID_NAME_CONSTRAINTS
-    0x1F                     "crlDistributionPoints"	OID_CRL_DISTRIBUTION_POINTS
-    0x20                     "certificatePolicies"		OID_CERTIFICATE_POLICIES
-      0x00                   "anyPolicy"				OID_ANY_POLICY
-    0x21                     "policyMappings"			OID_POLICY_MAPPINGS
-    0x23                     "authorityKeyIdentifier"	OID_AUTHORITY_KEY_ID
-    0x24                     "policyConstraints"		OID_POLICY_CONSTRAINTS
-    0x25                     "extendedKeyUsage"			OID_EXTENDED_KEY_USAGE
-      0x00                   "anyExtendedKeyUsage"
-    0x2E                     "freshestCRL"				OID_FRESHEST_CRL
-    0x36                     "inhibitAnyPolicy"			OID_INHIBIT_ANY_POLICY
-    0x37                     "targetInformation"		OID_TARGET_INFORMATION
-    0x38                     "noRevAvail"				OID_NO_REV_AVAIL
-0x2A                         ""
+0x2A                         "iso-member-body"
   0x83                       ""
     0x08                     "jp"
       0x8C                   ""
@@ -201,7 +148,7 @@
               0x02           "ecdsa-with-SHA256"		OID_ECDSA_WITH_SHA256
               0x03           "ecdsa-with-SHA384"		OID_ECDSA_WITH_SHA384
               0x04           "ecdsa-with-SHA512"		OID_ECDSA_WITH_SHA512
-0x2B                         ""
+0x2B                         "iso-org"
   0x06                       "dod"
     0x01                     "internet"
       0x04                   "private"
@@ -412,6 +359,59 @@
         0x25                 "sect409r1"				OID_SECT409R1
         0x26                 "sect571k1"				OID_SECT571K1
         0x27                 "sect571r1"				OID_SECT571R1
+0x55                         "X.500"
+  0x04                       "X.509"
+    0x03                     "CN"						OID_COMMON_NAME
+    0x04                     "SN"						OID_SURNAME
+    0x05                     "serialNumber"				OID_SERIAL_NUMBER
+    0x06                     "C"						OID_COUNTRY
+    0x07                     "L"						OID_LOCALITY
+    0x08                     "ST"						OID_STATE_OR_PROVINCE
+    0x09                     "STREET"					OID_STREET_ADDRESS
+    0x0A                     "O"						OID_ORGANIZATION
+    0x0B                     "OU"						OID_ORGANIZATION_UNIT
+    0x0C                     "T"						OID_TITLE
+    0x0D                     "D"						OID_DESCRIPTION
+    0x10                     "postalAddress"			OID_POSTAL_ADDRESS
+    0x11                     "postalCode"				OID_POSTAL_CODE
+    0x24                     "userCertificate"			OID_USER_CERTIFICATE
+    0x29                     "N"						OID_NAME
+    0x2A                     "G"						OID_GIVEN_NAME
+    0x2B                     "I"						OID_INITIALS
+    0x2D                     "ID"						OID_UNIQUE_IDENTIFIER
+    0x2E                     "dnQualifier"				OID_DN_QUALIFIER
+    0x36                     "dmdName"					OID_DMD_NAME
+    0x41                     "pseudonym"				OID_PSEUDONYM
+    0x48                     "role"						OID_ROLE
+    0x61                     "organizationIdentifier"   OID_ORGANIZATION_ID
+  0x1D                       "id-ce"
+    0x09                     "subjectDirectoryAttrs"
+    0x0E                     "subjectKeyIdentifier"		OID_SUBJECT_KEY_ID
+    0x0F                     "keyUsage"					OID_KEY_USAGE
+    0x10                     "privateKeyUsagePeriod"
+    0x11                     "subjectAltName"			OID_SUBJECT_ALT_NAME
+    0x12                     "issuerAltName"
+    0x13                     "basicConstraints"			OID_BASIC_CONSTRAINTS
+    0x14                     "crlNumber"				OID_CRL_NUMBER
+    0x15                     "reasonCode"				OID_CRL_REASON_CODE
+    0x17                     "holdInstructionCode"
+    0x18                     "invalidityDate"
+    0x1B                     "deltaCrlIndicator"		OID_DELTA_CRL_INDICATOR
+    0x1C                     "issuingDistributionPoint"	OID_ISSUING_DIST_POINT
+    0x1D                     "certificateIssuer"
+    0x1E                     "nameConstraints"			OID_NAME_CONSTRAINTS
+    0x1F                     "crlDistributionPoints"	OID_CRL_DISTRIBUTION_POINTS
+    0x20                     "certificatePolicies"		OID_CERTIFICATE_POLICIES
+      0x00                   "anyPolicy"				OID_ANY_POLICY
+    0x21                     "policyMappings"			OID_POLICY_MAPPINGS
+    0x23                     "authorityKeyIdentifier"	OID_AUTHORITY_KEY_ID
+    0x24                     "policyConstraints"		OID_POLICY_CONSTRAINTS
+    0x25                     "extendedKeyUsage"			OID_EXTENDED_KEY_USAGE
+      0x00                   "anyExtendedKeyUsage"
+    0x2E                     "freshestCRL"				OID_FRESHEST_CRL
+    0x36                     "inhibitAnyPolicy"			OID_INHIBIT_ANY_POLICY
+    0x37                     "targetInformation"		OID_TARGET_INFORMATION
+    0x38                     "noRevAvail"				OID_NO_REV_AVAIL
 0x60                         ""
   0x86                       ""
     0x48                     ""
