@@ -54,6 +54,42 @@ enum key_type_t {
 	KEY_ML_DSA_65 = 7,
 	/** ML-DSA-87 as in FIPS 204 */
 	KEY_ML_DSA_87 = 8,
+	/** Composite ML-DSA-44 and RSA-2048-PSS as in RFC ... */
+	KEY_MLDSA44_RSA2048_PSS    = 9,
+	/** Composite ML-DSA-44 and RSA-2048-PKCS#1v1.5 as in RFC ... */
+	KEY_MLDSA44_RSA2048_PKCS15 = 10,
+	/** Composite ML-DSA-44 and Ed25519 as in RFC ... */
+	KEY_MLDSA44_ED25519        = 11,
+	/** Composite ML-DSA-44 and ECDSA-P256 as in RFC ... */
+	KEY_MLDSA44_ECDSA_P256     = 12,
+	/** Composite ML-DSA-65 and RSA-3072-PSS as in RFC ... */
+	KEY_MLDSA65_RSA3072_PSS    = 13,
+	/** Composite ML-DSA-65 and RSA-3072-PKCS#1v1.5 as in RFC ... */
+	KEY_MLDSA65_RSA3072_PKCS15 = 14,
+	/** Composite ML-DSA-65 and RSA-4096-PSS as in RFC ... */
+	KEY_MLDSA65_RSA4096_PSS    = 15,
+	/** Composite ML-DSA-65 and RSA-4096-PKCS#1v1.5 as in RFC ... */
+	KEY_MLDSA65_RSA4096_PKCS15 = 16,
+	/** Composite ML-DSA-65 and ECDSA-P256 as in RFC ... */
+	KEY_MLDSA65_ECDSA_P256     = 17,
+	/** Composite ML-DSA-65 and ECDSA-P384 as in RFC ... */
+	KEY_MLDSA65_ECDSA_P384     = 18,
+	/** Composite ML-DSA-65 and ECDSA-BP-P256r1 as in RFC ... */
+	KEY_MLDSA65_ECDSA_BPP256R1 = 19,
+	/** Composite ML-DSA-65 and Ed25519 as in RFC ... */
+	KEY_MLDSA65_ED25519        = 20,
+	/** Composite ML-DSA-87 and ECDSA-P384 as in RFC ... */
+	KEY_MLDSA87_ECDSA_P384     = 21,
+	/** Composite ML-DSA-87 and ECDSA-BP-P384r1 as in RFC ... */
+	KEY_MLDSA87_ECDSA_BPP384R1 = 22,
+	/** Composite ML-DSA-87 and Ed448 as in RFC ... */
+	KEY_MLDSA87_ED448          = 23,
+	/** Composite ML-DSA-87 and RSA-3072-PSS as in RFC ... */
+	KEY_MLDSA87_RSA3072_PSS    = 24,
+	/** Composite ML-DSA-87 and RSA-4096-PSS as in RFC ... */
+	KEY_MLDSA87_RSA4096_PSS    = 25,
+	/** Composite ML-DSA-87 and ECDSA-P521 as in RFC ... */
+	KEY_MLDSA87_ECDSA_P521     = 26,
 };
 
 /**
@@ -115,12 +151,48 @@ enum signature_scheme_t {
 	SIGN_ED25519,
 	/** PureEdDSA on Curve448 as in RFC 8410                           */
 	SIGN_ED448,
-	/** Pure ML-DSA-44 as in FIPS 204                                   */
+	/** Pure ML-DSA-44 as in FIPS 204                                  */
 	SIGN_ML_DSA_44,
-	/** Pure ML-DSA-65 as in FIPS 204                                   */
+	/** Pure ML-DSA-65 as in FIPS 204                                  */
 	SIGN_ML_DSA_65,
-	/** Pure ML-DSA-87 as in FIPS 204                                   */
+	/** Pure ML-DSA-87 as in FIPS 204                                  */
 	SIGN_ML_DSA_87,
+	/** Composite ML-DSA-44 and RSA-2048-PKCS#1v1.5 as in RFC ...      */
+	SIGN_MLDSA44_RSA2048_PSS,
+	/** Composite ML-DSA-44 and RSA-2048-PKCS#1v1.5 as in RFC ...      */
+	SIGN_MLDSA44_RSA2048_PKCS15,
+	/** Composite ML-DSA-44 and Ed25519 as in RFC ...                  */
+	SIGN_MLDSA44_ED25519,
+	/** Composite ML-DSA-44 and ECDSA-P256 as in RFC ...               */
+	SIGN_MLDSA44_ECDSA_P256,
+	/** Composite ML-DSA-65 and RSA-3072-PSS as in RFC ...             */
+	SIGN_MLDSA65_RSA3072_PSS,
+	/** Composite ML-DSA-65 and RSA-3072-PKCS#1v1.5 as in RFC ...      */
+	SIGN_MLDSA65_RSA3072_PKCS15,
+	/** Composite ML-DSA-65 and RSA-4096-PSS as in RFC ...             */
+	SIGN_MLDSA65_RSA4096_PSS,
+	/** Composite ML-DSA-65 and RSA-4096-PKCS#1v1.5 as in RFC ...      */
+	SIGN_MLDSA65_RSA4096_PKCS15,
+	/** Composite ML-DSA-65 and ECDSA-P256 as in RFC ...               */
+	SIGN_MLDSA65_ECDSA_P256,
+	/** Composite ML-DSA-65 and ECDSA-P384 as in RFC ...               */
+	SIGN_MLDSA65_ECDSA_P384,
+	/** Composite ML-DSA-65 and ECDSA-BP-P256r1 as in RFC ...          */
+	SIGN_MLDSA65_ECDSA_BPP256R1,
+	/** Composite ML-DSA-65 and Ed25519 as in RFC ...                  */
+	SIGN_MLDSA65_ED25519,
+	/** Composite ML-DSA-87 and ECDSA-P384 as in RFC ...               */
+	SIGN_MLDSA87_ECDSA_P384,
+	/** Composite ML-DSA-87 and ECDSA-BP-P384r1 as in RFC ...          */
+	SIGN_MLDSA87_ECDSA_BPP384R1,
+	/** Composite ML-DSA-87 and Ed448 as in RFC ...                    */
+	SIGN_MLDSA87_ED448,
+	/** Composite ML-DSA-87 and RSA-3072-PSS as in RFC ...             */
+	SIGN_MLDSA87_RSA3072_PSS,
+	/** Composite ML-DSA-87 and RSA-4096-PSS as in RFC ...             */
+	SIGN_MLDSA87_RSA4096_PSS,
+	/** Composite ML-DSA-87 and ECDSA-P521 as in RFC ...               */
+	SIGN_MLDSA87_ECDSA_P521,
 };
 
 /**
