@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2007-2022 Tobias Brunner
+# Copyright (C) 2007-2026 Tobias Brunner
 # Copyright (C) 2006-2022 Andreas Steffen
 # Copyright (C) 2006-2014 Martin Willi
 #
@@ -158,6 +158,7 @@ ARG_ENABL_SET([sha2],           [enable SHA256/SHA384/SHA512 software implementa
 ARG_ENABL_SET([sha3],           [enable SHA3_224/SHA3_256/SHA3_384/SHA3_512 software implementation plugin.])
 ARG_DISBL_SET([xcbc],           [disable xcbc crypto implementation plugin.])
 # encoding/decoding plugins
+ARG_DISBL_SET([compsigs],       [disable ML-DSA composite key/signature decoding and wrapper plugin.])
 ARG_DISBL_SET([dnskey],         [disable DNS RR key decoding plugin.])
 ARG_DISBL_SET([pem],            [disable PEM decoding plugin.])
 ARG_DISBL_SET([pgp],            [disable PGP key decoding plugin.])
@@ -1485,6 +1486,7 @@ ADD_PLUGIN([openssl],              [s charon swanctl pki scripts attest nm cmd a
 ADD_PLUGIN([wolfssl],              [s charon swanctl pki scripts attest nm cmd aikgen])
 ADD_PLUGIN([botan],                [s charon swanctl pki scripts attest nm cmd aikgen])
 ADD_PLUGIN([pkcs8],                [s charon swanctl pki scripts attest nm cmd])
+ADD_PLUGIN([compsigs],             [s charon swanctl pki scripts nm cmd fd fc])
 ADD_PLUGIN([fips-prf],             [s charon nm cmd])
 ADD_PLUGIN([gmp],                  [s charon swanctl pki scripts attest nm cmd aikgen fc])
 ADD_PLUGIN([curve25519],           [s charon swanctl pki scripts nm cmd])
@@ -1650,6 +1652,7 @@ AM_CONDITIONAL(USE_CCM, test x$ccm = xtrue)
 AM_CONDITIONAL(USE_GCM, test x$gcm = xtrue)
 AM_CONDITIONAL(USE_DRBG, test x$drbg = xtrue)
 AM_CONDITIONAL(USE_ML, test x$ml = xtrue)
+AM_CONDITIONAL(USE_COMPSIGS, test x$compsigs = xtrue)
 
 #  charon plugins
 # ----------------
@@ -1876,6 +1879,7 @@ AC_CONFIG_FILES([
 	src/libstrongswan/Makefile
 	src/libstrongswan/plugins/aes/Makefile
 	src/libstrongswan/plugins/cmac/Makefile
+	src/libstrongswan/plugins/compsigs/Makefile
 	src/libstrongswan/plugins/des/Makefile
 	src/libstrongswan/plugins/rc2/Makefile
 	src/libstrongswan/plugins/md4/Makefile
