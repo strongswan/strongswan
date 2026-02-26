@@ -691,6 +691,13 @@ if MONOLITHIC
 endif
 endif
 
+if USE_COMPSIGS
+  SUBDIRS += plugins/compsigs
+if MONOLITHIC
+  libstrongswan_la_LIBADD += plugins/compsigs/libstrongswan-compsigs.la
+endif
+endif
+
 if USE_TEST_VECTORS
   SUBDIRS += plugins/test_vectors
 if MONOLITHIC
