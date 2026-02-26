@@ -280,6 +280,10 @@ private_key_t *pkcs8_private_key_load(key_type_t type, va_list args)
 		}
 		break;
 	}
+	if (!blob.len)
+	{
+		return NULL;
+	}
 	/* we don't know whether it is encrypted or not, try both ways */
 	key = parse_encrypted_private_key(type, blob);
 	if (!key)

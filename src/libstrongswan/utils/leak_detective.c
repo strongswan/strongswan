@@ -668,6 +668,7 @@ static char *whitelist[] = {
 	"botan_privkey_load_rsa_pkcs1",
 	"botan_privkey_load",
 	"botan_private_key_load",
+	"botan_public_key_load",
 	/* C++ due to Botan */
 	"__cxa_get_globals",
 	"__cxa_thread_atexit",
