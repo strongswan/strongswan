@@ -207,8 +207,8 @@ default|ld)
 	fi
 	;;
 openssl*)
-	CONFIG="--disable-defaults --enable-pki --enable-openssl --enable-pem --enable-drbg"
-	export TESTS_PLUGINS="test-vectors openssl! pem drbg"
+	CONFIG="--disable-defaults --enable-pki --enable-openssl --enable-pem --enable-drbg --enable-compsigs"
+	export TESTS_PLUGINS="test-vectors openssl! pem drbg compsigs"
 	DEPS="libssl-dev"
 	if test "$TEST" = "openssl-3"; then
 		DEPS=""
@@ -236,8 +236,8 @@ botan)
 	fi
 	;;
 wolfssl)
-	CONFIG="--disable-defaults --enable-pki --enable-wolfssl --enable-pem --enable-pkcs1 --enable-pkcs8 --enable-x509 --enable-constraints --enable-drbg"
-	export TESTS_PLUGINS="test-vectors wolfssl! pem pkcs1 pkcs8 x509 constraints drbg"
+	CONFIG="--disable-defaults --enable-pki --enable-wolfssl --enable-pem --enable-pkcs1 --enable-pkcs8 --enable-x509 --enable-constraints --enable-drbg --enable-compsigs"
+	export TESTS_PLUGINS="test-vectors wolfssl! pem pkcs1 pkcs8 compsigs x509 constraints drbg"
 	# build with custom options to enable all the features the plugin supports
 	DEPS=""
 	if test "$1" = "build-deps"; then
@@ -315,7 +315,7 @@ win*)
 			--enable-constraints --enable-revocation --enable-pem --enable-pkcs1
 			--enable-pkcs8 --enable-x509 --enable-pubkey --enable-acert
 			--enable-eap-tnc --enable-eap-ttls --enable-eap-identity
-			--enable-eap-radius
+			--enable-eap-radius --enable-compsigs
 			--enable-updown --enable-ext-auth --enable-libipsec --enable-pkcs11
 			--enable-tnccs-20
 			--enable-pki --enable-swanctl --enable-socket-win
@@ -386,7 +386,7 @@ macos)
 			--enable-pkcs8 --enable-pkcs11 --enable-pki --enable-pubkey
 			--enable-revocation --enable-socket-default --enable-sshkey
 			--enable-stroke --enable-swanctl --enable-unity --enable-updown
-			--enable-x509 --enable-xauth-generic --enable-drbg"
+			--enable-x509 --enable-xauth-generic --enable-drbg --enable-compsigs"
 	DEPS="automake autoconf libtool bison gperf pkgconf openssl@4 curl"
 	BREW_PREFIX=$(brew --prefix)
 	export PATH=$BREW_PREFIX/opt/bison/bin:$PATH
