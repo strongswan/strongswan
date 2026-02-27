@@ -15,8 +15,8 @@
  */
 
 /**
- * @defgroup wolfssl_ml_dsa_public_key wolfssl_ml_dsa_public_key
- * @{ @ingroup wolfssl_p
+ * @defgroup ml_dsa_public_key ml_dsa_public_key
+ * @{ @ingroup ml_p
  */
 
 #ifndef ML_DSA_PUBLIC_KEY_H_
