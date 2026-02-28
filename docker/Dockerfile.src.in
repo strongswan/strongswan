@@ -1,0 +1,3 @@
+run apk add --no-cache autoconf automake libtool pkgconfig gettext-dev flex bison gperf
+copy . .
+run ./autogen.sh
