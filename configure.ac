@@ -68,7 +68,7 @@ ARG_WITH_SET([dev-headers],          [no], [install strongSwan development heade
 ARG_WITH_SET([printf-hooks],         [auto], [force the use of a specific printf hook implementation (auto, builtin, glibc, vstr).])
 ARG_WITH_SET([rubygemdir],           ["gem environment gemdir"], [path to install ruby gems to])
 ARG_WITH_SET([testable-ke],          [yes], [make key exchange implementations testable by providing a set_seed() method])
-ARG_WITH_SET([plugins-packaged-seperately], [no], [changes e.g. log messages for distributions that package plugins seperately])
+ARG_WITH_SET([plugins-packaged-separately], [no], [changes e.g. log messages for distributions that package plugins separately])
 
 if test -n "$PKG_CONFIG"; then
 	systemdsystemunitdir_default=$($PKG_CONFIG --variable=systemdsystemunitdir systemd)

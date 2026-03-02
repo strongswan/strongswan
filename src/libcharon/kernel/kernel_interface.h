@@ -312,7 +312,7 @@ struct kernel_interface_t {
 	 * The returned host is allocated and must be destroyed.
 	 * An optional src address can be used to check if a route is available
 	 * for the given source to dest.
-	 * 0.0.0.0/:: may get returend if an interface but no next hop can be
+	 * 0.0.0.0/:: may get returned if an interface but no next hop can be
 	 * determined.
 	 *
 	 * @param dest			target destination address
