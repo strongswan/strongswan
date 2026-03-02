@@ -16,7 +16,7 @@
  */
 
 /**
- * @defgroup command command
+ * @defgroup swanctl_command command
  * @{ @ingroup swanctl
  */
 
