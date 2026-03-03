@@ -1,3 +1,30 @@
+strongswan-6.0.5
+----------------
+
+- Added support for forwarding certain ICMP errors even if their source address
+  doesn't match the traffic selectors, when running on Linux 6.9+.
+
+- The dhcp plugin now tracks leases across make-before-break reauthentications.
+
+- charon-cmd support childless IKE SA initiation and IKEv2 PSK authentication.
+
+- The kernel-netlink plugin now doesn't default to the peer's address as next
+  hop when installing routes if at least an interface was found.
+
+- organizationIdentifier RDNs are supported when parsing ASN.1 DN identities
+  from strings.
+
+- Options shared by all commands in the swanctl and pki tools (e.g. --debug) are
+  now parsed even if passed before the command. The log level is now always
+  changed before initializing the libraries and plugins. And due to conflicts,
+  the short options for swanctl's `--version` and `--uninstall` commands were
+  changed to `-V` and `-U`, respectively. Similarly, the short option for pki's
+  `--verify` command is now `-V`.
+
+- For distributions that package plugins separately a new configure option is
+  provided to change the log message if a plugin can't be loaded.
+
+
 strongswan-6.0.4
 ----------------
 
