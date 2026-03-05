@@ -119,7 +119,7 @@ METHOD(eap_ttls_avp_t, process, status_t,
 		chunk_free(&this->input);
 		this->inpos = 0;
 
-		if (!success)
+		if (!success || avp_len < AVP_HEADER_LEN)
 		{
 			DBG1(DBG_IKE, "received invalid AVP header");
 			return FAILED;
@@ -130,7 +130,7 @@ METHOD(eap_ttls_avp_t, process, status_t,
 			return FAILED;
 		}
 		this->process_header = FALSE;
-		this->data_len = avp_len - 8;
+		this->data_len = avp_len - AVP_HEADER_LEN;
 		this->input = chunk_alloc(this->data_len + (4 - avp_len) % 4);
 	}
 
