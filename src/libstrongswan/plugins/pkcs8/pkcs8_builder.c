@@ -91,15 +91,27 @@ static private_key_t *parse_private_key(chunk_t blob)
 						part = BUILD_EDDSA_PRIV_ASN1_DER;
 						break;
 					case OID_ML_DSA_44:
-						type = KEY_ML_DSA_44;
-						part = BUILD_BLOB;
-						break;
 					case OID_ML_DSA_65:
-						type = KEY_ML_DSA_65;
-						part = BUILD_BLOB;
-						break;
 					case OID_ML_DSA_87:
-						type = KEY_ML_DSA_87;
+					case OID_MLDSA44_RSA2048_PSS_SHA256:
+					case OID_MLDSA44_RSA2048_PKCS15_SHA256:
+					case OID_MLDSA44_ED25519_SHA512:
+					case OID_MLDSA44_ECDSA_P256_SHA256:
+					case OID_MLDSA65_RSA3072_PSS_SHA512:
+					case OID_MLDSA65_RSA3072_PKCS15_SHA512:
+					case OID_MLDSA65_RSA4096_PSS_SHA512:
+					case OID_MLDSA65_RSA4096_PKCS15_SHA512:
+					case OID_MLDSA65_ECDSA_P256_SHA512:
+					case OID_MLDSA65_ECDSA_P384_SHA512:
+					case OID_MLDSA65_ECDSA_BPP256R1_SHA512:
+					case OID_MLDSA65_ED25519_SHA512:
+					case OID_MLDSA87_ECDSA_P384_SHA512:
+					case OID_MLDSA87_ECDSA_BPP384R1_SHA512:
+					case OID_MLDSA87_ED448_SHAKE256:
+					case OID_MLDSA87_RSA3072_PSS_SHA512:
+					case OID_MLDSA87_RSA4096_PSS_SHA512:
+					case OID_MLDSA87_ECDSA_P521_SHA512:
+						type = key_type_from_oid(oid);
 						part = BUILD_BLOB;
 						break;
 					default:
