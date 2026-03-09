@@ -192,6 +192,8 @@ int key_type_to_oid(key_type_t type)
 			return OID_ML_DSA_65;
 		case KEY_ML_DSA_87:
 			return OID_ML_DSA_87;
+		case KEY_ECDSA:
+			return OID_EC_PUBLICKEY;
 		default:
 			return OID_UNKNOWN;
 	}
