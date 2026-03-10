@@ -38,35 +38,7 @@ static int gen()
 			case 'h':
 				return command_usage(NULL);
 			case 't':
-				if (streq(arg, "rsa"))
-				{
-					type = KEY_RSA;
-				}
-				else if (streq(arg, "ecdsa"))
-				{
-					type = KEY_ECDSA;
-				}
-				else if (streq(arg, "ed25519"))
-				{
-					type = KEY_ED25519;
-				}
-				else if (streq(arg, "ed448"))
-				{
-					type = KEY_ED448;
-				}
-				else if (streq(arg, "mldsa44"))
-				{
-					type = KEY_ML_DSA_44;
-				}
-				else if (streq(arg, "mldsa65"))
-				{
-					type = KEY_ML_DSA_65;
-				}
-				else if (streq(arg, "mldsa87"))
-				{
-					type = KEY_ML_DSA_87;
-				}
-				else
+				if (!key_type_from_string(arg, FALSE, &type) || type == KEY_ANY)
 				{
 					return command_usage("invalid key type");
 				}
@@ -188,12 +160,11 @@ static void __attribute__ ((constructor))reg()
 {
 	command_register((command_t) {
 		gen, 'g', "gen", "generate a new private key",
-		{"[--type rsa|ecdsa|ed25519|ed448|mldsa44|mldsa65|mldsa87]",
-		 "[--size bits] [--curve <name|oid>] [--safe-primes]",
+		{"[--type <key type>] [--size bits] [--curve <name|oid>] [--safe-primes]",
 		 "[--shares n] [--threshold l] [--outform der|pem]"},
 		{
 			{"help",		'h', 0, "show usage information"},
-			{"type",		't', 1, "type of key, default: rsa"},
+			{"type",		't', 1, "type of key (see man page), default: rsa"},
 			{"size",		's', 1, "keylength in bits, default: rsa 2048, ecdsa 384"},
 			{"curve",		'c', 1, "curve for ecdsa key (name or oid, --size is ignored)"},
 			{"safe-primes", 'p', 0, "generate rsa safe primes"},

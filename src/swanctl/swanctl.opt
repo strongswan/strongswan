@@ -694,13 +694,14 @@ connections.<conn>.remote<suffix>.auth = pubkey
 	specify the key type followed by one or more accepted hash algorithms (e.g.
 	_pubkey-sha256-sha512_ or _ecdsa-sha384_). For EdDSA, ML-DSA and composite
 	keys use _identity_ as hash algorithm (e.g. _ed25519-identity_,
-	_mldsa87-identity_ or _mldsa65+ed25519-identity_). See **pki --gen**(1) for
-	a list of supported composite key types. To require a specific public key
-	strength for RSA or ECDSA, specify the key type followed by the	minimum
-	strength in bits (e.g. _ecdsa-384_ or _rsa-3072-ecdsa-384_). Note that this
-	does not enforce the key type/signature scheme if no hash is specified after
-	the strength. To restrict the elliptic curves accepted for ECDSA public keys
-	in the trustchain, append one or more curve names or OIDs to an _ecdsa_ key
+	_mldsa87-identity_, _mldsa65+ed25519-identity_ or
+	_MLDSA87_ED448-identity_). See **pki --gen**(1) for a list of supported
+	composite key types. To require a specific public key strength for RSA or
+	ECDSA, specify the key type followed by the minimum strength in bits (e.g.
+	_ecdsa-384_ or _rsa-3072-ecdsa-384_). Note that this does not enforce the
+	key type/signature scheme if no hash is specified after the strength. To
+	restrict the elliptic curves accepted for ECDSA public keys in the
+	trustchain, append one or more curve names or OIDs to an _ecdsa_ key
 	type (for example _ecdsa-p256-sha256_, _ecdsa-1.3.36.3.3.2.8.1.1.11-sha384_
 	or _ecdsa-p384-brainpoolP384r1-sha384_). Again, without hash algorithm, this
 	does not enforce the signature scheme (i.e. curves will only be enforced if
