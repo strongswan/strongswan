@@ -1950,9 +1950,17 @@ if test "x$plugins_packaged_seperately" != xno; then
 fi
 
 
-# ====================================================
-#  options for enabled modules (see conf/Makefile.am)
-# ====================================================
+# ===============================================================
+#  plugins and options for enabled modules (see conf/Makefile.am)
+# ===============================================================
+
+config_plugins=
+
+AM_COND_IF([USE_CHARON], [config_plugins=${config_plugins}" ${charon_plugins}"])
+AM_COND_IF([USE_CMD], [config_plugins=${config_plugins}" ${cmd_plugins}"])
+AM_COND_IF([USE_NM], [config_plugins=${config_plugins}" ${nm_plugins}"])
+
+AC_SUBST(config_plugins, [`echo -n "${config_plugins}" | tr ' ' '\n' | sort | uniq | tr '\n' ' '`])
 
 strongswan_options=
 
@@ -1967,6 +1975,7 @@ AM_COND_IF([USE_IMV_SWIMA], [strongswan_options=${strongswan_options}" sec-updat
 AM_COND_IF([USE_LIBTNCCS], [strongswan_options=${strongswan_options}" tnc"])
 AM_COND_IF([USE_MANAGER], [strongswan_options=${strongswan_options}" manager"])
 AM_COND_IF([USE_MEDSRV], [strongswan_options=${strongswan_options}" medsrv"])
+AM_COND_IF([USE_CMD], [strongswan_options=${strongswan_options}" charon-cmd"])
 AM_COND_IF([USE_NM], [strongswan_options=${strongswan_options}" charon-nm"])
 AM_COND_IF([USE_PKI], [strongswan_options=${strongswan_options}" pki"])
 AM_COND_IF([USE_SWANCTL], [strongswan_options=${strongswan_options}" swanctl"])

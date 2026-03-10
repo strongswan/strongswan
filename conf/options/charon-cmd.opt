@@ -1,0 +1,10 @@
+charon-cmd {}
+	Section with settings specific to the CLI client `charon-cmd`.
+	Settings from the `charon` section are not inherited, but many can be used
+	here as well.
+
+charon-cmd.load_modular := yes
+	Load only explicitly enabled plugins
+
+charon-cmd.plugins.include charon-cmd/*.conf
+	Plugin config snippets used by charon-cmd
