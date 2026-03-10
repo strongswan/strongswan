@@ -47,8 +47,8 @@ Read command line options from \fIfile\fR.
 .TP
 .BI "\-t, \-\-type " type
 Type of key to generate. Either \fIrsa\fR, \fIecdsa\fR, \fIed25519\fR,
-\fIed448\fR, \fImldsa44\fR, \fImldsa65\fR or \fImldsa87\fR, defaults to
-\fIrsa\fR.
+\fIed448\fR, \fImldsa44\fR, \fImldsa65\fR, \fImldsa87\fR or one of the composite
+key types listed below, defaults to \fIrsa\fR.
 .TP
 .BI "\-s, \-\-size " bits
 Key length in bits. Defaults to 2048 for \fIrsa\fR and 384 for \fIecdsa\fR.
@@ -98,6 +98,66 @@ keys. The names/aliases are matched case-insensitive.
 .TP
 .B "bp512, brainpoolP512r1"
 512-bit Brainpool curve (1.3.36.3.3.2.8.1.1.13)
+.
+.SH "COMPOSITE KEY TYPES"
+.
+The following composite key types, which combine ML-DSA with a traditional
+algorithm, are supported given the required plugins that implement the
+underlying algorithms are loaded:
+.TP
+.B mldsa44\-rsa2048pss
+ML-DSA-44 with 2048-bit RSA using RSASSA-PSS
+.TP
+.B mldsa44\-rsa2048pkcs15
+ML-DSA-44 with 2048-bit RSA using RSASSA-PKCS1-v1_5
+.TP
+.B mldsa44\-ed25519
+ML-DSA-44 with Ed25519
+.TP
+.B mldsa44\-ecdsa256
+ML-DSA-44 with 256-bit ECDSA using curve P-256/secp256r1
+.TP
+.B mldsa65\-rsa3072pss
+ML-DSA-65 with 3072-bit RSA using RSASSA-PSS
+.TP
+.B mldsa65\-rsa3072pkcs15
+ML-DSA-65 with 3072-bit RSA using RSASSA-PKCS1-v1_5
+.TP
+.B mldsa65\-rsa4096pss
+ML-DSA-65 with 4096-bit RSA using RSASSA-PSS
+.TP
+.B mldsa65\-rsa4096pkcs15
+ML-DSA-65 with 4096-bit RSA using RSASSA-PKCS1-v1_5
+.TP
+.B mldsa65\-ecdsa256
+ML-DSA-65 with 256-bit ECDSA using curve P-256/secp256r1
+.TP
+.B mldsa65\-ecdsa384
+ML-DSA-65 with 384-bit ECDSA using curve P-384/secp384r1
+.TP
+.B mldsa65\-ecdsa256\-bp
+ML-DSA-65 with 256-bit ECDSA using curve brainpoolP256r1
+.TP
+.B mldsa65\-ed25519
+ML-DSA-65 with Ed25519
+.TP
+.B mldsa87\-ecdsa384
+ML-DSA-87 with 384-bit ECDSA using curve P-384/secp384r1
+.TP
+.B mldsa87\-ecdsa384\-bp
+ML-DSA-87 with 256-bit ECDSA using curve brainpoolP384r1
+.TP
+.B mldsa87\-ed448
+ML-DSA-87 with Ed448
+.TP
+.B mldsa87\-rsa3072pss
+ML-DSA-87 with 3072-bit RSA using RSASSA-PSS
+.TP
+.B mldsa87\-rsa4096pss
+ML-DSA-87 with 4096-bit RSA using RSASSA-PSS
+.TP
+.B mldsa87\-ecdsa521
+ML-DSA-87 with 521-bit ECDSA using curve P-521/secp521r1
 .
 .SH "PROBLEMS ON HOSTS WITH LOW ENTROPY"
 .

@@ -22,6 +22,57 @@
 #include <asn1/oid.h>
 
 /**
+ * Known key types
+ */
+static struct {
+	char *name;
+	key_type_t type;
+} key_types[] = {
+	{ "rsa", KEY_RSA, },
+	{ "ecdsa", KEY_ECDSA, },
+	{ "ed25519", KEY_ED25519, },
+	{ "ed448", KEY_ED448, },
+	{ "mldsa44", KEY_ML_DSA_44, },
+	{ "mldsa65", KEY_ML_DSA_65, },
+	{ "mldsa87", KEY_ML_DSA_87, },
+	{ "mldsa44-rsa2048pss", KEY_MLDSA44_RSA2048_PSS, },
+	{ "mldsa44-rsa2048pkcs15", KEY_MLDSA44_RSA2048_PKCS15, },
+	{ "mldsa44-ed25519", KEY_MLDSA44_ED25519, },
+	{ "mldsa44-ecdsa256", KEY_MLDSA44_ECDSA_P256, },
+	{ "mldsa65-rsa3072pss", KEY_MLDSA65_RSA3072_PSS, },
+	{ "mldsa65-rsa3072pkcs15", KEY_MLDSA65_RSA3072_PKCS15, },
+	{ "mldsa65-rsa4096pss", KEY_MLDSA65_RSA4096_PSS, },
+	{ "mldsa65-rsa4096pkcs15", KEY_MLDSA65_RSA4096_PKCS15, },
+	{ "mldsa65-ecdsa256", KEY_MLDSA65_ECDSA_P256, },
+	{ "mldsa65-ecdsa384", KEY_MLDSA65_ECDSA_P384, },
+	{ "mldsa65-ecdsa256-bp", KEY_MLDSA65_ECDSA_BPP256R1, },
+	{ "mldsa65-ed25519", KEY_MLDSA65_ED25519, },
+	{ "mldsa87-ecdsa384", KEY_MLDSA87_ECDSA_P384, },
+	{ "mldsa87-ecdsa384-bp", KEY_MLDSA87_ECDSA_BPP384R1, },
+	{ "mldsa87-ed448", KEY_MLDSA87_ED448, },
+	{ "mldsa87-rsa3072pss", KEY_MLDSA87_RSA3072_PSS, },
+	{ "mldsa87-rsa4096pss", KEY_MLDSA87_RSA4096_PSS, },
+	{ "mldsa87-ecdsa521", KEY_MLDSA87_ECDSA_P521, },
+};
+
+/**
+ * Try to match the given key type name.
+ */
+static key_type_t get_key_type(char *name)
+{
+	int i;
+
+	for (i = 0; i < countof(key_types); i++)
+	{
+		if (streq(name, key_types[i].name))
+		{
+			return key_types[i].type;
+		}
+	}
+	return KEY_ANY;
+}
+
+/**
  * Known elliptic curves.
  */
 static const struct {
@@ -89,35 +140,8 @@ static int gen()
 			case 'h':
 				return command_usage(NULL);
 			case 't':
-				if (streq(arg, "rsa"))
-				{
-					type = KEY_RSA;
-				}
-				else if (streq(arg, "ecdsa"))
-				{
-					type = KEY_ECDSA;
-				}
-				else if (streq(arg, "ed25519"))
-				{
-					type = KEY_ED25519;
-				}
-				else if (streq(arg, "ed448"))
-				{
-					type = KEY_ED448;
-				}
-				else if (streq(arg, "mldsa44"))
-				{
-					type = KEY_ML_DSA_44;
-				}
-				else if (streq(arg, "mldsa65"))
-				{
-					type = KEY_ML_DSA_65;
-				}
-				else if (streq(arg, "mldsa87"))
-				{
-					type = KEY_ML_DSA_87;
-				}
-				else
+				type = get_key_type(arg);
+				if (type == KEY_ANY)
 				{
 					return command_usage("invalid key type");
 				}
@@ -238,11 +262,11 @@ static void __attribute__ ((constructor))reg()
 {
 	command_register((command_t) {
 		gen, 'g', "gen", "generate a new private key",
-		{"[--type rsa|ecdsa|ed25519|ed448|mldsa44|mldsa65|mldsa87] [--size bits] [--curve <name|oid>]",
-		 "[--safe-primes] [--shares n] [--threshold l] [--outform der|pem]"},
+		{"[--type <key type>] [--size bits] [--curve <name|oid>] [--safe-primes]",
+		 "[--shares n] [--threshold l] [--outform der|pem]"},
 		{
 			{"help",		'h', 0, "show usage information"},
-			{"type",		't', 1, "type of key, default: rsa"},
+			{"type",		't', 1, "type of key (see man page), default: rsa"},
 			{"size",		's', 1, "keylength in bits, default: rsa 2048, ecdsa 384"},
 			{"curve",		'c', 1, "curve for ecdsa key (name or oid, --size is ignored)"},
 			{"safe-primes", 'p', 0, "generate rsa safe primes"},
