@@ -2,6 +2,8 @@
 strongswanconfdir = `dirname $(strongswan_conf)`
 strongswanddir = $(strongswanconfdir)/strongswan.d
 charonconfdir = $(strongswanddir)/charon
+cmdconfdir = $(strongswanddir)/charon-cmd
+nmconfdir = $(strongswanddir)/charon-nm
 # copy these files also to /usr/share
 templatesdir = $(pkgdatadir)/templates/config
 optionstemplatedir = $(templatesdir)/strongswan.d
@@ -11,6 +13,7 @@ options = \
 	options/aikgen.opt \
 	options/attest.opt \
 	options/charon.opt \
+	options/charon-cmd.opt \
 	options/charon-logging.opt \
 	options/charon-nm.opt \
 	options/charon-systemd.opt \
@@ -110,9 +113,20 @@ alloptions = $(options) $(plugins)
 
 confsnippets = $(alloptions:opt=conf)
 
-# we only install snippets for enabled plugins
-plugins_install_tmp = $(charon_plugins:%=plugins/%.tmp)
-plugins_install_src = $(charon_plugins:%=plugins/%.conf)
+# we only install snippets for enabled plugins (see configure script)
+plugins_install_tmp = $(config_plugins:%=plugins/%.tmp)
+plugins_install_src = $(config_plugins:%=plugins/%.conf)
+
+if USE_CHARON
+charon_install_src = $(charon_plugins:%=plugins/%.conf)
+endif
+if USE_CMD
+cmd_install_src = $(cmd_plugins:%=plugins/%.conf)
+endif
+if USE_NM
+nm_install_src = $(nm_plugins:%=plugins/%.conf)
+endif
+
 # only install snippets for enabled components
 # has to be defined via autoconf as we can't do it with automake conditionals
 options_install_src = $(strongswan_options:%=options/%.conf)
@@ -174,14 +188,26 @@ maintainer-clean-local:
 install-data-local: $(plugins_install_src)
 	test -e "$(DESTDIR)${strongswanconfdir}" || $(INSTALL) -d "$(DESTDIR)$(strongswanconfdir)" || true
 	test -e "$(DESTDIR)${strongswanddir}" || $(INSTALL) -d "$(DESTDIR)$(strongswanddir)" || true
-	test -e "$(DESTDIR)${charonconfdir}" || $(INSTALL) -d "$(DESTDIR)$(charonconfdir)" || true
+	test -e "$(DESTDIR)${charonconfdir}" || test -z "${charon_install_src}" || $(INSTALL) -d "$(DESTDIR)$(charonconfdir)" || true
+	test -e "$(DESTDIR)${cmdconfdir}" || test -z "${cmd_install_src}" || $(INSTALL) -d "$(DESTDIR)$(cmdconfdir)" || true
+	test -e "$(DESTDIR)${nmconfdir}" || test -z "${nm_install_src}" || $(INSTALL) -d "$(DESTDIR)$(nmconfdir)" || true
 	test -e "$(DESTDIR)$(strongswan_conf)" || $(INSTALL) -m 644 $(srcdir)/strongswan.conf $(DESTDIR)$(strongswan_conf) || true
 	for f in $(options_install_src); do \
 		name=`basename $$f`; \
 		test -f "$(DESTDIR)$(strongswanddir)/$$name" || $(INSTALL) -m 644 "$(srcdir)/$$f" "$(DESTDIR)$(strongswanddir)/$$name" || true; \
 	done
-	for f in $(plugins_install_src); do \
+	for f in $(charon_install_src); do \
 		name=`basename $$f`; \
 		if test -f "$$f"; then dir=; else dir="$(srcdir)/"; fi; \
 		test -f "$(DESTDIR)$(charonconfdir)/$$name" || $(INSTALL) -m 644 "$$dir$$f" "$(DESTDIR)$(charonconfdir)/$$name" || true; \
+	done
+	for f in $(cmd_install_src); do \
+		name=`basename $$f`; \
+		if test -f "$$f"; then dir=; else dir="$(srcdir)/"; fi; \
+		test -f "$(DESTDIR)$(cmdconfdir)/$$name" || $(INSTALL) -m 644 "$$dir$$f" "$(DESTDIR)$(cmdconfdir)/$$name" || true; \
+	done
+	for f in $(nm_install_src); do \
+		name=`basename $$f`; \
+		if test -f "$$f"; then dir=; else dir="$(srcdir)/"; fi; \
+		test -f "$(DESTDIR)$(nmconfdir)/$$name" || $(INSTALL) -m 644 "$$dir$$f" "$(DESTDIR)$(nmconfdir)/$$name" || true; \
 	done

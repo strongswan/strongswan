@@ -12,6 +12,9 @@ charon-nm.install_virtual_ip_on = lo
 	Interface on which virtual IP addresses are installed. Note that NM
 	also installs the virtual IPs on the XFRM interface.
 
+charon-nm.load_modular := yes
+	Load only explicitly enabled plugins
+
 charon-nm.mtu = 1400
 	MTU for XFRM interfaces created by the NM plugin.
 
@@ -42,6 +45,9 @@ charon-nm.routing_table = 210
 charon-nm.routing_table_prio = 210
 	Priority of the routing table. Higher than the default priority used for the
 	regular IKE daemon.
+
+charon-nm.plugins.include charon-nm/*.conf
+	Plugin config snippets used by charon-nm
 
 charon-nm.plugins.kernel-netlink.fwmark = !210
 	Make packets with this mark ignore the routing table. Must be the same mark
