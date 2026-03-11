@@ -496,7 +496,7 @@ gmp_rsa_public_key_t *gmp_rsa_public_key_load(key_type_t type, va_list args)
 
 	this->k = (mpz_sizeinbase(this->n, 2) + 7) / BITS_PER_BYTE;
 
-	if (!mpz_sgn(this->e))
+	if (!mpz_sgn(this->e) || mpz_cmp_ui(this->e, 3) < 0)
 	{
 		destroy(this);
 		return NULL;
