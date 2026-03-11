@@ -255,7 +255,7 @@ end:
 static void __attribute__ ((constructor))reg()
 {
 	command_register((command_t) {
-		verify, 'v', "verify",
+		verify, 'V', "verify",
 		"verify a certificate using one or more CA certificates",
 		{"[--in file] [--cacert file]+ [--crl file]"},
 		{

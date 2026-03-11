@@ -222,6 +222,25 @@ void command_register(command_t command)
 				"MAX_COMMANDS\n");
 		return;
 	}
+	for (i = 0; i < MAX_COMMANDS && cmds[i].cmd; i++)
+	{
+		if (cmds[i].op == command.op)
+		{
+			fprintf(stderr, "unable to register command --%s, short option "
+					"conflicts with --%s\n", command.cmd, cmds[i].cmd);
+			return;
+		}
+	}
+	for (i = 0; i < countof(shared_options); i++)
+	{
+		if (shared_options[i].op == command.op)
+		{
+			fprintf(stderr, "unable to register command --%s, short option "
+					"-%c conflicts with --%s\n", command.cmd, command.op,
+					shared_options[i].name);
+			return;
+		}
+	}
 
 	cmds[registered] = command;
 	/* append default options, but not to --help */

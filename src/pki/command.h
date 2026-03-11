@@ -16,7 +16,7 @@
  */
 
 /**
- * @defgroup command command
+ * @defgroup pki_command command
  * @{ @ingroup pki
  */
 

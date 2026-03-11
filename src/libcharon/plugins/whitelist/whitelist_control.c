@@ -25,6 +25,7 @@
 
 #include <daemon.h>
 #include <collections/linked_list.h>
+#include <processing/jobs/callback_job.h>
 
 #include "whitelist_msg.h"
 
@@ -102,6 +103,40 @@ typedef struct {
 } whitelist_conn_t;
 
 /**
+ * Information needed for async disconnect job.
+ */
+typedef struct {
+	whitelist_conn_t *conn;
+	stream_t *stream;
+} disconnect_data_t;
+
+/**
+ * Asynchronous callback to disconnect client
+ */
+CALLBACK(disconnect_async, job_requeue_t,
+	disconnect_data_t *data)
+{
+	data->stream->destroy(data->stream);
+	free(data->conn);
+	return JOB_REQUEUE_NONE;
+}
+
+/**
+ * Disconnect a connected client
+ */
+static void disconnect(whitelist_conn_t *conn, stream_t *stream)
+{
+	disconnect_data_t *data;
+
+	INIT(data,
+		.conn = conn,
+		.stream = stream,
+	);
+	lib->processor->queue_job(lib->processor,
+			(job_t*)callback_job_create(disconnect_async, data, free, NULL));
+}
+
+/**
  * Dispatch a received message
  */
 CALLBACK(on_read, bool,
@@ -127,8 +162,7 @@ CALLBACK(on_read, bool,
 				{
 					DBG1(DBG_CFG, "whitelist socket error: %s", strerror(errno));
 				}
-				stream->destroy(stream);
-				free(conn);
+				disconnect(conn, stream);
 				return FALSE;
 			}
 			conn->read += len;

@@ -86,7 +86,7 @@ Extract the subject DN of an X.509 certificate.
 .B "\-p, \-\-pub"
 Extract a public key from a private key or certificate.
 .TP
-.B "\-v, \-\-verify"
+.B "\-V, \-\-verify"
 Verify a certificate using a CA certificate.
 .TP
 .B "\-S, \-\-scep"
@@ -103,6 +103,14 @@ Get CA certificate[s] from an EST server.
 .TP
 .B "\-o, \-\-ocsp"
 OCSP request parser and OCSP responder.
+.
+.SH GENERAL OPTIONS
+.TP
+.B "\-v, \-\-debug"
+set debug level, default: 1
+.TP
+.B "\-+, \-\-options"
+read command line options from file
 .
 .SH "EXAMPLES"
 .
