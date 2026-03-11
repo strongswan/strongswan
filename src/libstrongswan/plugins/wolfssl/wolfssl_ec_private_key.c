@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2019-2026 Tobias Brunner
  * Copyright (C) 2019 Sean Parkinson, wolfSSL Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -47,11 +48,6 @@ struct private_wolfssl_ec_private_key_t {
 	 * Public interface
 	 */
 	wolfssl_ec_private_key_t public;
-
-	/**
-	 * Key size
-	 */
-	int keysize;
 
 	/**
 	 * EC key object
@@ -216,7 +212,11 @@ METHOD(private_key_t, decrypt, bool,
 METHOD(private_key_t, get_keysize, int,
 	private_wolfssl_ec_private_key_t *this)
 {
-	return this->keysize;
+	if (this->ec.dp->id == ECC_SECP521R1)
+	{	/* special case this as there is no API to determine the size in bits */
+		return 521;
+	}
+	return wc_ecc_size(&this->ec) * 8;
 }
 
 METHOD(private_key_t, get_type, key_type_t,
@@ -363,7 +363,8 @@ wolfssl_ec_private_key_t *wolfssl_ec_private_key_gen(key_type_t type,
 {
 	private_wolfssl_ec_private_key_t *this;
 	u_int key_size = 0;
-	ecc_curve_id curve_id;
+	chunk_t curve = chunk_empty;
+	ecc_curve_id curve_id = -1;
 
 	while (TRUE)
 	{
@@ -372,6 +373,9 @@ wolfssl_ec_private_key_t *wolfssl_ec_private_key_gen(key_type_t type,
 			case BUILD_KEY_SIZE:
 				key_size = va_arg(args, u_int);
 				continue;
+			case BUILD_ECDSA_CURVE:
+				curve = va_arg(args, chunk_t);
+				continue;
 			case BUILD_END:
 				break;
 			default:
@@ -379,7 +383,34 @@ wolfssl_ec_private_key_t *wolfssl_ec_private_key_gen(key_type_t type,
 		}
 		break;
 	}
-	if (!key_size)
+
+	if (curve.len)
+	{
+		if (asn1_unwrap(&curve, &curve) == ASN1_OID)
+		{
+			curve_id = wc_ecc_get_curve_id_from_oid(curve.ptr, curve.len);
+		}
+	}
+	else if (key_size)
+	{
+		switch (key_size)
+		{
+			case 256:
+				curve_id = ECC_SECP256R1;
+				break;
+			case 384:
+				curve_id = ECC_SECP384R1;
+				break;
+			case 521:
+				curve_id = ECC_SECP521R1;
+				break;
+			default:
+				DBG1(DBG_LIB, "EC private key size %d not supported", key_size);
+				break;
+		}
+	}
+
+	if (curve_id < 0)
 	{
 		return NULL;
 	}
@@ -388,27 +419,8 @@ wolfssl_ec_private_key_t *wolfssl_ec_private_key_gen(key_type_t type,
 	{
 		return NULL;
 	}
-
-	this->keysize = key_size;
-	switch (key_size)
-	{
-		case 256:
-			curve_id = ECC_SECP256R1;
-			break;
-		case 384:
-			curve_id = ECC_SECP384R1;
-			break;
-		case 521:
-			curve_id = ECC_SECP521R1;
-			break;
-		default:
-			DBG1(DBG_LIB, "EC private key size %d not supported", key_size);
-			destroy(this);
-			return NULL;
-	}
-
-	if (wc_ecc_make_key_ex(&this->rng, (key_size + 7) / 8, &this->ec,
-						   curve_id) < 0)
+	if (wc_ecc_make_key_ex(&this->rng, wc_ecc_get_curve_size_from_id(curve_id),
+						   &this->ec, curve_id) < 0)
 	{
 		DBG1(DBG_LIB, "EC private key generation failed");
 		destroy(this);
@@ -426,7 +438,7 @@ wolfssl_ec_private_key_t *wolfssl_ec_private_key_load(key_type_t type,
 	private_wolfssl_ec_private_key_t *this;
 	chunk_t params = chunk_empty, key = chunk_empty;
 	word32 idx;
-	int oid = OID_UNKNOWN;
+	ecc_curve_id oid = -1;
 
 	while (TRUE)
 	{
@@ -462,53 +474,19 @@ wolfssl_ec_private_key_t *wolfssl_ec_private_key_load(key_type_t type,
 		destroy(this);
 		return NULL;
 	}
-	switch (this->ec.dp->id)
-	{
-		case ECC_SECP256R1:
-			this->keysize = 256;
-			break;
-		case ECC_SECP384R1:
-			this->keysize = 384;
-			break;
-		case ECC_SECP521R1:
-			this->keysize = 521;
-			break;
-		default:
-			break;
-	}
 
 	if (params.ptr)
 	{
 		/* if ECParameters is passed, ensure we guessed correctly */
 		if (asn1_unwrap(&params, &params) == ASN1_OID)
 		{
-			oid = asn1_known_oid(params);
-			switch (oid)
+			oid = wc_ecc_get_curve_id_from_oid(params.ptr, params.len);
+			if (this->ec.dp->id != oid)
 			{
-				case OID_PRIME256V1:
-					if (this->ec.dp->id != ECC_SECP256R1)
-					{
-						oid = OID_UNKNOWN;
-					}
-					break;
-				case OID_SECT384R1:
-					if (this->ec.dp->id != ECC_SECP384R1)
-					{
-						oid = OID_UNKNOWN;
-					}
-					break;
-				case OID_SECT521R1:
-					if (this->ec.dp->id != ECC_SECP521R1)
-					{
-						oid = OID_UNKNOWN;
-					}
-					break;
-				default:
-					oid = OID_UNKNOWN;
-					break;
+				oid = -1;
 			}
 		}
-		if (oid == OID_UNKNOWN)
+		if (oid == -1)
 		{
 			DBG1(DBG_LIB, "parameters do not match private key data");
 			destroy(this);
