@@ -46,11 +46,6 @@ struct private_wolfssl_ec_public_key_t {
 	wolfssl_ec_public_key_t public;
 
 	/**
-	 * Key size
-	 */
-	int keysize;
-
-	/**
 	 * EC key object
 	 */
 	ecc_key ec;
@@ -204,7 +199,11 @@ METHOD(public_key_t, encrypt_, bool,
 METHOD(public_key_t, get_keysize, int,
 	private_wolfssl_ec_public_key_t *this)
 {
-	return this->keysize;
+	if (this->ec.dp->id == ECC_SECP521R1)
+	{	/* special case this as there is no API to determine the size in bits */
+		return 521;
+	}
+	return wc_ecc_size(&this->ec) * 8;
 }
 
 /**
@@ -382,20 +381,6 @@ wolfssl_ec_public_key_t *wolfssl_ec_public_key_load(key_type_t type,
 	{
 		destroy(this);
 		return NULL;
-	}
-	switch (this->ec.dp->id)
-	{
-		case ECC_SECP256R1:
-			this->keysize = 256;
-			break;
-		case ECC_SECP384R1:
-			this->keysize = 384;
-			break;
-		case ECC_SECP521R1:
-			this->keysize = 521;
-			break;
-		default:
-			break;
 	}
 	return &this->public;
 }
