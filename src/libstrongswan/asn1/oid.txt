@@ -333,13 +333,13 @@
                 0x04         "brainpoolP192t1"
                 0x05         "brainpoolP224r1"
                 0x06         "brainpoolP224t1"
-                0x07         "brainpoolP256r1"
+                0x07         "brainpoolP256r1"			OID_BRAINPOOLP256R1
                 0x08         "brainpoolP256t1"
                 0x09         "brainpoolP320r1"
                 0x0A         "brainpoolP320t1"
-                0x0B         "brainpoolP384r1"
+                0x0B         "brainpoolP384r1"			OID_BRAINPOOLP384R1
                 0x0C         "brainpoolP384t1"
-                0x0D         "brainpoolP512r1"
+                0x0D         "brainpoolP512r1"			OID_BRAINPOOLP512R1
                 0x0E         "brainpoolP512t1"
   0x65                       "Thawte"
     0x70                     "id-Ed25519"				OID_ED25519
