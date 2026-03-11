@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2016 Tobias Brunner
+ * Copyright (C) 2008-2026 Tobias Brunner
  * Copyright (C) 2009 Martin Willi
  *
  * Copyright (C) secunet Security Networks AG
@@ -337,7 +337,9 @@ openssl_ec_private_key_t *openssl_ec_private_key_gen(key_type_t type,
 {
 	private_openssl_ec_private_key_t *this;
 	EVP_PKEY *key = NULL;
+	chunk_t curve = chunk_empty;
 	u_int key_size = 0;
+	int nid = 0;
 
 	while (TRUE)
 	{
@@ -346,6 +348,9 @@ openssl_ec_private_key_t *openssl_ec_private_key_gen(key_type_t type,
 			case BUILD_KEY_SIZE:
 				key_size = va_arg(args, u_int);
 				continue;
+			case BUILD_ECDSA_CURVE:
+				curve = va_arg(args, chunk_t);
+				continue;
 			case BUILD_END:
 				break;
 			default:
@@ -353,45 +358,46 @@ openssl_ec_private_key_t *openssl_ec_private_key_gen(key_type_t type,
 		}
 		break;
 	}
-	if (!key_size)
+
+	if (curve.len)
+	{
+		ASN1_OBJECT *obj = d2i_ASN1_OBJECT(NULL, (const u_char**)&curve.ptr,
+										   curve.len);
+		if (obj)
+		{
+			nid = OBJ_obj2nid(obj);
+			ASN1_OBJECT_free(obj);
+		}
+	}
+	else if (key_size)
+	{
+		switch (key_size)
+		{
+			case 256:
+				nid = NID_X9_62_prime256v1;
+				break;
+			case 384:
+				nid = NID_secp384r1;
+				break;
+			case 521:
+				nid = NID_secp521r1;
+				break;
+			default:
+				DBG1(DBG_LIB, "EC private key size %d not supported", key_size);
+				break;
+		}
+	}
+
+	if (!nid)
 	{
 		return NULL;
 	}
 
 #if OPENSSL_VERSION_NUMBER >= 0x30000000L
-	switch (key_size)
-	{
-		case 256:
-			key = EVP_EC_gen("P-256");
-			break;
-		case 384:
-			key = EVP_EC_gen("P-384");
-			break;
-		case 521:
-			key = EVP_EC_gen("P-521");
-			break;
-		default:
-			DBG1(DBG_LIB, "EC private key size %d not supported", key_size);
-			return NULL;
-	}
+	key = EVP_EC_gen(OBJ_nid2sn(nid));
 #else /* OPENSSL_VERSION_NUMBER */
-	EC_KEY *ec;
+	EC_KEY *ec = EC_KEY_new_by_curve_name(nid);
 
-	switch (key_size)
-	{
-		case 256:
-			ec = EC_KEY_new_by_curve_name(NID_X9_62_prime256v1);
-			break;
-		case 384:
-			ec = EC_KEY_new_by_curve_name(NID_secp384r1);
-			break;
-		case 521:
-			ec = EC_KEY_new_by_curve_name(NID_secp521r1);
-			break;
-		default:
-			DBG1(DBG_LIB, "EC private key size %d not supported", key_size);
-			return NULL;
-	}
 	if (ec && EC_KEY_generate_key(ec) == 1)
 	{
 		key = EVP_PKEY_new();
