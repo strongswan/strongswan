@@ -1,0 +1,18 @@
+venus::systemctl stop strongswan
+moon::systemctl stop strongswan
+sun::systemctl stop strongswan
+alice::"ip route del fec2:\:/16 via fec1:\:1"
+venus::"ip route del fec2:\:/16 via fec1:\:1"
+moon::"ip route del fec2:\:/16 via fec0:\:2"
+sun::"ip route del fec1:\:/16 via fec0:\:1"
+bob::"ip route del fec1:\:/16 via fec2:\:1"
+sun::"ip route del fec2:\:20/126 via fec2:\:10"
+sun::"ip route del fec2:\:10/128 dev eth1"
+venus::"ip route del fec0:\:/16 via fec1:\:1"
+winnetou::"ip route del fec1:\:/16 via fec0:\:1"
+venus::iptables-restore < /etc/iptables.flush
+moon::iptables-restore < /etc/iptables.flush
+sun::iptables-restore < /etc/iptables.flush
+venus::ip6tables-restore < /etc/ip6tables.flush
+moon::ip6tables-restore < /etc/ip6tables.flush
+sun::ip6tables-restore < /etc/ip6tables.flush

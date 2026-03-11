@@ -1,0 +1,18 @@
+A connection between the gateways <b>moon</b> and <b>sun</b> is set up, which
+connects <b>alice</b> and <b>moon</b> with a small subnet behind gateway <b>sun</b>.
+A second tunnel is created between client <b>venus</b> and gateway <b>moon</b>,
+which connects <b>venus</b> with another small subnet behind, in this case,
+non-IPsec gateway <b>sun</b>.
+The authentication is based on <b>X.509 certificates</b>.
+<p/>
+In order to test ICMP error forwarding, which <b>venus</b>, <b>moon</b> and
+<b>sun</b> all enabled, <b>alice</b> and <b>moon</b> ping unreachable IPs behind
+IPsec gateway <b>sun</b> and behind host <b>bob</b>, respectively. The
+corresponding ICMP Destination Unreachable messages, with source IP addresses
+outside the IPsec tunnel traffic selectors are expected to be forwarded
+by <b>sun</b> and <b>moon</b>.
+<p/>
+Similar tests are run from <b>venus</b>, in which case the non-IPsec router
+<b>sun</b> generates ICMP Time Exceeded (TTL expired) and Fragmentation Needed
+(MTU exceeded) messages with a source IP outside of the traffic selectors.
+These messages should again get forwarded by <b>moon</b>.

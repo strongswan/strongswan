@@ -1,0 +1,49 @@
+*filter
+
+# default policy is DROP
+-P INPUT DROP
+-P OUTPUT DROP
+-P FORWARD DROP
+
+# allow esp
+-A INPUT  -i eth0 -p 50 -j ACCEPT
+-A OUTPUT -o eth0 -p 50 -j ACCEPT
+
+# allow IKE
+-A INPUT  -i eth0 -p udp --sport 500 --dport 500 -j ACCEPT
+-A OUTPUT -o eth0 -p udp --dport 500 --sport 500 -j ACCEPT
+
+# allow MobIKE
+-A INPUT  -i eth0 -p udp --sport 4500 --dport 4500 -j ACCEPT
+-A OUTPUT -o eth0 -p udp --dport 4500 --sport 4500 -j ACCEPT
+
+# allow last UDP fragment
+-A INPUT -i eth0 -p udp -m frag --fraglast -j ACCEPT
+
+# allow ICMPv6 neighbor-solicitations
+-A INPUT  -p icmpv6 --icmpv6-type neighbor-solicitation -j ACCEPT
+-A OUTPUT -p icmpv6 --icmpv6-type neighbor-solicitation -j ACCEPT
+
+# allow ICMPv6 neighbor-advertisements
+-A INPUT  -p icmpv6 --icmpv6-type neighbor-advertisement -j ACCEPT
+-A OUTPUT -p icmpv6 --icmpv6-type neighbor-advertisement -j ACCEPT
+
+# allow crl and certificate fetch from winnetou
+-A INPUT  -i eth0 -p tcp --sport 80 -s fec0::15 -j ACCEPT
+-A OUTPUT -o eth0 -p tcp --dport 80 -d fec0::15 -j ACCEPT
+
+# explicitly allow ICMPv6 responses we don't actually want to see as they should get encrypted
+-A OUTPUT -p icmpv6 --icmpv6-type destination-unreachable -j ACCEPT
+-A FORWARD -p icmpv6 --icmpv6-type destination-unreachable -j ACCEPT
+
+# allow only specific ICMPs from/to venus for this scenario
+-A FORWARD -s fec1::20/128 -p icmpv6 --icmpv6-type echo-request -j ACCEPT
+-A FORWARD -d fec1::20/128 -p icmpv6 --icmpv6-type echo-reply -j ACCEPT
+-A OUTPUT -d fec1::20/128 -p icmpv6 --icmpv6-type time-exceeded -j ACCEPT
+-A OUTPUT -d fec1::20/128 -p icmpv6 --icmpv6-type packet-too-big -j ACCEPT
+
+# log dropped packets
+-A INPUT  -j LOG --log-prefix " IN: "
+-A OUTPUT -j LOG --log-prefix " OUT: "
+
+COMMIT

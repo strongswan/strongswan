@@ -1,0 +1,18 @@
+moon::swanctl --list-sas --raw 2> /dev/null::gw-gw.*version=2 state=ESTABLISHED local-host=192.168.0.1 local-port=500 local-id=moon.strongswan.org remote-host=192.168.0.2 remote-port=500 remote-id=sun.strongswan.org initiator=yes.*encr-alg=AES_CBC encr-keysize=128 integ-alg=HMAC_SHA2_256_128 prf-alg=PRF_HMAC_SHA2_256 dh-group=CURVE_25519.*child-sas.*net-net.*state=INSTALLED mode=TUNNEL.*ESP.*encr-alg=AES_GCM_16 encr-keysize=128.*local-ts=\[10.1.0.0/16] remote-ts=\[10.2.0.16/28]::YES
+sun:: swanctl --list-sas --raw 2> /dev/null::gw-gw.*version=2 state=ESTABLISHED local-host=192.168.0.2 local-port=500 local-id=sun.strongswan.org remote-host=192.168.0.1 remote-port=500 remote-id=moon.strongswan.org.*encr-alg=AES_CBC encr-keysize=128 integ-alg=HMAC_SHA2_256_128 prf-alg=PRF_HMAC_SHA2_256 dh-group=CURVE_25519.*child-sas.*net-net.*state=INSTALLED mode=TUNNEL.*ESP.*encr-alg=AES_GCM_16 encr-keysize=128.*local-ts=\[10.2.0.16/28] remote-ts=\[10.1.0.0/16]::YES
+moon::swanctl --list-sas --raw 2> /dev/null::venus.*version=2 state=ESTABLISHED local-host=10.1.0.1 local-port=500 local-id=moon.strongswan.org remote-host=10.1.0.20 remote-port=500 remote-id=venus.strongswan.org.*encr-alg=AES_CBC encr-keysize=128 integ-alg=HMAC_SHA2_256_128 prf-alg=PRF_HMAC_SHA2_256 dh-group=CURVE_25519.*child-sas.*net-net.*state=INSTALLED mode=TUNNEL.*ESP.*encr-alg=AES_GCM_16 encr-keysize=128.*local-ts=\[10.2.0.8/30] remote-ts=\[10.1.0.20/32]::YES
+venus::swanctl --list-sas --raw 2> /dev/null::rw.*version=2 state=ESTABLISHED local-host=10.1.0.20 local-port=500 local-id=venus.strongswan.org remote-host=10.1.0.1 remote-port=500 remote-id=moon.strongswan.org initiator=yes.*encr-alg=AES_CBC encr-keysize=128 integ-alg=HMAC_SHA2_256_128 prf-alg=PRF_HMAC_SHA2_256 dh-group=CURVE_25519.*child-sas.*rw.*state=INSTALLED mode=TUNNEL.*ESP.*encr-alg=AES_GCM_16 encr-keysize=128.*local-ts=\[10.1.0.20/32] remote-ts=\[10.2.0.8/30]::YES
+# the kernel currently sets the source incorrectly to the non-existent IP
+# allow both in case it gets fixed
+alice::ping -c 1 -W 4 10.2.0.25::From \(PH_IP_SUN\|10.2.0.25\) icmp_seq=1 Destination Host Unreachable::YES
+moon::ping -c 1 -W 4 10.2.0.17::From PH_IP_BOB icmp_seq=1 Destination Host Unreachable::YES
+# test other types of ICMPs with venus
+venus::ping -c 1 PH_IP_BOB::64 bytes from PH_IP_BOB: icmp_.eq=1::YES
+venus::ping -t 2 -c 1 PH_IP_BOB::From PH_IP_SUN.*Time to live exceeded::YES
+venus::ping -M do -s 1320 -c 1 PH_IP_BOB::From PH_IP_SUN.*Frag needed and DF set (mtu = 1280)::YES
+sun::tcpdump::IP moon.strongswan.org > sun.strongswan.org: ESP::2
+sun::tcpdump::IP sun.strongswan.org > moon.strongswan.org: ESP::2
+sun::tcpdump::IP sun.strongswan.org > alice.strongswan.org: ICMP host 10.2.0.25 unreachable::NO
+sun::tcpdump::IP bob.strongswan.org > moon1.strongswan.org: ICMP host 10.2.0.17 unreachable::NO
+venus::tcpdump::IP venus.strongswan.org > moon1.strongswan.org: ESP::3
+venus::tcpdump::IP moon1.strongswan.org > venus.strongswan.org: ESP::3

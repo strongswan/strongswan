@@ -1,0 +1,48 @@
+*filter
+
+# default policy is DROP
+-P INPUT DROP
+-P OUTPUT DROP
+-P FORWARD DROP
+
+# allow esp
+-A INPUT  -i eth0 -p 50 -j ACCEPT
+-A OUTPUT -o eth0 -p 50 -j ACCEPT
+
+# allow IKE
+-A INPUT  -i eth0 -p udp --sport 500 --dport 500 -j ACCEPT
+-A OUTPUT -o eth0 -p udp --dport 500 --sport 500 -j ACCEPT
+
+# allow MobIKE
+-A INPUT  -i eth0 -p udp --sport 4500 --dport 4500 -j ACCEPT
+-A OUTPUT -o eth0 -p udp --dport 4500 --sport 4500 -j ACCEPT
+
+# allow ssh
+-A INPUT  -p tcp --dport 22 -j ACCEPT
+-A OUTPUT -p tcp --sport 22 -j ACCEPT
+
+# allow crl fetch from winnetou
+-A INPUT  -i eth0 -p tcp --sport 80 -s 192.168.0.150 -j ACCEPT
+-A OUTPUT -o eth0 -p tcp --dport 80 -d 192.168.0.150 -j ACCEPT
+
+# allow decrypted ICMPs from any source IP (updown script is too specific)
+-A INPUT -p icmp --icmp-type destination-unreachable -m policy --dir in -j ACCEPT
+-A FORWARD -p icmp --icmp-type destination-unreachable -m policy --dir in -j ACCEPT
+
+# allow venus to connect and fetch crls
+-A INPUT -i eth1 -p udp --sport 500 --dport 500 -j ACCEPT
+-A OUTPUT -o eth1 -p udp --dport 500 --sport 500 -j ACCEPT
+-A INPUT -i eth1 -p 50 -j ACCEPT
+-A OUTPUT -o eth1 -p 50 -j ACCEPT
+-A FORWARD -i eth0 -o eth1 -p tcp --sport 80 -s 192.168.0.150 -j ACCEPT
+-A FORWARD -o eth0 -i eth1 -p tcp --dport 80 -d 192.168.0.150 -j ACCEPT
+
+# forward specific errors to venus
+-A FORWARD -d 10.1.0.20/32 -p icmp --icmp-type time-exceeded -j ACCEPT
+-A FORWARD -d 10.1.0.20/32 -p icmp --icmp-type fragmentation-needed -j ACCEPT
+
+# log dropped packets
+-A INPUT  -j LOG --log-prefix " IN: "
+-A OUTPUT -j LOG --log-prefix " OUT: "
+
+COMMIT

@@ -2075,9 +2075,9 @@ static host_t *get_route(private_kernel_netlink_net_t *this, host_t *dest,
 				*iface = get_interface_name_by_index(this, best->oif);
 			}
 		}
-		if (!addr && !match_net)
-		{	/* fallback to destination address */
-			addr = dest->clone(dest);
+		if (!addr && !match_net && iface && *iface)
+		{
+			addr = host_create_any(dest->get_family(dest));
 		}
 	}
 	else
@@ -2600,7 +2600,8 @@ static status_t manage_srcroute(private_kernel_netlink_net_t *this,
 	{
 		chunk = src_ip->get_address(src_ip);
 		netlink_add_attribute(hdr, RTA_PREFSRC, chunk, sizeof(request));
-		if (gateway && gateway->get_family(gateway) == src_ip->get_family(src_ip))
+		if (gateway && !gateway->is_anyaddr(gateway) &&
+			gateway->get_family(gateway) == src_ip->get_family(src_ip))
 		{
 			chunk = gateway->get_address(gateway);
 			netlink_add_attribute(hdr, RTA_GATEWAY, chunk, sizeof(request));

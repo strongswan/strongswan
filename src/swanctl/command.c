@@ -185,6 +185,8 @@ static bool process_common_opts(bool init)
 	int prevoptind = optind;
 	bool success = TRUE;
 
+	/* don't report any errors during this pre-processing */
+	opterr = 0;
 	while (TRUE)
 	{
 		switch (getopt_long(argc, argv, command_optstring, command_opts, NULL))
@@ -240,6 +242,16 @@ void command_register(command_t command)
 		{
 			fprintf(stderr, "unable to register command --%s, short option "
 					"conflicts with --%s\n", command.cmd, cmds[i].cmd);
+			return;
+		}
+	}
+	for (i = 0; i < countof(shared_options); i++)
+	{
+		if (shared_options[i].op == command.op)
+		{
+			fprintf(stderr, "unable to register command --%s, short option "
+					"-%c conflicts with --%s\n", command.cmd, command.op,
+					shared_options[i].name);
 			return;
 		}
 	}

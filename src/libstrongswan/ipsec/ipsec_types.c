@@ -56,6 +56,22 @@ ENUM(dscp_copy_names, DSCP_COPY_OUT_ONLY, DSCP_COPY_NO,
 /*
  * See header
  */
+u_int ipsec_sa_cfg_hash(ipsec_sa_cfg_t *this)
+{
+	return chunk_hash_inc(chunk_from_thing(this->mode),
+			chunk_hash_inc(chunk_from_thing(this->reqid),
+			chunk_hash_inc(chunk_from_thing(this->policy_count),
+			chunk_hash_inc(chunk_from_thing(this->esp.use),
+			chunk_hash_inc(chunk_from_thing(this->esp.spi),
+			chunk_hash_inc(chunk_from_thing(this->ah.use),
+			chunk_hash_inc(chunk_from_thing(this->ah.spi),
+			chunk_hash_inc(chunk_from_thing(this->ipcomp.transform),
+				chunk_hash(chunk_from_thing(this->ipcomp.cpi))))))))));
+}
+
+/*
+ * See header
+ */
 bool ipsec_sa_cfg_equals(ipsec_sa_cfg_t *a, ipsec_sa_cfg_t *b)
 {
 	return a->mode == b->mode &&

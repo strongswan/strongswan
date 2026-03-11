@@ -37,12 +37,13 @@ typedef stream_t*(*stream_constructor_t)(char *uri);
 /**
  * Callback function prototype, called when stream is ready.
  *
- * It is not allowed to destroy the stream nor to call on_read()/on_write/()
- * during the callback.
- *
  * As select() may return even if a read()/write() would actually block, it is
  * recommended to use the non-blocking calls and handle return values
  * appropriately.
+ *
+ * @warning It is not allowed to destroy the passed stream nor to call
+ * stream_t::on_read()/on_write() during the callback. Such calls
+ * must be handled asynchronously (e.g. from a separate job).
  *
  * @param data			data passed during callback registration
  * @param stream		associated stream
@@ -84,6 +85,8 @@ struct stream_t {
 	/**
 	 * Register a callback to invoke when stream has data to read.
 	 *
+	 * @warning Must not be called from callbacks (see \ref stream_cb_t).
+	 *
 	 * @param cb		callback function, NULL to unregister
 	 * @param data		data to pass to callback
 	 */
@@ -117,6 +120,8 @@ struct stream_t {
 	/**
 	 * Register a callback to invoke when a write would not block.
 	 *
+	 * @warning Must not be called from callbacks (see \ref stream_cb_t).
+	 *
 	 * @param cb		callback function, NULL to unregister
 	 * @param data		data to pass to callback
 	 */
@@ -131,6 +136,8 @@ struct stream_t {
 
 	/**
 	 * Destroy a stream_t.
+	 *
+	 * @warning Must not be called from callbacks (see \ref stream_cb_t).
 	 */
 	void (*destroy)(stream_t *this);
 };

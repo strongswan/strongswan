@@ -348,7 +348,7 @@ static u_int ipsec_sa_hash(ipsec_sa_t *sa)
 {
 	return chunk_hash_inc(sa->src->get_address(sa->src),
 						  chunk_hash_inc(sa->dst->get_address(sa->dst),
-						  chunk_hash(chunk_from_thing(sa->cfg))));
+						  ipsec_sa_cfg_hash(&sa->cfg)));
 }
 
 /**

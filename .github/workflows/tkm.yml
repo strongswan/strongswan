@@ -41,35 +41,36 @@ jobs:
       - name: Build Docker Image
         run: docker build -t strongswan-tkm -f testing/tkm/Dockerfile testing
       - name: Run Tests in Container
-        uses: addnab/docker-run-action@v3
-        with:
-          image: strongswan-tkm
-          shell: bash
-          options: |
-            --cap-add net_admin
-            -v ${{ github.workspace }}:/strongswan
-            -v ${{ env.CCACHE_DIR }}:${{ env.CCACHE_CONTAINER }}
-            -e CCACHE_DIR=${{ env.CCACHE_CONTAINER }}
-            -e CCACHE_COMPILERCHECK
-            -e CCACHE_COMPRESS
-            -e CCACHE_MAXSIZE
-          run: |
-            ccache -z
-            autoreconf -i /strongswan || exit 1
-            CFLAGS="-g -O2 -Wall -Wno-format -Wno-format-security -Wno-pointer-sign -Werror" \
+        run: |
+          docker run \
+            --cap-add net_admin \
+            -v ${{ github.workspace }}:/strongswan \
+            -v ${{ env.CCACHE_DIR }}:${{ env.CCACHE_CONTAINER }} \
+            -e CCACHE_DIR=${{ env.CCACHE_CONTAINER }} \
+            -e CCACHE_COMPILERCHECK \
+            -e CCACHE_COMPRESS \
+            -e CCACHE_MAXSIZE \
+            strongswan-tkm \
+            bash -c "ccache -z; \
+            echo '### build charon-tkm'; \
+            autoreconf -i /strongswan || exit 1; \
+            CFLAGS=\"-g -O2 -Wall -Wno-format -Wno-format-security -Wno-pointer-sign -Werror\" \
             /strongswan/configure --disable-defaults --enable-silent-rules \
               --enable-ikev2 --enable-kernel-netlink --enable-pem --enable-pkcs1 \
               --enable-random --enable-sha1 --enable-socket-default --enable-swanctl \
-              --enable-tkm --enable-x509 || exit 1
-            # run tests without TKM first
-            make -j check TESTS_RUNNERS=tkm || exit 1
-
-            # generate TKM config
-            /usr/local/share/tkm/generate-config.sh
-
-            # start TKM in the background
-            tkm_keymanager -c tkm.conf -k key.der -r ca.der:1 >/tmp/tkm.log &
-            # run the tests against TKM and get TKM log
-            make -j check TESTS_RUNNERS=tkm TESTS_TKM=1 || exit 1
-            cat /tmp/tkm.log
-            ccache -s
+              --enable-tkm --enable-x509 || exit 1; \
+            make -j || exit 1; \
+            \
+            echo '### run tests without TKM first'; \
+            make -j check TESTS_RUNNERS=tkm || exit 1; \
+            \
+            echo '### generate TKM config'; \
+            /usr/local/share/tkm/generate-config.sh; \
+            echo '### start TKM in the background'; \
+            tkm_keymanager -c tkm.conf -k key.der -r ca.der:1 >/tmp/tkm.log & \
+            \
+            echo '### run the tests against TKM and get TKM log'; \
+            make -j check TESTS_RUNNERS=tkm TESTS_TKM=1 || exit 1; \
+            cat /tmp/tkm.log; \
+            ccache -s; \
+            "

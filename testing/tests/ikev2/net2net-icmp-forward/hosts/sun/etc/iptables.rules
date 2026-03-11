@@ -1,0 +1,42 @@
+*filter
+
+# default policy is DROP
+-P INPUT DROP
+-P OUTPUT DROP
+-P FORWARD DROP
+
+# allow esp
+-A INPUT  -i eth0 -p 50 -j ACCEPT
+-A OUTPUT -o eth0 -p 50 -j ACCEPT
+
+# allow IKE
+-A INPUT  -i eth0 -p udp --sport 500 --dport 500 -j ACCEPT
+-A OUTPUT -o eth0 -p udp --dport 500 --sport 500 -j ACCEPT
+
+# allow MobIKE
+-A INPUT  -i eth0 -p udp --sport 4500 --dport 4500 -j ACCEPT
+-A OUTPUT -o eth0 -p udp --dport 4500 --sport 4500 -j ACCEPT
+
+# allow ssh
+-A INPUT  -p tcp --dport 22 -j ACCEPT
+-A OUTPUT -p tcp --sport 22 -j ACCEPT
+
+# allow crl fetch from winnetou
+-A INPUT  -i eth0 -p tcp --sport 80 -s 192.168.0.150 -j ACCEPT
+-A OUTPUT -o eth0 -p tcp --dport 80 -d 192.168.0.150 -j ACCEPT
+
+# explicitly allow ICMP responses we don't actually want to see as they should get encrypted
+-A OUTPUT -p icmp --icmp-type destination-unreachable -j ACCEPT
+-A FORWARD -p icmp --icmp-type destination-unreachable -j ACCEPT
+
+# allow only specific ICMPs from/to venus for this scenario
+-A FORWARD -s 10.1.0.20/32 -p icmp --icmp-type echo-request -j ACCEPT
+-A FORWARD -d 10.1.0.20/32 -p icmp --icmp-type echo-reply -j ACCEPT
+-A OUTPUT -d 10.1.0.20/32 -p icmp --icmp-type time-exceeded -j ACCEPT
+-A OUTPUT -d 10.1.0.20/32 -p icmp --icmp-type fragmentation-needed -j ACCEPT
+
+# log dropped packets
+-A INPUT  -j LOG --log-prefix " IN: "
+-A OUTPUT -j LOG --log-prefix " OUT: "
+
+COMMIT
