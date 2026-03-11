@@ -416,7 +416,7 @@ static bool parse_attributes(private_simaka_message_t *this, chunk_t in)
 			case AT_ENCR_DATA:
 			case AT_RAND:
 			{
-				if (hdr->length * 4 > in.len || in.len < 4)
+				if (hdr->length == 0 || hdr->length * 4 > in.len || in.len < 4)
 				{
 					return invalid_length(hdr->type);
 				}
@@ -439,7 +439,7 @@ static bool parse_attributes(private_simaka_message_t *this, chunk_t in)
 			case AT_PADDING:
 			default:
 			{
-				if (hdr->length * 4 > in.len || in.len < 4)
+				if (hdr->length == 0 || hdr->length * 4 > in.len || in.len < 4)
 				{
 					return invalid_length(hdr->type);
 				}
@@ -932,4 +932,3 @@ simaka_message_t *simaka_message_create(bool request, uint8_t identifier,
 	return simaka_message_create_data(chunk_create((char*)&hdr, sizeof(hdr)),
 									  crypto);
 }
-
