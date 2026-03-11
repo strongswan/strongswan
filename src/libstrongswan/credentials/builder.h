@@ -161,6 +161,8 @@ enum builder_part_t {
 	BUILD_SHARES,
 	/** minimum number of participating private key shares */
 	BUILD_THRESHOLD,
+	/** DER-encoded OID of a curve used for ECDSA, chunk_t */
+	BUILD_ECDSA_CURVE,
 	/** EdDSA public key blob */
 	BUILD_EDDSA_PUB,
 	/** DER encoded ASN.1 EdDSA private key */
