@@ -47,7 +47,7 @@ struct wolfssl_ec_private_key_t {
 /**
  * Generate a ECDSA private key using wolfSSL.
  *
- * Accepts the BUILD_KEY_SIZE argument.
+ * Accepts a BUILD_ECDSA_CURVE or BUILD_KEY_SIZE argument.
  *
  * @param type		type of the key, must be KEY_ECDSA
  * @param args		builder_part_t argument list
