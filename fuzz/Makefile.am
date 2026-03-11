@@ -7,6 +7,7 @@ AM_CPPFLAGS = @CPPFLAGS@ \
 	-I$(top_srcdir)/src/libtpmtss \
 	-I$(top_srcdir)/src/libtnccs \
 	-I$(top_srcdir)/src/libtnccs/plugins/tnccs_20 \
+	-I$(top_srcdir)/src/libradius \
 	-DPLUGINDIR=\""$(abs_top_builddir)/src/libstrongswan/plugins\"" \
 	-DPLUGINS="\"${fuzz_plugins}\""
 
@@ -28,6 +29,7 @@ pb_tnc_ldflags = \
 
 ike_ldflags = \
 	$(top_builddir)/src/libcharon/.libs/libcharon.a \
+	$(top_builddir)/src/libradius/.libs/libradius.a \
 	$(fuzz_ldflags)
 
 FUZZ_TARGETS=fuzz_certs fuzz_crls fuzz_ocsp_req fuzz_ocsp_rsp \
