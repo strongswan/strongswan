@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2026 Tobias Brunner
  * Copyright (C) 2009 Martin Willi
  * Copyright (C) 2014-2016 Andreas Steffen
  *
@@ -17,6 +18,57 @@
 
 #include "pki.h"
 
+#include <asn1/asn1.h>
+#include <asn1/oid.h>
+
+/**
+ * Known elliptic curves.
+ */
+static const struct {
+	char *name;
+	int oid;
+} known_curves[] = {
+	{ "p256", OID_PRIME256V1, },
+	{ "p384", OID_SECT384R1, },
+	{ "p521", OID_SECT521R1, },
+	{ "p-256", OID_PRIME256V1, },
+	{ "p-384", OID_SECT384R1, },
+	{ "p-521", OID_SECT521R1, },
+	{ "secp256r1", OID_PRIME256V1, },
+	{ "secp384r1", OID_SECT384R1, },
+	{ "secp521r1", OID_SECT521R1, },
+	{ "bp256", OID_BRAINPOOLP256R1, },
+	{ "bp384", OID_BRAINPOOLP384R1, },
+	{ "bp512", OID_BRAINPOOLP512R1, },
+	{ "brainpoolP256r1", OID_BRAINPOOLP256R1, },
+	{ "brainpoolP384r1", OID_BRAINPOOLP384R1, },
+	{ "brainpoolP512r1", OID_BRAINPOOLP512R1, },
+};
+
+/**
+ * Try to find an elliptic curve with the given name or parse it as an OID.
+ */
+static bool get_curve(char *name, chunk_t *curve)
+{
+	int i;
+
+	if (strchr(name, '.'))
+	{
+		*curve = asn1_wrap(ASN1_OID, "m", asn1_oid_from_string(name));
+		return TRUE;
+	}
+
+	for (i = 0; i < countof(known_curves); i++)
+	{
+		if (strcaseeq(name, known_curves[i].name))
+		{
+			*curve = asn1_build_known_oid(known_curves[i].oid);
+			return TRUE;
+		}
+	}
+	return FALSE;
+}
+
 /**
  * Generate a private key
  */
@@ -26,7 +78,7 @@ static int gen()
 	key_type_t type = KEY_RSA;
 	u_int size = 0, shares = 0, threshold = 1;
 	private_key_t *key;
-	chunk_t encoding;
+	chunk_t encoding, curve = chunk_empty;
 	bool safe_primes = FALSE;
 	char *arg;
 
@@ -68,6 +120,13 @@ static int gen()
 				else
 				{
 					return command_usage("invalid key type");
+				}
+				continue;
+			case 'c':
+				chunk_free(&curve);
+				if (!get_curve(arg, &curve))
+				{
+					return command_usage("invalid elliptic curve");
 				}
 				continue;
 			case 'f':
@@ -138,11 +197,17 @@ static int gen()
 		key = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, type,
 							BUILD_KEY_SIZE, size, BUILD_SAFE_PRIMES, BUILD_END);
 	}
+	else if (type == KEY_ECDSA && curve.len)
+	{
+		key = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, type,
+							BUILD_ECDSA_CURVE, curve, BUILD_END);
+	}
 	else
 	{
 		key = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, type,
 							BUILD_KEY_SIZE, size, BUILD_END);
 	}
+	chunk_free(&curve);
 	if (!key)
 	{
 		fprintf(stderr, "private key generation failed\n");
@@ -173,12 +238,13 @@ static void __attribute__ ((constructor))reg()
 {
 	command_register((command_t) {
 		gen, 'g', "gen", "generate a new private key",
-		{"[--type rsa|ecdsa|ed25519|ed448|mldsa44|mldsa65|mldsa87] [--size bits] [--safe-primes]",
-		 "[--shares n] [--threshold l] [--outform der|pem]"},
+		{"[--type rsa|ecdsa|ed25519|ed448|mldsa44|mldsa65|mldsa87] [--size bits] [--curve <name|oid>]",
+		 "[--safe-primes] [--shares n] [--threshold l] [--outform der|pem]"},
 		{
 			{"help",		'h', 0, "show usage information"},
 			{"type",		't', 1, "type of key, default: rsa"},
 			{"size",		's', 1, "keylength in bits, default: rsa 2048, ecdsa 384"},
+			{"curve",		'c', 1, "curve for ecdsa key (name or oid, --size is ignored)"},
 			{"safe-primes", 'p', 0, "generate rsa safe primes"},
 			{"shares",		'n', 1, "number of private rsa key shares"},
 			{"threshold",	'l', 1, "minimum number of participating rsa key shares"},

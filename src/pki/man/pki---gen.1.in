@@ -9,6 +9,7 @@ pki \-\-gen \- Generate a new RSA or ECDSA private key
 .SY pki\ \-\-gen
 .OP \-\-type type
 .OP \-\-size bits
+.OP \-\-curve name|oid
 .OP \-\-safe\-primes
 .OP \-\-shares n
 .OP \-\-threshold l
@@ -51,7 +52,13 @@ Type of key to generate. Either \fIrsa\fR, \fIecdsa\fR, \fIed25519\fR,
 .TP
 .BI "\-s, \-\-size " bits
 Key length in bits. Defaults to 2048 for \fIrsa\fR and 384 for \fIecdsa\fR.
-For \fIecdsa\fR only three values are currently supported: 256, 384 and 521.
+For \fIecdsa\fR, only three values are supported: 256, 384 and 521, which
+correspond to the three NIST curves of that size (ignored if \-\-curve is used).
+.TP
+.BI "\-c, \-\-curve " name|oid
+Elliptic curve to use for \fIecdsa\fR. See below for the list of known curves.
+Other curves may be used via OID (e.g. 1.3.132.0.34 for NIST P-384) if supported
+by the ECDSA implementation.
 .TP
 .BI "\-p, \-\-safe\-primes"
 Generate RSA safe primes.
@@ -68,6 +75,29 @@ Number of private RSA key shares.
 .TP
 .BI "\-l, \-\-threshold " <l>
 Minimum number of participating RSA key shares.
+.
+.SH "KNOWN ELLIPTIC CURVES"
+.
+Below is a list of the known elliptic curves that can be used for ECDSA
+keys. The names/aliases are matched case-insensitive.
+.TP
+.B "p256, p-256, secp256r1"
+256-bit NIST curve P-256 (1.2.840.10045.3.1.7)
+.TP
+.B "p384, p-384, secp384r1"
+384-bit NIST curve P-384 (1.3.132.0.34)
+.TP
+.B "p521, p-521, secp521r1"
+521-bit NIST curve P-521 (1.3.132.0.35)
+.TP
+.B "bp256, brainpoolP256r1"
+256-bit Brainpool curve (1.3.36.3.3.2.8.1.1.7)
+.TP
+.B "bp384, brainpoolP384r1"
+384-bit Brainpool curve (1.3.36.3.3.2.8.1.1.11)
+.TP
+.B "bp512, brainpoolP512r1"
+512-bit Brainpool curve (1.3.36.3.3.2.8.1.1.13)
 .
 .SH "PROBLEMS ON HOSTS WITH LOW ENTROPY"
 .
