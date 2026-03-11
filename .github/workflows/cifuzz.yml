@@ -35,6 +35,7 @@ jobs:
       uses: google/oss-fuzz/infra/cifuzz/actions/run_fuzzers@master
       with:
         oss-fuzz-project-name: 'strongswan'
+        report-timeouts: true
         output-sarif: true
         language: c
         sanitizer: ${{ matrix.sanitizer }}
