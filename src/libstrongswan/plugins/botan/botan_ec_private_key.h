@@ -77,10 +77,8 @@ botan_ec_private_key_t *botan_ec_private_key_load(key_type_t type,
  * Load a ECDSA private key by adopting a botan_privkey_t object.
  *
  * @param key		private key object (adopted)
- * @param oid		EC curve OID
  * @return			loaded key, NULL on failure
  */
-botan_ec_private_key_t *botan_ec_private_key_adopt(botan_privkey_t key,
-												   int oid);
+botan_ec_private_key_t *botan_ec_private_key_adopt(botan_privkey_t key);
 
 #endif /** BOTAN_EC_PRIVATE_KEY_H_ @}*/

@@ -153,28 +153,6 @@ public_key_t *botan_public_key_load(key_type_t type, va_list args)
 	return this;
 }
 
-#ifdef BOTAN_HAS_ECDSA
-/**
- * Determine the curve OID from a PKCS#8 structure
- */
-static int determine_ec_oid(chunk_t pkcs8)
-{
-	int oid = OID_UNKNOWN;
-	chunk_t inner, params = chunk_empty;
-
-	if (asn1_unwrap(&pkcs8, &pkcs8) == ASN1_SEQUENCE &&
-		asn1_unwrap(&pkcs8, &inner) == ASN1_INTEGER &&
-		asn1_parse_integer_uint64(inner) == 0 &&
-		asn1_parse_algorithmIdentifier(pkcs8, 0, &params) == OID_EC_PUBLICKEY &&
-		params.len &&
-		asn1_unwrap(&params, &params) == ASN1_OID)
-	{
-		oid = asn1_known_oid(params);
-	}
-	return oid;
-}
-#endif
-
 #ifdef BOTAN_HAS_ML_DSA
 /**
  * Determine the ML-DSA private key type from a PKCS#8 structure
@@ -255,11 +233,7 @@ private_key_t *botan_private_key_load(key_type_t type, va_list args)
 #ifdef BOTAN_HAS_ECDSA
 	if (streq(name, "ECDSA") && (type == KEY_ANY || type == KEY_ECDSA))
 	{
-		int oid = determine_ec_oid(blob);
-		if (oid != OID_UNKNOWN)
-		{
-			this = (private_key_t*)botan_ec_private_key_adopt(key, oid);
-		}
+		this = (private_key_t*)botan_ec_private_key_adopt(key);
 	}
 	else
 #endif
