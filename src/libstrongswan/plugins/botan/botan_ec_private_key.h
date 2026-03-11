@@ -53,7 +53,7 @@ struct botan_ec_private_key_t {
 /**
  * Generate a ECDSA private key using Botan.
  *
- * Accepts the BUILD_KEY_SIZE argument.
+ * Accepts a BUILD_ECDSA_CURVE or BUILD_KEY_SIZE argument.
  *
  * @param type		type of the key, must be KEY_ECDSA
  * @param args		builder_part_t argument list
@@ -77,10 +77,8 @@ botan_ec_private_key_t *botan_ec_private_key_load(key_type_t type,
  * Load a ECDSA private key by adopting a botan_privkey_t object.
  *
  * @param key		private key object (adopted)
- * @param oid		EC curve OID
  * @return			loaded key, NULL on failure
  */
-botan_ec_private_key_t *botan_ec_private_key_adopt(botan_privkey_t key,
-												   int oid);
+botan_ec_private_key_t *botan_ec_private_key_adopt(botan_privkey_t key);
 
 #endif /** BOTAN_EC_PRIVATE_KEY_H_ @}*/
