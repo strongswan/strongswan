@@ -380,7 +380,7 @@ private_key_t *wolfssl_ml_dsa_private_key_load(key_type_t type, va_list args)
 	{
 		priv = chunk_skip(priv, 2);
 	}
-if (priv.len != DILITHIUM_SEED_SZ)
+	if (priv.len != DILITHIUM_SEED_SZ)
 	{
 		DBG1(DBG_LIB, "error: the size of the loaded ML-DSA private key seed "
 			 "is %u bytes instead of %d bytes", priv.len, DILITHIUM_SEED_SZ);
