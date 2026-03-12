@@ -34,6 +34,7 @@
 
 #if OPENSSL_VERSION_NUMBER < 0x10100000L
 OPENSSL_KEY_FALLBACK(ECDSA_SIG, r, s)
+#define OBJ_length(o) ((o)->length)
 #endif
 
 typedef struct private_openssl_ec_public_key_t private_openssl_ec_public_key_t;
@@ -138,6 +139,36 @@ static bool verify_signature(private_openssl_ec_public_key_t *this,
 }
 
 /**
+ * Get the curve for the given key (has to be freed).
+ */
+static EC_GROUP *get_curve(EVP_PKEY *key)
+{
+	EC_GROUP *group;
+
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L
+	char name[BUF_LEN];
+	OSSL_PARAM params[] = {
+		OSSL_PARAM_utf8_string(OSSL_PKEY_PARAM_GROUP_NAME, name, sizeof(name)),
+		OSSL_PARAM_END,
+	};
+
+	if (!EVP_PKEY_get_group_name(key, name, sizeof(name), NULL))
+	{
+		return NULL;
+	}
+	group = EC_GROUP_new_from_params(params, NULL, NULL);
+#elif OPENSSL_VERSION_NUMBER >= 0x1010000fL
+	EC_KEY *ec = EVP_PKEY_get0_EC_KEY(key);
+	group = EC_GROUP_dup(EC_KEY_get0_group(ec));
+#else
+	EC_KEY *ec = EVP_PKEY_get1_EC_KEY(key);
+	group = EC_GROUP_dup(EC_KEY_get0_group(ec));
+	EC_KEY_free(ec);
+#endif
+	return group;
+}
+
+/**
  * Check that the given key's curve matches a specific one. Also used by
  * private key.
  */
@@ -151,29 +182,8 @@ bool openssl_check_ec_key_curve(EVP_PKEY *key, int nid_curve)
 	{
 		goto error;
 	}
-
-#if OPENSSL_VERSION_NUMBER >= 0x30000000L
-	char name[BUF_LEN];
-	OSSL_PARAM params[] = {
-		OSSL_PARAM_utf8_string(OSSL_PKEY_PARAM_GROUP_NAME, name, sizeof(name)),
-		OSSL_PARAM_END,
-	};
-
-	if (!EVP_PKEY_get_group_name(key, name, sizeof(name), NULL))
-	{
-		goto error;
-	}
-	my_group = EC_GROUP_new_from_params(params, NULL, NULL);
-#elif OPENSSL_VERSION_NUMBER >= 0x1010000fL
-	EC_KEY *ec = EVP_PKEY_get0_EC_KEY(key);
-	my_group = EC_GROUP_dup(EC_KEY_get0_group(ec));
-#else
-	EC_KEY *ec = EVP_PKEY_get1_EC_KEY(key);
-	my_group = EC_GROUP_dup(EC_KEY_get0_group(ec));
-	EC_KEY_free(ec);
-#endif
-
-	if (EC_GROUP_cmp(my_group, req_group, NULL) == 0)
+	my_group = get_curve(key);
+	if (my_group && EC_GROUP_cmp(my_group, req_group, NULL) == 0)
 	{
 		matches = TRUE;
 	}
@@ -264,6 +274,21 @@ METHOD(public_key_t, get_encoding, bool,
 	chunk_t *encoding)
 {
 	bool success = TRUE;
+
+	if (type == PUBKEY_ECDSA_CURVE_DER)
+	{
+		EC_GROUP *group = get_curve(this->key);
+		ASN1_OBJECT *obj;
+
+		obj = OBJ_nid2obj(EC_GROUP_get_curve_name(group));
+		EC_GROUP_free(group);
+		if (obj && OBJ_length(obj))
+		{
+			*encoding = openssl_i2chunk(ASN1_OBJECT, obj);
+			return TRUE;
+		}
+		return FALSE;
+	}
 
 	*encoding = openssl_i2chunk(PUBKEY, this->key);
 
