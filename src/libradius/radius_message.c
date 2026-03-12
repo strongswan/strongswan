@@ -261,6 +261,11 @@ METHOD(enumerator_t, attribute_enumerate, bool,
 		DBG1(DBG_IKE, "RADIUS message truncated");
 		return FALSE;
 	}
+	if (this->next->length < sizeof(rattr_t))
+	{
+		DBG1(DBG_IKE, "RADIUS attribute has invalid length");
+		return FALSE;
+	}
 	*type = this->next->type;
 	data->ptr = this->next->value;
 	data->len = this->next->length - sizeof(rattr_t);
