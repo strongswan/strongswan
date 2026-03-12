@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2022-2026 Tobias Brunner
  * Copyright (C) 2015-2023 Andreas Steffen
  * Copyright (C) 2010 Martin Willi
  *
@@ -396,6 +397,33 @@ static void print_crl(private_certificate_printer_t *this, crl_t *crl)
 }
 
 /**
+ * Print the given OID as name, dotted-notation or hex encoding.
+ */
+static void print_oid(FILE *f, chunk_t chunk)
+{
+	int oid = asn1_known_oid(chunk);
+	char *str;
+
+	if (oid == OID_UNKNOWN)
+	{
+		str = asn1_oid_to_string(chunk);
+		if (str)
+		{
+			fprintf(f, "%s", str);
+			free(str);
+		}
+		else
+		{
+			fprintf(f, "OID:%#B", &chunk);
+		}
+	}
+	else
+	{
+		fprintf(f, "%s", oid_names[oid].name);
+	}
+}
+
+/**
  * Print AC specific information
  */
 static void print_ac(private_certificate_printer_t *this, ac_t *ac)
@@ -423,9 +451,6 @@ static void print_ac(private_certificate_printer_t *this, ac_t *ac)
 	groups = ac->create_group_enumerator(ac);
 	while (groups->enumerate(groups, &type, &chunk))
 	{
-		int oid;
-		char *str;
-
 		if (first)
 		{
 			fprintf(f, "  groups:    ");
@@ -441,24 +466,7 @@ static void print_ac(private_certificate_printer_t *this, ac_t *ac)
 				fprintf(f, "%.*s", (int)chunk.len, chunk.ptr);
 				break;
 			case AC_GROUP_TYPE_OID:
-				oid = asn1_known_oid(chunk);
-				if (oid == OID_UNKNOWN)
-				{
-					str = asn1_oid_to_string(chunk);
-					if (str)
-					{
-						fprintf(f, "%s", str);
-						free(str);
-					}
-					else
-					{
-						fprintf(f, "OID:%#B", &chunk);
-					}
-				}
-				else
-				{
-					fprintf(f, "%s", oid_names[oid].name);
-				}
+				print_oid(f, chunk);
 				break;
 			case AC_GROUP_TYPE_OCTETS:
 				fprintf(f, "%#B", &chunk);
@@ -572,16 +580,32 @@ static void print_ocsp_response(private_certificate_printer_t *this,
 static void print_pubkey(private_certificate_printer_t *this, public_key_t *key,
 						 bool has_privkey)
 {
+	key_type_t type = key->get_type(key);
 	chunk_t chunk;
 	FILE *f = this->f;
 
-	fprintf(f, "  pubkey:    %N %d bits", key_type_names, key->get_type(key),
-				key->get_keysize(key));
+	fprintf(f, "  pubkey:    %N %d bits", key_type_names, type,
+			key->get_keysize(key));
 	if (has_privkey)
 	{
 		fprintf(f, ", has private key");
 	}
 	fprintf(f, "\n");
+
+	if (type == KEY_ECDSA &&
+		key->get_encoding(key, PUBKEY_ECDSA_CURVE_DER, &chunk))
+	{
+		chunk_t curve = chunk;
+		if (asn1_unwrap(&curve, &curve) != ASN1_OID)
+		{
+			curve = chunk;
+		}
+		fprintf(f, "  curve:     ");
+		print_oid(f, curve);
+		fprintf(f, "\n");
+		chunk_free(&chunk);
+	}
+
 	if (key->get_fingerprint(key, KEYID_PUBKEY_INFO_SHA1, &chunk))
 	{
 		fprintf(f, "  keyid:     %#B\n", &chunk);
