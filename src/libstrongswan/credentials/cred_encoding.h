@@ -92,6 +92,8 @@ enum cred_encoding_type_t {
 	PUBKEY_SSHKEY,
 	/** RSA modulus only */
 	PUBKEY_RSA_MODULUS,
+	/** ECDSA curve (ASN.1 DER encoded OID) */
+	PUBKEY_ECDSA_CURVE_DER,
 
 	/** ASN.1 DER encoded certificate */
 	CERT_ASN1_DER,
