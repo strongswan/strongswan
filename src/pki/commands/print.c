@@ -28,21 +28,11 @@
 static void print_key(private_key_t *key)
 {
 	public_key_t *public;
-	chunk_t chunk;
 
 	public = key->get_public_key(key);
 	if (public)
 	{
-		printf("  privkey:   %N %d bits\n", key_type_names,
-			   public->get_type(public), public->get_keysize(public));
-		if (public->get_fingerprint(public, KEYID_PUBKEY_INFO_SHA1, &chunk))
-		{
-			printf("  keyid:     %#B\n", &chunk);
-		}
-		if (public->get_fingerprint(public, KEYID_PUBKEY_SHA1, &chunk))
-		{
-			printf("  subjkey:   %#B\n", &chunk);
-		}
+		certificate_printer_print_pubkey(stdout, "  privkey:", public, FALSE);
 		public->destroy(public);
 	}
 	else
