@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2026 Tobias Brunner
  * Copyright (C) 2015 Andreas Steffen
  *
  * Copyright (C) secunet Security Networks AG
@@ -67,5 +68,17 @@ struct certificate_printer_t {
  */
 certificate_printer_t* certificate_printer_create(FILE *f, bool detailed,
 												  bool utc);
+
+/**
+ * Print the given public key with the given prefix to a file stream.
+ *
+ * @param f				file where print output is directed to (usually stdout)
+ * @param prefix		prefix (e.g. "  pubkey:"), max. 12 chars
+ * @param key			public key to print details about
+ * @param has_privkey	whether to add a hint indicating that a matching private
+ *						key is available
+ */
+void certificate_printer_print_pubkey(FILE *f, char *prefix, public_key_t *key,
+									  bool has_privkey);
 
 #endif /** CERTIFICATE_PRINTER_H_ @}*/

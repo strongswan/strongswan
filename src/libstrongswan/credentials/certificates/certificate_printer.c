@@ -574,17 +574,16 @@ static void print_ocsp_response(private_certificate_printer_t *this,
 	}
 }
 
-/**
- * Print public key information
+/*
+ * Described in header
  */
-static void print_pubkey(private_certificate_printer_t *this, public_key_t *key,
-						 bool has_privkey)
+void certificate_printer_print_pubkey(FILE *f, char *prefix, public_key_t *key,
+									  bool has_privkey)
 {
 	key_type_t type = key->get_type(key);
 	chunk_t chunk;
-	FILE *f = this->f;
 
-	fprintf(f, "  pubkey:    %N %d bits", key_type_names, type,
+	fprintf(f, "%-12s %N %d bits", prefix, key_type_names, type,
 			key->get_keysize(key));
 	if (has_privkey)
 	{
@@ -718,7 +717,7 @@ METHOD(certificate_printer_t, print, void,
 	key = cert->get_public_key(cert);
 	if (key)
 	{
-		print_pubkey(this, key, has_privkey);
+		certificate_printer_print_pubkey(this->f, "  pubkey:", key, has_privkey);
 		key->destroy(key);
 	}
 }
