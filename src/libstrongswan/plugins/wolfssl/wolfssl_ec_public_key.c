@@ -27,6 +27,7 @@
 #include "wolfssl_ec_public_key.h"
 #include "wolfssl_util.h"
 
+#include <asn1/asn1.h>
 #include <utils/debug.h>
 
 #include <wolfssl/wolfcrypt/ecc.h>
@@ -269,6 +270,20 @@ METHOD(public_key_t, get_encoding, bool,
 {
 	bool success = TRUE;
 	int len;
+
+	if (type == PUBKEY_ECDSA_CURVE_DER)
+	{
+		const byte *oid = NULL;
+		word32 len = 0;
+
+		if (wc_ecc_get_oid(this->ec.dp->oidSum, &oid, &len) > 0 && len)
+		{
+			*encoding = asn1_simple_object(ASN1_OID,
+										   chunk_create((u_char*)oid, len));
+			return TRUE;
+		}
+		return FALSE;
+	}
 
 	/* space for algorithmIdentifier/bitString + one byte for the point type */
 	*encoding = chunk_alloc(2 * this->ec.dp->size + 2 * MAX_SEQ_SZ +
