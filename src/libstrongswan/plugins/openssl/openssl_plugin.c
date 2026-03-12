@@ -831,12 +831,16 @@ static int concat_ossl_providers(OSSL_PROVIDER *provider, void *cbdata)
  */
 static int add_ml_dsa_ossl_params(OSSL_PROVIDER *provider, void *cbdata)
 {
+	/* prefer seed-only format but allow priv-only if we loaded a priv-only
+	 * key and need to re-encode it again (e.g. in swanctl after decrypting
+	 * a PKCS#8 file) */
 	if (!OSSL_PROVIDER_add_conf_parameter(provider,
 						OSSL_PKEY_PARAM_ML_DSA_RETAIN_SEED, "yes") ||
 		!OSSL_PROVIDER_add_conf_parameter(provider,
 						OSSL_PKEY_PARAM_ML_DSA_PREFER_SEED, "yes") ||
 		!OSSL_PROVIDER_add_conf_parameter(provider,
-						OSSL_PKEY_PARAM_ML_DSA_OUTPUT_FORMATS, "seed-only"))
+						OSSL_PKEY_PARAM_ML_DSA_OUTPUT_FORMATS,
+						"seed-only priv-only"))
 	{
 		DBG1(DBG_LIB, "failed to set ml.dsa parameters in '%s' provider",
 			 OSSL_PROVIDER_get0_name(provider));
