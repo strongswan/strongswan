@@ -189,7 +189,7 @@ METHOD(enumerator_t, parse_enumerate, bool,
 			this->list = FALSE;
 			break;
 		case VICI_END:
-			return TRUE;
+			break;
 		default:
 			DBG1(DBG_ENC, "unknown encoding type: %u", type);
 			return FALSE;
