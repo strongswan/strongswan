@@ -474,7 +474,12 @@ wolfssl_ec_private_key_t *wolfssl_ec_private_key_load(key_type_t type,
 		destroy(this);
 		return NULL;
 	}
-
+	if (this->ec.type == ECC_PRIVATEKEY_ONLY &&
+		wc_ecc_make_pub_ex(&this->ec, NULL, &this->rng) != 0)
+	{
+		destroy(this);
+		return NULL;
+	}
 	if (params.ptr)
 	{
 		/* if ECParameters is passed, ensure we guessed correctly */
