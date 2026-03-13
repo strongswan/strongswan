@@ -188,6 +188,7 @@ START_TEST(test_gen_curve)
 {
 	private_key_t *privkey;
 	public_key_t *pubkey;
+	chunk_t curve;
 	bool nist = _i % 2 == 0;
 
 	if (!nist && !non_nist_curves_supported)
@@ -213,6 +214,10 @@ START_TEST(test_gen_curve)
 	test_good_sig(privkey, pubkey, nist);
 
 	test_bad_sigs(pubkey);
+
+	ck_assert(pubkey->get_encoding(pubkey, PUBKEY_ECDSA_CURVE_DER, &curve));
+	ck_assert_chunk_eq(curve, curves[_i]);
+	chunk_free(&curve);
 
 	pubkey->destroy(pubkey);
 	privkey->destroy(privkey);
