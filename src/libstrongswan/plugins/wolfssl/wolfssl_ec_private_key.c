@@ -447,6 +447,7 @@ wolfssl_ec_private_key_t *wolfssl_ec_private_key_load(key_type_t type,
 	chunk_t params = chunk_empty, key = chunk_empty;
 	word32 idx;
 	ecc_curve_id oid = -1;
+	WC_RNG rng;
 
 	while (TRUE)
 	{
@@ -482,7 +483,19 @@ wolfssl_ec_private_key_t *wolfssl_ec_private_key_load(key_type_t type,
 		destroy(this);
 		return NULL;
 	}
-
+	if (wc_InitRng(&rng) != 0)
+	{
+		destroy(this);
+		return NULL;
+	}
+	if (this->ec.type == ECC_PRIVATEKEY_ONLY &&
+		wc_ecc_make_pub_ex(&this->ec, NULL, &rng) != 0)
+	{
+		destroy(this);
+		wc_FreeRng(&rng);
+		return NULL;
+	}
+	wc_FreeRng(&rng);
 	if (params.ptr)
 	{
 		/* if ECParameters is passed, ensure we guessed correctly */
