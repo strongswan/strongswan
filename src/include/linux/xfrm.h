@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: GPL-2.0 WITH Linux-syscall-note */
 #ifndef _LINUX_XFRM_H
 #define _LINUX_XFRM_H
 
@@ -223,6 +224,9 @@ enum {
 #define XFRM_MSG_SETDEFAULT XFRM_MSG_SETDEFAULT
 	XFRM_MSG_GETDEFAULT,
 #define XFRM_MSG_GETDEFAULT XFRM_MSG_GETDEFAULT
+
+	XFRM_MSG_MIGRATE_STATE,
+#define XFRM_MSG_MIGRATE_STATE XFRM_MSG_MIGRATE_STATE
 	__XFRM_MSG_MAX
 };
 #define XFRM_MSG_MAX (__XFRM_MSG_MAX - 1)
@@ -501,6 +505,24 @@ struct xfrm_user_migrate {
 	__u32				reqid;
 	__u16				old_family;
 	__u16				new_family;
+};
+
+struct xfrm_user_migrate_state {
+	struct xfrm_usersa_id id;
+	xfrm_address_t new_daddr;
+	xfrm_address_t new_saddr;
+	struct xfrm_mark old_mark;
+	struct xfrm_selector new_sel;
+	__u32 new_reqid;
+	__u32 flags;
+	__u16 new_family;
+	__u16 reserved;
+};
+
+/* Flags for xfrm_user_migrate_state.flags */
+enum xfrm_user_migrate_state_flags {
+	XFRM_MIGRATE_STATE_NO_OFFLOAD = 1, /* do not inherit offload from existing SA */
+	XFRM_MIGRATE_STATE_UPDATE_SEL = 2, /* update host-to-host selector from saddr and daddr */
 };
 
 struct xfrm_user_mapping {
