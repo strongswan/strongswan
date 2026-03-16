@@ -1730,9 +1730,19 @@ CALLBACK(reinstall_vip, void,
 /**
  * Update addresses and encap state of IPsec SAs in the kernel
  */
-static status_t update_sas(private_child_sa_t *this, host_t *me, host_t *other,
-						   bool encap, uint32_t reqid)
+static bool update_sas(private_child_sa_t *this, host_t *me, host_t *other,
+					   bool encap, uint32_t reqid, array_t *new_my_ts,
+					   array_t *new_other_ts)
 {
+	linked_list_t *my_ts, *other_ts;
+	bool success = FALSE, inbound_updated = FALSE;
+
+	/* BEET requires the bound address from the traffic selectors */
+	my_ts = linked_list_create_from_enumerator(
+									array_create_enumerator(new_my_ts));
+	other_ts = linked_list_create_from_enumerator(
+									array_create_enumerator(new_other_ts));
+
 	/* update our (initiator) SA */
 	if (this->inbound_installed)
 	{
@@ -1745,18 +1755,25 @@ static status_t update_sas(private_child_sa_t *this, host_t *me, host_t *other,
 			.if_id = this->if_id_in,
 		};
 		kernel_ipsec_update_sa_t sa = {
+			.mode = this->mode,
 			.cpi = this->ipcomp != IPCOMP_NONE ? this->my_cpi : 0,
 			.new_src = other,
 			.new_dst = me,
 			.encap = this->encap,
 			.new_encap = encap,
-			.new_reqid = reqid,
+			.old_reqid = this->reqid,
+			.new_reqid = reqid ?: this->reqid,
+			.hw_offload = this->config->get_hw_offload(this->config),
+			.src_ts = other_ts,
+			.dst_ts = my_ts,
+			.inbound = TRUE,
 		};
 		if (charon->kernel->update_sa(charon->kernel, &id,
-									  &sa) == NOT_SUPPORTED)
+									  &sa) != SUCCESS)
 		{
-			return NOT_SUPPORTED;
+			goto failed;
 		}
+		inbound_updated = TRUE;
 	}
 
 	/* update his (responder) SA */
@@ -1771,21 +1788,86 @@ static status_t update_sas(private_child_sa_t *this, host_t *me, host_t *other,
 			.if_id = this->if_id_out,
 		};
 		kernel_ipsec_update_sa_t sa = {
+			.mode = this->mode,
 			.cpi = this->ipcomp != IPCOMP_NONE ? this->other_cpi : 0,
 			.new_src = me,
 			.new_dst = other,
 			.encap = this->encap,
 			.new_encap = encap,
-			.new_reqid = reqid,
+			.old_reqid = this->reqid,
+			.new_reqid = reqid ?: this->reqid,
+			.hw_offload = this->config->get_hw_offload(this->config),
+			.src_ts = my_ts,
+			.dst_ts = other_ts,
+			.interface = this->config->get_interface(this->config),
 		};
 		if (charon->kernel->update_sa(charon->kernel, &id,
-									  &sa) == NOT_SUPPORTED)
+									  &sa) != SUCCESS)
 		{
-			return NOT_SUPPORTED;
+			if (inbound_updated)
+			{
+				/* restore the already migrated inbound SA as the rekey fallback
+				 * is otherwise not able to delete it using the old addresses */
+				kernel_ipsec_sa_id_t restore_id = {
+					.src = other,
+					.dst = me,
+					.spi = this->my_spi,
+					.proto = proto_ike2ip(this->protocol),
+					.mark = mark_in_sa(this),
+					.if_id = this->if_id_in,
+				};
+				kernel_ipsec_update_sa_t restore_sa = {
+					.mode = this->mode,
+					.cpi = this->ipcomp != IPCOMP_NONE ? this->my_cpi : 0,
+					.new_src = this->other_addr,
+					.new_dst = this->my_addr,
+					.encap = encap,
+					.new_encap = this->encap,
+					.old_reqid = reqid ?: this->reqid,
+					.new_reqid = this->reqid,
+					.hw_offload = this->config->get_hw_offload(this->config),
+					.inbound = TRUE,
+				};
+				linked_list_t *restore_my_ts, *restore_other_ts;
+
+				/* we need to use the original TS */
+				restore_my_ts = linked_list_create_from_enumerator(
+									array_create_enumerator(this->my_ts));
+				restore_other_ts = linked_list_create_from_enumerator(
+									array_create_enumerator(this->other_ts));
+				restore_sa.src_ts = restore_other_ts;
+				restore_sa.dst_ts = restore_my_ts;
+
+				if (charon->kernel->update_sa(charon->kernel, &restore_id,
+											  &restore_sa) != SUCCESS)
+				{
+					/* delete the migrated inbound SA if we can't restore it
+					 * to avoid it's left in the kernel after the rekeying */
+					kernel_ipsec_del_sa_t del = {
+						.cpi = this->ipcomp != IPCOMP_NONE ? this->my_cpi : 0,
+					};
+					DBG1(DBG_CHD, "failed to restore inbound SA with SPI "
+						 "0x%.8x, deleting it", ntohl(this->my_spi));
+					charon->kernel->del_sa(charon->kernel, &restore_id, &del);
+				}
+				else
+				{
+					DBG1(DBG_CHD, "restored inbound SA with SPI 0x%.8x to "
+						 "previous addresses after failure to update outbound "
+						 "SA", ntohl(this->my_spi));
+				}
+				restore_my_ts->destroy(restore_my_ts);
+				restore_other_ts->destroy(restore_other_ts);
+			}
+			goto failed;
 		}
 	}
-	/* we currently ignore the actual return values above */
-	return SUCCESS;
+	success = TRUE;
+
+failed:
+	my_ts->destroy(my_ts);
+	other_ts->destroy(other_ts);
+	return success;
 }
 
 /**
@@ -1816,6 +1898,7 @@ METHOD(child_sa_t, update, status_t,
 	private_child_sa_t *this, host_t *me, host_t *other, linked_list_t *vips,
 	bool encap)
 {
+	array_t *new_my_ts = NULL, *new_other_ts = NULL;
 	child_sa_state_t old;
 	bool transport_proxy_mode;
 
@@ -1838,11 +1921,9 @@ METHOD(child_sa_t, update, status_t,
 		ipsec_sa_cfg_t my_sa, other_sa;
 		enumerator_t *enumerator;
 		traffic_selector_t *my_ts, *other_ts;
-		array_t *new_my_ts = NULL, *new_other_ts = NULL;
 		policy_priority_t priority;
 		uint32_t manual_prio, new_reqid = 0;
-		status_t state;
-		bool outbound;
+		bool outbound, sas_updated;
 
 		prepare_sa_cfg(this, &my_sa, &other_sa);
 		manual_prio = this->config->get_manual_prio(this->config);
@@ -1897,11 +1978,13 @@ METHOD(child_sa_t, update, status_t,
 		}
 
 		/* update the IPsec SAs */
-		state = update_sas(this, me, other, encap, new_reqid);
+		sas_updated = update_sas(this, me, other, encap, new_reqid,
+								 new_my_ts ?: this->my_ts,
+								 new_other_ts ?: this->other_ts);
 
 		/* install new/updated policies only if we were able to update the
 		 * SAs, otherwise we reinstall the old policies further below */
-		if (state != NOT_SUPPORTED)
+		if (sas_updated)
 		{
 			/* we reinstall the virtual IP to handle interface roaming
 			 * correctly */
@@ -1933,7 +2016,7 @@ METHOD(child_sa_t, update, status_t,
 		while (enumerator->enumerate(enumerator, &my_ts, &other_ts))
 		{
 			/* reinstall the previous policies if we can't update the SAs */
-			if (state == NOT_SUPPORTED)
+			if (!sas_updated)
 			{
 				install_policies_internal(this, this->my_addr, this->other_addr,
 						my_ts, other_ts, &my_sa, &other_sa, POLICY_IPSEC,
@@ -1949,7 +2032,7 @@ METHOD(child_sa_t, update, status_t,
 		}
 		enumerator->destroy(enumerator);
 
-		if (state == NOT_SUPPORTED)
+		if (!sas_updated)
 		{
 			if (new_reqid &&
 				charon->kernel->release_reqid(charon->kernel,
@@ -1977,26 +2060,43 @@ METHOD(child_sa_t, update, status_t,
 				 this->unique_id);
 			this->reqid = new_reqid;
 		}
-		if (new_my_ts)
-		{
-			array_destroy_offset(this->my_ts,
-								 offsetof(traffic_selector_t, destroy));
-			this->my_ts = new_my_ts;
-		}
-		if (new_other_ts)
-		{
-			array_destroy_offset(this->other_ts,
-								 offsetof(traffic_selector_t, destroy));
-			this->other_ts = new_other_ts;
-		}
 	}
 	else if (!transport_proxy_mode)
 	{
-		if (update_sas(this, me, other, encap, 0) == NOT_SUPPORTED)
+		if (!me->ip_equals(me, this->my_addr))
 		{
+			new_my_ts = array_create(0, 0);
+			update_ts(this->my_addr, me, this->my_ts, new_my_ts);
+		}
+		if (!other->ip_equals(other, this->other_addr))
+		{
+			new_other_ts = array_create(0, 0);
+			update_ts(this->other_addr, other, this->other_ts, new_other_ts);
+		}
+		if (!update_sas(this, me, other, encap, 0,
+						new_my_ts ?: this->my_ts,
+						new_other_ts ?: this->other_ts))
+		{
+			array_destroy_offset(new_my_ts,
+								 offsetof(traffic_selector_t, destroy));
+			array_destroy_offset(new_other_ts,
+								 offsetof(traffic_selector_t, destroy));
 			set_state(this, old);
 			return NOT_SUPPORTED;
 		}
+	}
+
+	if (new_my_ts)
+	{
+		array_destroy_offset(this->my_ts,
+							 offsetof(traffic_selector_t, destroy));
+		this->my_ts = new_my_ts;
+	}
+	if (new_other_ts)
+	{
+		array_destroy_offset(this->other_ts,
+							 offsetof(traffic_selector_t, destroy));
+		this->other_ts = new_other_ts;
 	}
 
 	if (!transport_proxy_mode)
