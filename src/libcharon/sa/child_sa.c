@@ -1745,12 +1745,15 @@ static status_t update_sas(private_child_sa_t *this, host_t *me, host_t *other,
 			.if_id = this->if_id_in,
 		};
 		kernel_ipsec_update_sa_t sa = {
+			.mode = this->mode,
 			.cpi = this->ipcomp != IPCOMP_NONE ? this->my_cpi : 0,
 			.new_src = other,
 			.new_dst = me,
 			.encap = this->encap,
 			.new_encap = encap,
-			.new_reqid = reqid,
+			.new_reqid = reqid ?: this->reqid,
+			.hw_offload = this->config->get_hw_offload(this->config),
+			.inbound = TRUE,
 		};
 		if (charon->kernel->update_sa(charon->kernel, &id,
 									  &sa) == NOT_SUPPORTED)
@@ -1771,12 +1774,14 @@ static status_t update_sas(private_child_sa_t *this, host_t *me, host_t *other,
 			.if_id = this->if_id_out,
 		};
 		kernel_ipsec_update_sa_t sa = {
+			.mode = this->mode,
 			.cpi = this->ipcomp != IPCOMP_NONE ? this->other_cpi : 0,
 			.new_src = me,
 			.new_dst = other,
 			.encap = this->encap,
 			.new_encap = encap,
-			.new_reqid = reqid,
+			.new_reqid = reqid ?: this->reqid,
+			.hw_offload = this->config->get_hw_offload(this->config),
 		};
 		if (charon->kernel->update_sa(charon->kernel, &id,
 									  &sa) == NOT_SUPPORTED)
