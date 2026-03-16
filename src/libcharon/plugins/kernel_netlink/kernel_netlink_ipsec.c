@@ -2576,6 +2576,30 @@ METHOD(kernel_ipsec_t, del_sa, status_t,
 	}
 }
 
+/**
+ * Check if the kernel's lockdown feature is set to "confidentiality", which
+ * means it won't allow userland to access confidential information like IPsec
+ * keys.
+ */
+static bool lockdown_confidentiality()
+{
+	char buf[BUF_LEN];
+	FILE *f;
+	bool locked = FALSE;
+
+	f = fopen("/sys/kernel/security/lockdown", "r");
+	if (f)
+	{
+		if (fgets(buf, sizeof(buf), f) &&
+			strstr(buf, "[confidentiality]"))
+		{
+			locked = TRUE;
+		}
+		fclose(f);
+	}
+	return locked;
+}
+
 METHOD(kernel_ipsec_t, update_sa, status_t,
 	private_kernel_netlink_ipsec_t *this, kernel_ipsec_sa_id_t *id,
 	kernel_ipsec_update_sa_t *data)
@@ -2596,6 +2620,11 @@ METHOD(kernel_ipsec_t, update_sa, status_t,
 	status_t status = FAILED;
 	traffic_selector_t *ts;
 	char markstr[32] = "";
+
+	if (lockdown_confidentiality())
+	{
+		return NOT_SUPPORTED;
+	}
 
 	/* if IPComp is used, we first update the IPComp SA */
 	if (data->cpi)
