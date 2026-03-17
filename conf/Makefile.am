@@ -117,7 +117,7 @@ confsnippets = $(alloptions:opt=conf)
 plugins_install_tmp = $(config_plugins:%=plugins/%.tmp)
 plugins_install_src = $(config_plugins:%=plugins/%.conf)
 
-if USE_CHARON
+if USE_CHARON_CONF
 charon_install_src = $(charon_plugins:%=plugins/%.conf)
 endif
 if USE_CMD

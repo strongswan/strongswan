@@ -1871,6 +1871,7 @@ AM_CONDITIONAL(USE_IKEV2, test x$ikev2 = xtrue)
 AM_CONDITIONAL(USE_THREADS, test x$threads = xtrue)
 AM_CONDITIONAL(USE_ADNS, test x$adns = xtrue)
 AM_CONDITIONAL(USE_CHARON, test x$charon = xtrue)
+AM_CONDITIONAL(USE_CHARON_CONF, test x$charon = xtrue -o x$svc = xtrue -o x$systemd = xtrue)
 AM_CONDITIONAL(USE_NM, test x$nm = xtrue)
 AM_CONDITIONAL(USE_PKI, test x$pki = xtrue)
 AM_CONDITIONAL(USE_SCRIPTS, test x$scripts = xtrue)
@@ -1956,7 +1957,7 @@ fi
 
 config_plugins=
 
-AM_COND_IF([USE_CHARON], [config_plugins=${config_plugins}" ${charon_plugins}"])
+AM_COND_IF([USE_CHARON_CONF], [config_plugins=${config_plugins}" ${charon_plugins}"])
 AM_COND_IF([USE_CMD], [config_plugins=${config_plugins}" ${cmd_plugins}"])
 AM_COND_IF([USE_NM], [config_plugins=${config_plugins}" ${nm_plugins}"])
 
@@ -1966,7 +1967,7 @@ strongswan_options=
 
 AM_COND_IF([USE_AIKGEN], [strongswan_options=${strongswan_options}" aikgen"])
 AM_COND_IF([USE_ATTR_SQL], [strongswan_options=${strongswan_options}" pool"])
-AM_COND_IF([USE_CHARON], [strongswan_options=${strongswan_options}" charon charon-logging iptfs"])
+AM_COND_IF([USE_CHARON_CONF], [strongswan_options=${strongswan_options}" charon charon-logging iptfs"])
 AM_COND_IF([USE_FILE_CONFIG], [strongswan_options=${strongswan_options}" starter"])
 AM_COND_IF([USE_IMV_ATTESTATION], [strongswan_options=${strongswan_options}" attest"])
 AM_COND_IF([USE_IMCV], [strongswan_options=${strongswan_options}" imcv imv_policy_manager"])
