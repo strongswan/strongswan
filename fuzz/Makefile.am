@@ -33,7 +33,7 @@ ike_ldflags = \
 	$(fuzz_ldflags)
 
 FUZZ_TARGETS=fuzz_certs fuzz_crls fuzz_ocsp_req fuzz_ocsp_rsp \
-	fuzz_ids fuzz_pa_tnc fuzz_pb_tnc fuzz_ike
+	fuzz_ids fuzz_pa_tnc fuzz_pb_tnc fuzz_ike fuzz_ikev1
 
 all-local: $(FUZZ_TARGETS)
 
@@ -61,6 +61,9 @@ fuzz_pb_tnc: fuzz_pb_tnc.c ${libfuzzer}
 	$(CC) $(AM_CPPFLAGS) $(CFLAGS) -o $@ $< $(pb_tnc_ldflags)
 
 fuzz_ike: fuzz_ike.c ${libfuzzer}
+	$(CC) $(AM_CPPFLAGS) $(CFLAGS) -o $@ $< $(ike_ldflags)
+
+fuzz_ikev1: fuzz_ikev1.c ${libfuzzer}
 	$(CC) $(AM_CPPFLAGS) $(CFLAGS) -o $@ $< $(ike_ldflags)
 
 noinst_LIBRARIES = libFuzzerLocal.a
