@@ -2723,6 +2723,9 @@ METHOD(kernel_ipsec_t, update_sa, status_t,
 		{
 			ts->set_address(ts, data->new_dst);
 			ts2subnet(ts, &sa->sel.daddr, &sa->sel.prefixlen_d);
+			/* can't set this for src, otherwise selector2ts() will fail, but
+			 * if the family changes, both addresses need updating anyway */
+			sa->sel.family = data->new_dst->get_family(data->new_dst);
 		}
 		DESTROY_IF(ts);
 	}
