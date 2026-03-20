@@ -936,9 +936,14 @@ static status_t process_certreq(private_tls_peer_t *this, bio_reader_t *reader)
 	}
 	else
 	{
-		/* certificate request context as described in RFC 8446, section 4.3.2 */
-		reader->read_data8(reader, &context);
-		reader->read_data16(reader, &ext);
+		/* certificate request as described in RFC 8446, section 4.3.2 */
+		if (!reader->read_data8(reader, &context) ||
+			!reader->read_data16(reader, &ext))
+		{
+			DBG1(DBG_TLS, "received invalid CertificateRequest");
+			this->alert->add(this->alert, TLS_FATAL, TLS_DECODE_ERROR);
+			return NEED_MORE;
+		}
 		extensions = bio_reader_create(ext);
 		while (extensions->remaining(extensions))
 		{
@@ -984,7 +989,7 @@ static status_t process_certreq(private_tls_peer_t *this, bio_reader_t *reader)
 			}
 			extension->destroy(extension);
 		}
-	extensions->destroy(extensions);
+		extensions->destroy(extensions);
 	}
 	this->certreq_received = TRUE;
 	this->state = STATE_CERTREQ_RECEIVED;
