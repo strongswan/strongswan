@@ -25,6 +25,11 @@
 #include <credentials/certificates/x509.h>
 #include <credentials/containers/container.h>
 
+/**
+ * Maximum depth/recursion before failing to create a credential.
+ */
+#define CREATE_MAX_DEPTH 10
+
 ENUM(credential_type_names, CRED_PRIVATE_KEY, CRED_CONTAINER,
 	"CRED_PRIVATE_KEY",
 	"CRED_PUBLIC_KEY",
@@ -137,6 +142,12 @@ METHOD(credential_factory_t, create, void*,
 	}
 
 	level = (uintptr_t)this->recursive->get(this->recursive);
+	if (level >= CREATE_MAX_DEPTH)
+	{
+		DBG1(DBG_LIB, "building %N - %N failed, reached depth limit (%d)",
+			 credential_type_names, type, names, subtype, CREATE_MAX_DEPTH);
+		return NULL;
+	}
 	this->recursive->set(this->recursive, (void*)level + 1);
 
 	this->lock->read_lock(this->lock);
