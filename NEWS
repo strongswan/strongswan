@@ -1,6 +1,10 @@
 strongswan-6.0.5
 ----------------
 
+- Fixed a vulnerability in the eap-ttls plugin related to processing EAP-TTLS
+  AVPs that can lead to a resource exhaustion or a crash.
+  This vulnerability has been registered as CVE-2026-25075.
+
 - Added support for forwarding certain ICMP errors even if their source address
   doesn't match the traffic selectors, when running on Linux 6.9+.
 
