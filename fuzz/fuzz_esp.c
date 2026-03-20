@@ -66,7 +66,7 @@ int LLVMFuzzerTestOneInput(const uint8_t *buf, size_t len)
 	src = host_create_from_string("192.0.2.1", 4500);
 	dst = host_create_from_string("192.0.2.2", 4500);
 
-	/* Create ESP packet from plaintext payload */
+	/* Create ESP packet from plaintext payload (takes ownership of src/dst) */
 	esp_packet = esp_packet_create_from_payload(src, dst, plaintext_ip);
 	if (!esp_packet)
 	{
@@ -81,8 +81,6 @@ int LLVMFuzzerTestOneInput(const uint8_t *buf, size_t len)
 	if (!esp_ctx_out)
 	{
 		esp_packet->destroy(esp_packet);
-		src->destroy(src);
-		dst->destroy(dst);
 		return 0;
 	}
 
@@ -108,8 +106,6 @@ int LLVMFuzzerTestOneInput(const uint8_t *buf, size_t len)
 	/* Cleanup */
 	esp_ctx_out->destroy(esp_ctx_out);
 	esp_packet->destroy(esp_packet);
-	src->destroy(src);
-	dst->destroy(dst);
 
 	return 0;
 }
