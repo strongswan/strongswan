@@ -374,7 +374,7 @@ static bool parse_attributes(private_simaka_message_t *this, chunk_t in)
 			{
 				uint16_t len;
 
-				if (hdr->length < 1 || in.len < 4)
+				if (hdr->length < 1 || in.len < hdr->length * 4)
 				{
 					return invalid_length(hdr->type);
 				}
@@ -384,7 +384,7 @@ static bool parse_attributes(private_simaka_message_t *this, chunk_t in)
 				{	/* AT_RES uses length encoding in bits */
 					len /= 8;
 				}
-				if (len > hdr->length * 4 || len > in.len)
+				if (len > hdr->length * 4 - 4)
 				{
 					return invalid_length(hdr->type);
 				}
