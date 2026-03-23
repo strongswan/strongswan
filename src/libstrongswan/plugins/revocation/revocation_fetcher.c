@@ -269,6 +269,7 @@ METHOD(revocation_fetcher_t, fetch_ocsp, certificate_t*,
 							ocsp_response->get_nonce(ocsp_response)))
 	{
 		DBG1(DBG_CFG, "nonce in ocsp response doesn't match");
+		response->destroy(response);
 		request->destroy(request);
 		return NULL;
 	}
