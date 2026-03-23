@@ -36,8 +36,8 @@ fuzzing-corpora/
 *.orig
 *.patch
 *.diff
-*.tar.bz2
-*.tar.gz
+*.tar.bz2*
+*.tar.gz*
 .DS_Store
 ._.DS_Store
 coverage/
