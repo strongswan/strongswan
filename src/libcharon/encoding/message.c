@@ -3054,6 +3054,10 @@ METHOD(message_t, add_fragment_v2, status_t,
 		this->frag->last = total;
 		this->fragments = array_create(0, total);
 	}
+	else if (total < this->frag->last)
+	{	/* drop these silently as mandated by RFC 7383, section 2.6 */
+		return INVALID_ARG;
+	}
 	num = encrypted_fragment->get_fragment_number(encrypted_fragment);
 	data = encrypted_fragment->get_content(encrypted_fragment);
 	status = add_fragment(this, num, data);
@@ -3080,11 +3084,11 @@ METHOD(message_t, add_fragment_v2, status_t,
 		enumerator->destroy(enumerator);
 	}
 
-	if (array_count(this->fragments) != total)
+	if (array_count(this->fragments) != this->frag->last)
 	{
 		/* there are some fragments missing */
 		DBG1(DBG_ENC, "received fragment #%hu of %hu, waiting for complete IKE "
-			 "message", num, total);
+			 "message", num, this->frag->last);
 		return NEED_MORE;
 	}
 
