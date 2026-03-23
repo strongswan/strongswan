@@ -183,9 +183,15 @@ check_commands()
 running_any()
 {
 	command -v virsh >/dev/null || return 1
-	for host in $*
+	for host in "$@"
 	do
-		virsh list --name 2>/dev/null | grep "^$host$" >/dev/null && return 0
+		# skip empty host strings to prevent grep from matching empty lines
+		# and incorrectly returning 0
+		[ -z "$host" ] && continue
+
+		# explicitly connect to the system uri to ensure we see guests 
+		# started in a root/sudo context, avoiding session ambiguity
+		virsh -c qemu:///system list --name 2>/dev/null | grep -qx "$host" && return 0
 	done
 	return 1
 }
