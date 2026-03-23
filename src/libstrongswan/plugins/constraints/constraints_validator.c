@@ -56,6 +56,18 @@ static bool check_pathlen(x509_t *issuer, int pathlen)
 }
 
 /**
+ * Check if the constraint and ID strings match case-insensitively
+ */
+static bool string_matches(chunk_t constraint, chunk_t id)
+{
+	/* make sure the two strings have actually the same length */
+	return constraint.len == id.len &&
+		   memchr(constraint.ptr, 0, constraint.len) == NULL &&
+		   memchr(id.ptr, 0, id.len) == NULL &&
+		   strncasecmp(constraint.ptr, id.ptr, constraint.len) == 0;
+}
+
+/**
  * Check if a FQDN constraint matches
  */
 static bool fqdn_matches(identification_t *constraint, identification_t *id)
@@ -70,7 +82,7 @@ static bool fqdn_matches(identification_t *constraint, identification_t *id)
 		return FALSE;
 	}
 	diff = chunk_create(i.ptr, i.len - c.len);
-	if (!chunk_equals(c, chunk_skip(i, diff.len)))
+	if (!string_matches(c, chunk_skip(i, diff.len)))
 	{
 		return FALSE;
 	}
@@ -101,10 +113,10 @@ static bool email_matches(identification_t *constraint, identification_t *id)
 	}
 	if (memchr(c.ptr, '@', c.len))
 	{	/* constraint is a full email address */
-		return chunk_equals(c, i);
+		return string_matches(c, i);
 	}
 	diff = chunk_create(i.ptr, i.len - c.len);
-	if (!chunk_equals(c, chunk_skip(i, diff.len)))
+	if (!string_matches(c, chunk_skip(i, diff.len)))
 	{
 		return FALSE;
 	}
