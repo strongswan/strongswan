@@ -253,11 +253,11 @@ static struct {
 	char *subject;
 	bool good;
 } excluded_dn[] = {
-	{ "C=CH, O=another", "C=CH, O=strongSwan, CN=tester", TRUE },
-	{ "C=CH, O=another", "C=CH, O=anot", TRUE },
-	{ "C=CH, O=another", "C=CH, O=anot, CN=tester", TRUE },
+	{ "C=CH, O=another", "C=CH, O=strongSwan, CN=tester", FALSE },
+	{ "C=CH, O=another", "C=CH, O=anot", FALSE },
+	{ "C=CH, O=another", "C=CH, O=anot, CN=tester", FALSE },
 	{ "C=CH, O=another", "C=CH, O=another, CN=tester", FALSE },
-	{ "C=CH, O=another", "C=CH, CN=tester, O=another", TRUE },
+	{ "C=CH, O=another", "C=CH, CN=tester, O=another", FALSE },
 };
 
 START_TEST(test_excluded_dn)
@@ -427,9 +427,9 @@ static struct {
 	char *subject;
 	bool good;
 } excluded_dn_levels[] = {
-	{ "C=CH, O=strongSwan", "C=CH", "C=DE", TRUE },
+	{ "C=CH, O=strongSwan", "C=CH", "C=DE", FALSE },
 	{ "C=CH, O=strongSwan", "C=CH", "C=CH", FALSE },
-	{ "C=CH, O=strongSwan", "C=DE", "C=CH", TRUE },
+	{ "C=CH, O=strongSwan", "C=DE", "C=CH", FALSE },
 	{ "C=CH, O=strongSwan", "C=DE", "C=DE", FALSE },
 	{ "C=CH, O=strongSwan", "C=DE", "C=CH, O=strongSwan", FALSE },
 	{ NULL, "C=CH", "C=CH, O=strongSwan", FALSE },

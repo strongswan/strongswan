@@ -401,9 +401,17 @@ static bool collect_constraints(x509_t *x509, bool permitted, hashtable_t **out)
 		type = constraint->get_type(constraint);
 		switch (type)
 		{
+			case ID_DER_ASN1_DN:
+				if (!permitted)
+				{
+					DBG1(DBG_CFG, "excluded %N NameConstraint not supported",
+						 id_type_names, type);
+					success = FALSE;
+					break;
+				}
+				/* fall-through */
 			case ID_FQDN:
 			case ID_RFC822_ADDR:
-			case ID_DER_ASN1_DN:
 			case ID_IPV4_ADDR_SUBNET:
 			case ID_IPV6_ADDR_SUBNET:
 				break;
