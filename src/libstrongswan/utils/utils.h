@@ -53,6 +53,7 @@
 #include "utils/atomics.h"
 #include "utils/align.h"
 #include "utils/byteorder.h"
+#include "utils/constant_time.h"
 #include "utils/string.h"
 #include "utils/memory.h"
 #include "utils/strerror.h"

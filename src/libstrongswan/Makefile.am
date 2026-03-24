@@ -138,7 +138,8 @@ utils/parser_helper.h utils/test.h utils/integrity_checker.h utils/process.h \
 utils/utils/strerror.h utils/compat/windows.h utils/compat/apple.h utils/compat/android.h \
 utils/utils/atomics.h utils/utils/types.h utils/utils/byteorder.h \
 utils/utils/string.h utils/utils/memory.h utils/utils/tty.h utils/utils/path.h \
-utils/utils/status.h utils/utils/object.h utils/utils/time.h utils/utils/align.h
+utils/utils/status.h utils/utils/object.h utils/utils/time.h utils/utils/align.h \
+utils/utils/constant_time.h
 if USE_VM_SOCKETS
   nobase_strongswan_include_HEADERS += \
     networking/streams/stream_vsock.h \
