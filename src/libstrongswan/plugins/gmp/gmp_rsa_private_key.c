@@ -495,8 +495,8 @@ METHOD(private_key_t, decrypt, bool,
 	private_gmp_rsa_private_key_t *this, encryption_scheme_t scheme,
 	void *params, chunk_t crypto, chunk_t *plain)
 {
-	chunk_t em, stripped;
-	bool success = FALSE;
+	chunk_t em;
+	u_int valid, i, j, found_sep = 0, sep_index = 0, m_index;
 
 	if (scheme != ENCRYPT_RSA_PKCS1)
 	{
@@ -505,33 +505,51 @@ METHOD(private_key_t, decrypt, bool,
 		return FALSE;
 	}
 	/* rsa decryption using PKCS#1 RSADP */
-	stripped = em = rsadp(this, crypto);
+	em = rsadp(this, crypto);
+	if (em.len != this->k)
+	{
+		return FALSE;
+	}
 
-	/* PKCS#1 v1.5 8.1 encryption-block formatting (EB = 00 || 02 || PS || 00 || D) */
+	/* PKCS#1 v1.5, RFC 8017, section 7.2.2 message structure:
+	 * EM = 00 || 02 || PS || 00 || M */
 
 	/* check for hex pattern 00 02 in decrypted message */
-	if ((*stripped.ptr++ != 0x00) || (*(stripped.ptr++) != 0x02))
-	{
-		DBG1(DBG_LIB, "incorrect padding - probably wrong rsa key");
-		goto end;
-	}
-	stripped.len -= 2;
+	valid  = constant_time_eq(em.ptr[0], 0x00);
+	valid &= constant_time_eq(em.ptr[1], 0x02);
 
 	/* the plaintext data starts after first 0x00 byte */
-	while (stripped.len-- > 0 && *stripped.ptr++ != 0x00)
-
-	if (stripped.len == 0)
+	for (i = 2; i < em.len; i++)
 	{
-		DBG1(DBG_LIB, "no plaintext data");
-		goto end;
+		u_int zero = constant_time_eq(em.ptr[i], 0x00);
+
+		sep_index = constant_time_select(i, sep_index, ~found_sep & zero);
+		found_sep |= zero;
 	}
 
-	*plain = chunk_clone(stripped);
-	success = TRUE;
+	/* make sure PS is at least eight bytes long (plus the initial bytes) */
+	valid &= constant_time_ge(sep_index, 10);
 
-end:
+	/* instead of copying the message directly, we try not to reveal the message
+	 * length i.e. where the 0x00 byte was. and since clearing a chunk is
+	 * relatively efficient, i.e. doesn't leak much, we always allocate and copy
+	 * a value and then clear it if the structure was invalid */
+	m_index = constant_time_select(sep_index + 1, 11, valid);
+
+	*plain = chunk_alloc(this->k);
+	for (i = 0, j = 0; i < em.len; i++)
+	{
+		plain->ptr[j] = em.ptr[i];
+		j += constant_time_ge(i, m_index);
+	}
+	plain->len = j;
+
+	if (!valid)
+	{
+		chunk_clear(plain);
+	}
 	chunk_clear(&em);
-	return success;
+	return valid;
 }
 
 METHOD(private_key_t, get_keysize, int,
