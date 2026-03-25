@@ -470,15 +470,12 @@ static status_t process_client_hello(private_tls_server_t *this,
 		bio_reader_t *client_versions;
 
 		client_versions = bio_reader_create(versions);
-		while (client_versions->remaining(client_versions))
+		while (client_versions->read_uint16(client_versions, &version))
 		{
-			if (client_versions->read_uint16(client_versions, &version))
+			if (this->tls->set_version(this->tls, version, version))
 			{
-				if (this->tls->set_version(this->tls, version, version))
-				{
-					this->client_version = version;
-					break;
-				}
+				this->client_version = version;
+				break;
 			}
 		}
 		client_versions->destroy(client_versions);
