@@ -182,9 +182,17 @@ static bool decrypt(private_key_t *private, chunk_t key, chunk_t iv, int oid,
  */
 static bool remove_padding(private_pkcs7_enveloped_data_t *this)
 {
-	u_char *pos = this->content.ptr + this->content.len - 1;
-	u_char pattern = *pos;
-	size_t padding = pattern;
+	u_char *pos, pattern;
+	size_t padding;
+
+	if (!this->content.len)
+	{
+		return FALSE;
+	}
+
+	pos = this->content.ptr + this->content.len - 1;
+	pattern = *pos;
+	padding = pattern;
 
 	if (padding > this->content.len)
 	{
