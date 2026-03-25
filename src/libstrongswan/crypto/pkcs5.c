@@ -349,7 +349,7 @@ METHOD(pkcs5_t, decrypt, bool,
 	chunk_t keymat, key, iv;
 	derive_t kdf;
 
-	if (!ensure_crypto_primitives(this, data) || !decrypted)
+	if (!data.len || !ensure_crypto_primitives(this, data) || !decrypted)
 	{
 		return FALSE;
 	}
