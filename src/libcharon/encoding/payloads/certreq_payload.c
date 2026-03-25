@@ -112,12 +112,13 @@ METHOD(payload_t, verify, status_t,
 	private_certreq_payload_t *this)
 {
 	if (this->type == PLV2_CERTREQ &&
-		this->encoding == ENC_X509_SIGNATURE)
+		(this->encoding == ENC_X509_SIGNATURE ||
+		 this->encoding == ENC_OCSP_CONTENT))
 	{
 		if (this->data.len % HASH_SIZE_SHA1)
 		{
-			DBG1(DBG_ENC, "invalid X509 hash length (%d) in certreq",
-				 this->data.len);
+			DBG1(DBG_ENC, "invalid hash length (%d) in %N cert request",
+				 this->data.len, cert_encoding_names, this->encoding);
 			return FAILED;
 		}
 	}
