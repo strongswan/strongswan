@@ -113,6 +113,11 @@ static bool verify_padding(crypter_t *crypter, chunk_t *blob)
 {
 	uint8_t padding, count;
 
+	if (!blob->len)
+	{
+		return FALSE;
+	}
+
 	padding = count = blob->ptr[blob->len - 1];
 
 	if (padding > crypter->get_block_size(crypter))
