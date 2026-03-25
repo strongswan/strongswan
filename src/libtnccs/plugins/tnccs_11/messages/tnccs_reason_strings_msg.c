@@ -126,6 +126,11 @@ tnccs_msg_t *tnccs_reason_strings_msg_create_from_node(xmlNodePtr node,
 		}
 		break;
 	}
+	if (!child)
+	{
+		error_msg = "ReasonString tag not found";
+		goto fatal;
+	}
 
 	lang_string = xmlGetProp(child, "lang");
 	if (!lang_string)
