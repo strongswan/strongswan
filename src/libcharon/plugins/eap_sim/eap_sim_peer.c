@@ -180,6 +180,7 @@ static status_t process_start(private_eap_sim_peer_t *this,
 						supported = TRUE;
 						break;
 					}
+					data = chunk_skip(data, version.len);
 				}
 				break;
 			}
