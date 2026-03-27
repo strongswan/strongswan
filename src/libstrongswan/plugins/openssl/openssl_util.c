@@ -162,7 +162,7 @@ private_key_t *openssl_wrap_private_key(EVP_PKEY *key, bool engine)
 #ifndef OPENSSL_IS_AWSLC
 			case EVP_PKEY_ED448:
 #endif
-				return openssl_ed_private_key_create(key, FALSE);
+				return openssl_ed_private_key_create(key, engine);
 #endif /* OPENSSL_VERSION_NUMBER && !OPENSSL_NO_EC && !OPENSSL_IS_AWSLC */
 			default:
 				EVP_PKEY_free(key);
