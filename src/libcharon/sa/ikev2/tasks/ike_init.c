@@ -1004,10 +1004,6 @@ static bool derive_keys_internal(private_ike_init_t *this, chunk_t nonce_i,
 
 	if (this->old_sa)
 	{
-		if (additional_key_exchange_required(this))
-		{	/* when rekeying, we only derive keys once all exchanges are done */
-			return FALSE;
-		}
 		old_sa = this->old_sa;
 		kes = this->kes;
 	}
