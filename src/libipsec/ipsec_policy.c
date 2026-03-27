@@ -202,6 +202,23 @@ ipsec_policy_t *ipsec_policy_create(host_t *src, host_t *dst,
 {
 	private_ipsec_policy_t *this;
 
+
+	if (!sa->esp.use)
+	{
+		DBG1(DBG_ESP, "  IPsec policy: protocol not supported");
+		return NULL;
+	}
+	if (sa->ipcomp.transform != IPCOMP_NONE)
+	{
+		DBG1(DBG_ESP, "  IPsec policy: compression not supported");
+		return NULL;
+	}
+	if (sa->mode != MODE_TUNNEL)
+	{
+		DBG1(DBG_ESP, "  IPsec policy: unsupported mode");
+		return NULL;
+	}
+
 	INIT(this,
 		.public = {
 			.match = _match,

@@ -158,6 +158,11 @@ METHOD(ipsec_policy_mgr_t, add_policy, status_t,
 
 	policy = ipsec_policy_create(src, dst, src_ts, dst_ts, direction, type, sa,
 								 mark, priority);
+	if (!policy)
+	{
+		DBG1(DBG_ESP, "failed to create policy");
+		return FAILED;
+	}
 	entry = policy_entry_create(policy);
 
 	this->lock->write_lock(this->lock);
