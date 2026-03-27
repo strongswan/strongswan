@@ -557,6 +557,14 @@ METHOD(trap_manager_t, acquire, void,
 	}
 	wildcard = found->wildcard;
 
+	if (wildcard && (!data->dst || !data->src))
+	{
+		DBG1(DBG_CFG, "unable to process acquire without selectors for "
+			 "trap without destination address (reqid %u)", reqid);
+		this->lock->unlock(this->lock);
+		return;
+	}
+
 	this->mutex->lock(this->mutex);
 	if (wildcard)
 	{
