@@ -803,7 +803,7 @@ dhcp_socket_t *dhcp_socket_create()
 	this->identity_lease = lib->settings->get_bool(lib->settings,
 								"%s.plugins.dhcp.identity_lease", FALSE,
 								lib->ns);
-	this->force_dst = lib->settings->get_str(lib->settings,
+	this->force_dst = lib->settings->get_bool(lib->settings,
 								"%s.plugins.dhcp.force_server_address", FALSE,
 								lib->ns);
 	this->dst = host_create_from_string(lib->settings->get_str(lib->settings,
