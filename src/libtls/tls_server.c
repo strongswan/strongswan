@@ -344,7 +344,6 @@ static status_t process_client_hello(private_tls_server_t *this,
 	key_share_t peer = {0};
 	chunk_t extension_data = chunk_empty;
 	bio_reader_t *extensions, *extension;
-	tls_cipher_suite_t *suites;
 	tls_version_t original_version_max;
 	int count, i;
 	rng_t *rng;
@@ -534,9 +533,10 @@ static status_t process_client_hello(private_tls_server_t *this,
 	else
 	{
 		tls_cipher_suite_t original_suite = this->suite;
+		tls_cipher_suite_t *suites;
 
 		count = ciphers.len / sizeof(uint16_t);
-		suites = alloca(count * sizeof(tls_cipher_suite_t));
+		suites = malloc(count * sizeof(tls_cipher_suite_t));
 		DBG2(DBG_TLS, "received %d TLS cipher suites:", count);
 		for (i = 0; i < count; i++)
 		{
@@ -546,8 +546,10 @@ static status_t process_client_hello(private_tls_server_t *this,
 		if (!select_suite_and_key(this, suites, count))
 		{
 			this->alert->add(this->alert, TLS_FATAL, TLS_HANDSHAKE_FAILURE);
+			free(suites);
 			return NEED_MORE;
 		}
+		free(suites);
 		if (retrying(this) && original_suite != this->suite)
 		{
 			DBG1(DBG_TLS, "selected %N instead of %N during retry",
