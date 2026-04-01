@@ -1,0 +1,400 @@
+# Georgian translation for NetworkManager-strongswan.
+# Copyright (C) 2026 strongSwan Developers
+# This file is distributed under the same license as the NetworkManager-strongswan package.
+# Ekaterine Papava <papava.e@gtu.ge>, 2026.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version:  1.6.4\n"
+"Report-Msgid-Bugs-To: https://github.com/strongswan/strongswan\n"
+"POT-Creation-Date: 2025-12-10 18:34+0100\n"
+"PO-Revision-Date: 2026-04-01 12:19+0200\n"
+"Last-Translator: Ekaterine Papava <papava.e@gtu.ge>\n"
+"Language-Team: Georgian <papava.e@gtu.ge>\n"
+"Language: ka\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: properties/nm-strongswan-plugin.c:35
+msgid "IPsec/IKEv2 (strongswan)"
+msgstr "IPsec/IKEv2 (strongswan)"
+
+#: properties/nm-strongswan-plugin.c:36
+msgid "IPsec with the IKEv2 key exchange protocol."
+msgstr "IPsec გასაღების მიმოცვლის პროტოკოლით IKEv2."
+
+#: properties/nm-strongswan-plugin.c:97
+#, c-format
+msgid "unable to determine plugin path: %s"
+msgstr "დამატების ბილიკის დადგენა შეუძლებელია: %s"
+
+#: properties/nm-strongswan-plugin.c:110
+#, c-format
+msgid "missing plugin file '%s'"
+msgstr "აკლია დამატების ფაილი '%s'"
+
+#: properties/nm-strongswan-plugin.c:115
+#, c-format
+msgid "unable to load editor plugin: %s"
+msgstr "რედაქტორის დამატების ჩატვირთვა შეუძლებელია: %s"
+
+#: properties/nm-strongswan-plugin.c:125
+#, c-format
+msgid "cannot load factory %s from plugin: %s"
+msgstr "დამატებიდან ქარხნის (%s) ჩატვირთვა შეუძლებელია: %s"
+
+#: properties/nm-strongswan-plugin.c:142
+msgid "unknown error creating editor instance"
+msgstr "უცნობ შეცდომა რედაქტორის ასლის შექმნისას"
+
+#: properties/nm-strongswan.c:269
+msgid "(None)"
+msgstr "(არცერთი)"
+
+#: properties/nm-strongswan.c:433
+msgid "EAP (Username/Password)"
+msgstr "EAP (მომხმარებლის სახელი/პაროლი)"
+
+#: properties/nm-strongswan.c:434
+msgid "Certificate"
+msgstr "სერტიფიკატი"
+
+#: properties/nm-strongswan.c:435
+msgid "EAP-TLS"
+msgstr "EAP-TLS"
+
+#: properties/nm-strongswan.c:436
+msgid "Pre-shared key"
+msgstr "წინასწარ გაზიარებული გასაღები"
+
+#: properties/nm-strongswan.c:462
+msgid "Certificate/private key"
+msgstr "სერტიფიკატი/პირადი გასაღები"
+
+#: properties/nm-strongswan.c:463
+msgid "Certificate/ssh-agent"
+msgstr "სერტიფიკატი/ssh-agent"
+
+#: properties/nm-strongswan.c:464
+msgid "Smartcard"
+msgstr "Smart ბარათი"
+
+#: properties/nm-strongswan-dialog.ui:15
+msgid "Choose a server or CA certificate…"
+msgstr "სერვერის, ან CA სერტიფიკატის არჩევა…"
+
+#: properties/nm-strongswan-dialog.ui:25 properties/nm-strongswan-dialog.ui:858
+#: properties/nm-strongswan-dialog.ui:911
+msgid "_Cancel"
+msgstr "გაუ_ქმება"
+
+#: properties/nm-strongswan-dialog.ui:34 properties/nm-strongswan-dialog.ui:867
+#: properties/nm-strongswan-dialog.ui:920
+msgid "_Select"
+msgstr "_მონიშვნა"
+
+#: properties/nm-strongswan-dialog.ui:74
+msgid "<b>Server</b>"
+msgstr "<b>სერვერი</b>"
+
+#: properties/nm-strongswan-dialog.ui:97
+msgid "_Address:"
+msgstr "_მისამართი:"
+
+#: properties/nm-strongswan-dialog.ui:110
+msgid "An IP address or hostname of the VPN server."
+msgstr "VPN სერვერის მისამართი, ან ჰოსტის სახელი."
+
+#: properties/nm-strongswan-dialog.ui:122
+msgid "C_ertificate:"
+msgstr "ს_ერტიფიკატი:"
+
+#: properties/nm-strongswan-dialog.ui:136
+msgid ""
+"Server or CA certificate to use for server authentication. If none is "
+"specified, pre-installed CA certificates are used."
+msgstr ""
+"სერვერის, ან CA სერტიფიკატი სერვერზე ავთენტიკაციისთვის. თუ მითითებული არაა, "
+"გამოყენებული იქნება უკვე დაყენებული CA სერტიფიკატები."
+
+#: properties/nm-strongswan-dialog.ui:177
+msgid "_Identity:"
+msgstr "_იდენტიფიკაცია:"
+
+#: properties/nm-strongswan-dialog.ui:190
+msgid ""
+"Defaults to the server address or the server certificate's subject DN (if "
+"configured). Custom values are explicitly sent to the server and enforced "
+"during authentication."
+msgstr ""
+"ნაგულისხმევად იღებს სერვერის მისამართს, ან სერტიფიკატის თემის DN-ს (თუ "
+"დაყენებულია). მორგებული მნიშვნელობები აშკარად იგზავნება სერვერზე და "
+"ნაძალადევად გამოიყენება ავთენტიკაციისას."
+
+#: properties/nm-strongswan-dialog.ui:192
+msgid "(Defaults to address or certificate subject)"
+msgstr "(ნაგულისხმევად უდრის მისამართს, ან სერტიფიკატის თემას)"
+
+#: properties/nm-strongswan-dialog.ui:223
+msgid "<b>Client</b>"
+msgstr "<b>კლიენტი</b>"
+
+#: properties/nm-strongswan-dialog.ui:246
+msgid "Au_thentication:"
+msgstr "_ავთენტიკაცია:"
+
+#: properties/nm-strongswan-dialog.ui:270
+msgid "Ce_rtificate:"
+msgstr "სე_რტიფიკატი:"
+
+#: properties/nm-strongswan-dialog.ui:294
+msgid "Certificate _file:"
+msgstr "სერტიფიკატის _ფაილი:"
+
+#: properties/nm-strongswan-dialog.ui:308
+msgid "Client certificate to use for client authentication."
+msgstr "კლიენტის სერტიფიკატი კლიენტის ავთენტიკაციისთვის."
+
+#: properties/nm-strongswan-dialog.ui:349
+msgid "Private _key:"
+msgstr "პირადი გასა_ღები:"
+
+#: properties/nm-strongswan-dialog.ui:363
+msgid ""
+"Private key to use for client authentication. This key has to match the "
+"certificates public key and may be encrypted."
+msgstr ""
+"კლიენტის ავთენტიკაციისთვის გამოყენებული პირადი გასაღები. ეს გასაღები უნდა "
+"ემთხვეოდეს სერტიფიკატის საჯარო გასაღებს და შეიძლება, დაშიფრული იყოს."
+
+#: properties/nm-strongswan-dialog.ui:404
+msgid "_Username:"
+msgstr "_მომხმარებელი:"
+
+#: properties/nm-strongswan-dialog.ui:417
+msgid ""
+"The username (EAP identity) to use for authentication against the server."
+msgstr "მომხმარებლის სახელი (EAP იდენტიფიკატორი) სერვერთან ავთენტიკაციისთვის."
+
+#: properties/nm-strongswan-dialog.ui:429
+msgid "_Password:"
+msgstr "_პაროლი:"
+
+#: properties/nm-strongswan-dialog.ui:442
+msgid ""
+"The password to use for authentication against the server (min. 20 "
+"characters for PSKs)."
+msgstr "პაროლი სერვერთან ავთენტიკაციისთვის (მინ. 20 სიმბოლო PSK-ებისთვის)."
+
+#: properties/nm-strongswan-dialog.ui:445
+msgid "(Use icon to change password storage policy)"
+msgstr "(ხატულას გამოყენება პაროლის საცავის პოლიტიკის შესაცვლელად)"
+
+#: properties/nm-strongswan-dialog.ui:454
+msgid "_Show password"
+msgstr "პაროლის _ჩვენება"
+
+#: properties/nm-strongswan-dialog.ui:471
+msgid "I_dentity:"
+msgstr "ი_დენტიფიკატორი:"
+
+#: properties/nm-strongswan-dialog.ui:484
+msgid ""
+"Defaults to the username (EAP), the client certificate's subject DN "
+"(certificate/EAP-TLS), or the IP address (PSK). Custom values may be used if "
+"expected/required by the server."
+msgstr ""
+"ნაგულისხმევად უდრის მომხმარებლის სახელს (EAP), კლიენტის სერტიფიკატის თემის "
+"DN-ს (სერტიფიკატი /EAP-TLS), ან IP მისამართს (PSK). მორგებული მნიშვნელობების "
+"გამოყენება შესაძლებელია, თუ ისინი მოსალოდნელია/მოთხოვნილია სერვერის მიერ."
+
+#: properties/nm-strongswan-dialog.ui:486
+msgid "(Defaults to username, certificate subject or IP address)"
+msgstr ""
+"(ნაგულისხმევად უდრის მომხმარებლის სახელს, სერტიფიკატის თემას, ან IP "
+"მისამართს)"
+
+#: properties/nm-strongswan-dialog.ui:525
+msgid "Request an _inner IP address"
+msgstr "შ_იდა IP მისამართის მოთხოვნა"
+
+#: properties/nm-strongswan-dialog.ui:529
+msgid ""
+"The server may provide addresses from a pool to use for communication in the "
+"VPN. Check to request such an address."
+msgstr ""
+"სერვერს შეუძლია, მოგაწოდოთ მისამართი შუალედიდან VPN-ში კომუნიკაციისთვის. "
+"ჩართეთ ასეთი მისამართის გამოსათხოვად."
+
+#: properties/nm-strongswan-dialog.ui:541
+msgid "En_force UDP encapsulation"
+msgstr "ნაძალადევი UDP _ენკაპსულაცია"
+
+#: properties/nm-strongswan-dialog.ui:545
+msgid ""
+"Some firewalls block ESP traffic. Enforcing UDP capsulation even if no NAT "
+"situation is detected might help in such cases."
+msgstr ""
+"ზოგიერთი ბრანდმაუერი ESP ტრაფიკს ბლოკავს. ნაძალადევი UDP ენკაპსულაციამ "
+"მაშინაც კი, როცა NAT-ს არ იყენებთ, შეიძლება, გიშველოთ."
+
+#: properties/nm-strongswan-dialog.ui:557
+msgid "Use IP c_ompression"
+msgstr "IP შ_ეკუმშვის გამოყენება"
+
+#: properties/nm-strongswan-dialog.ui:561
+msgid ""
+"IPComp compresses raw IP packets before they get encrypted. This saves some "
+"bandwidth, but uses more processing power."
+msgstr ""
+"IPComp დაუმუშავებელ IP პაკეტებს დაშიფვრამდე შეკუმშავს. ეს დაზოგავს რაღაც "
+"რაოდენობა გამტარობას, მაგრამ მეტ პროცესორის დროს დახარჯავს."
+
+#: properties/nm-strongswan-dialog.ui:583
+msgid "Server _port:"
+msgstr "სერვერის _პორტი:"
+
+#: properties/nm-strongswan-dialog.ui:596
+msgid ""
+"Custom server port to connect to. Defaults to UDP port 500, which is "
+"followed by a switch to port 4500 after the first exchange."
+msgstr ""
+"მორგებული სერვერის პორტი დასაკავშირებლად. ნაგულისხმევად გამოიყენება UDP "
+"პორტი 500, რომელსაც მოჰყვება გადართვა პორტზე 4500 პირველი მიმოცვლის შემდეგ."
+
+#: properties/nm-strongswan-dialog.ui:599
+msgid "(Defaults to UDP 500/4500)"
+msgstr "(ნაგულისხმევად არის UDP 500/4500)"
+
+#: properties/nm-strongswan-dialog.ui:619
+msgid "Options"
+msgstr "მორგება"
+
+#: properties/nm-strongswan-dialog.ui:635
+msgid "_Enable custom algorithm proposals"
+msgstr "მორგებული ალგორითმის შეთავაზებების დაშვ_ება"
+
+#: properties/nm-strongswan-dialog.ui:660
+msgid "_IKE:"
+msgstr "_IKE:"
+
+#: properties/nm-strongswan-dialog.ui:673
+msgid "A list of proposals for IKE separated by \";\""
+msgstr "IKE-ის შეთავაზებების \";\"-ით გამოყოფილი სია"
+
+#: properties/nm-strongswan-dialog.ui:686
+msgid "_ESP:"
+msgstr "_ESP:"
+
+#: properties/nm-strongswan-dialog.ui:699
+msgid "A list of proposals for ESP separated by \";\""
+msgstr "ESP-ის შეთავაზებების \";\"-ით გამოყოფილი სია"
+
+#: properties/nm-strongswan-dialog.ui:724
+msgid "Algorithms"
+msgstr "ალგორითმები"
+
+#: properties/nm-strongswan-dialog.ui:751
+msgid "_Local TS:"
+msgstr "_ლოკალური TS:"
+
+#: properties/nm-strongswan-dialog.ui:764
+msgid "A list of local traffic selectors separated by \";\""
+msgstr "\";\"-ით გამოყოფილი ლოკალური ტრაფიკის ამრჩევების სია"
+
+#: properties/nm-strongswan-dialog.ui:767
+msgid "(Defaults to dynamic)"
+msgstr "(ნაგულისხმევად დინამიკურია)"
+
+#: properties/nm-strongswan-dialog.ui:778
+msgid "Re_mote TS:"
+msgstr "დაშო_რებული TS:"
+
+#: properties/nm-strongswan-dialog.ui:791
+msgid "A list of remote traffic selectors separated by \";\""
+msgstr "\";\"-ით გამოყოფილი დაშორებული ტრაფიკის ამრჩევების სია"
+
+#: properties/nm-strongswan-dialog.ui:794
+msgid "(Defaults to 0.0.0.0/0;::/0)"
+msgstr "(ნაგულისხმევია 0.0.0.0/0;::/0)"
+
+#: properties/nm-strongswan-dialog.ui:817
+msgid "Traffic"
+msgstr "ტრაფიკი"
+
+#: properties/nm-strongswan-dialog.ui:848
+msgid "Choose a client certificate…"
+msgstr "კლიენტის სერტიფიკატის არჩევა…"
+
+#: properties/nm-strongswan-dialog.ui:901
+msgid "Choose a private key…"
+msgstr "პირადი გასაღების არჩევა…"
+
+#: auth-dialog/main.c:137
+#, c-format
+msgid "EAP password required to establish VPN connection '%s'."
+msgstr "VPN კავშირის '%s' დასამყარებლად საჭიროა EAP-ის პაროლი."
+
+#: auth-dialog/main.c:142
+#, c-format
+msgid ""
+"Pre-shared key required to establish VPN connection '%s' (min. 20 "
+"characters)."
+msgstr ""
+"VPN კავშირის '%s' დასამყარებლად საჭიროა წინასწარ გაზიარებული გასაღები "
+"(მინ. 20 სიმბოლო)."
+
+#: auth-dialog/main.c:150
+#, c-format
+msgid "Smartcard PIN required to establish VPN connection '%s'."
+msgstr "VPN კავშირის '%s' დასამყარებლად საჭიროა სმარტ-ბარათის PIN-კოდი."
+
+#: auth-dialog/main.c:155
+#, c-format
+msgid ""
+"Private key decryption password required to establish VPN connection '%s'."
+msgstr ""
+"VPN კავშირის '%s' დასამყარებლად საჭიროა პირადი გასაღების გასაშიფრი "
+"პაროლი."
+
+#: auth-dialog/main.c:167 auth-dialog/main.c:185 auth-dialog/main.c:344
+msgid "Authenticate VPN"
+msgstr "VPN-ის ავთენტიკაცია"
+
+#: auth-dialog/main.c:169
+msgid "Password:"
+msgstr "პაროლი:"
+
+#: auth-dialog/main.c:364
+msgid ""
+"Configuration uses ssh-agent for authentication, but ssh-agent is not "
+"running!"
+msgstr ""
+"კონფიგურაცია ავთენტიკაციისთვის ssh-agent-ს იყენებს, მაგრამ ssh-agent "
+"გაშვებული არაა!"
+
+#: NetworkManager-strongswan.metainfo.xml.in:9
+msgid "strongSwan VPN client"
+msgstr "strongSwan-ის VPN კლიენტი"
+
+#: NetworkManager-strongswan.metainfo.xml.in:10
+msgid "strongSwan based client for IPsec virtual private networks"
+msgstr "strongSwan-ზე დაფუძნებული კლიენტი IPsec ვირტუალური პირადი ქსელებისთვის"
+
+#: NetworkManager-strongswan.metainfo.xml.in:24
+msgid ""
+"Support for configuring IPsec based virtual private network connections."
+msgstr ""
+"IPsec-ზე ბაზირებული ვირტუალური პირადი ქსელის კავშირების მორგების მხარდაჭერა."
+
+#: NetworkManager-strongswan.metainfo.xml.in:25
+msgid ""
+"Compatible with IKEv2 key exchange and multiple authentication mechanisms."
+msgstr ""
+"თავსებადია IKEv2 გასაღებების მიმოცვლასთან და მრავალ ავთენტიკაციის "
+"მექანიზმთან."
+
+#: NetworkManager-strongswan.metainfo.xml.in:39
+msgid "strongSwan Developers"
+msgstr "strongSwan-ის პროგრამისტები"
