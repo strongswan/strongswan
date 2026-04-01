@@ -140,12 +140,12 @@ METHOD(private_key_t, get_public_key, public_key_t*,
 
 	if (!EVP_PKEY_get_raw_public_key(this->key, NULL, &key.len))
 	{
-		return FALSE;
+		return NULL;
 	}
 	key = chunk_alloca(key.len);
 	if (!EVP_PKEY_get_raw_public_key(this->key, key.ptr, &key.len))
 	{
-		return FALSE;
+		return NULL;
 	}
 	public = lib->creds->create(lib->creds, CRED_PUBLIC_KEY, this->type,
 								BUILD_EDDSA_PUB, key, BUILD_END);
