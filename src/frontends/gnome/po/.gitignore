@@ -1,7 +1,7 @@
 Makefile.in.in
 Makevars.template
 POTFILES
-de.gmo
+*.gmo
 stamp-po
 boldquot.sed
 en@boldquot.header
