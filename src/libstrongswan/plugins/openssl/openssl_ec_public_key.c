@@ -42,10 +42,11 @@ typedef struct private_openssl_ec_public_key_t private_openssl_ec_public_key_t;
  * Private data structure with signing context.
  */
 struct private_openssl_ec_public_key_t {
+
 	/**
-	 * Public interface for this signer.
+	 * Public interface
 	 */
-	openssl_ec_public_key_t public;
+	public_key_t public;
 
 	/**
 	 * EC key object
@@ -282,7 +283,7 @@ METHOD(public_key_t, get_ref, public_key_t*,
 	private_openssl_ec_public_key_t *this)
 {
 	ref_get(&this->ref);
-	return &this->public.key;
+	return &this->public;
 }
 
 METHOD(public_key_t, destroy, void,
@@ -319,13 +320,44 @@ bool openssl_check_explicit_params(const EVP_PKEY *key)
 	return explicit == 1;
 }
 
+/*
+ * Described in header
+ */
+public_key_t *openssl_ec_public_key_create(EVP_PKEY *key)
+{
+	private_openssl_ec_public_key_t *this;
+
+	if (!key || EVP_PKEY_base_id(key) != EVP_PKEY_EC ||
+		openssl_check_explicit_params(key))
+	{
+		EVP_PKEY_free(key);
+		return NULL;
+	}
+
+	INIT(this,
+		.public = {
+			.get_type = _get_type,
+			.verify = _verify,
+			.encrypt = _encrypt,
+			.get_keysize = _get_keysize,
+			.equals = public_key_equals,
+			.get_fingerprint = _get_fingerprint,
+			.has_fingerprint = public_key_has_fingerprint,
+			.get_encoding = _get_encoding,
+			.get_ref = _get_ref,
+			.destroy = _destroy,
+		},
+		.ref = 1,
+		.key = key,
+	);
+	return &this->public;
+}
+
 /**
  * See header.
  */
-openssl_ec_public_key_t *openssl_ec_public_key_load(key_type_t type,
-													va_list args)
+public_key_t *openssl_ec_public_key_load(key_type_t type, va_list args)
 {
-	private_openssl_ec_public_key_t *this;
 	chunk_t blob = chunk_empty;
 	EVP_PKEY *key;
 
@@ -344,32 +376,7 @@ openssl_ec_public_key_t *openssl_ec_public_key_load(key_type_t type,
 		break;
 	}
 	key = d2i_PUBKEY(NULL, (const u_char**)&blob.ptr, blob.len);
-	if (!key || EVP_PKEY_base_id(key) != EVP_PKEY_EC ||
-		openssl_check_explicit_params(key))
-	{
-		EVP_PKEY_free(key);
-		return NULL;
-	}
-
-	INIT(this,
-		.public = {
-			.key = {
-				.get_type = _get_type,
-				.verify = _verify,
-				.encrypt = _encrypt,
-				.get_keysize = _get_keysize,
-				.equals = public_key_equals,
-				.get_fingerprint = _get_fingerprint,
-				.has_fingerprint = public_key_has_fingerprint,
-				.get_encoding = _get_encoding,
-				.get_ref = _get_ref,
-				.destroy = _destroy,
-			},
-		},
-		.ref = 1,
-		.key = key,
-	);
-	return &this->public;
+	return openssl_ec_public_key_create(key);
 }
 
 #endif /* OPENSSL_NO_ECDSA */
