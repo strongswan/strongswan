@@ -30,10 +30,10 @@ jobs:
     env:
       TEST: sonarcloud
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
-      - uses: actions/cache@v4
+      - uses: actions/cache@v5
         with:
           path: |
             ~/.cache/ccache
@@ -44,11 +44,11 @@ jobs:
           sudo apt-get install -qq ccache
           echo "PATH=/usr/lib/ccache:$PATH" >> $GITHUB_ENV
           ccache -z
-      - uses: SonarSource/sonarqube-scan-action/install-build-wrapper@v6.0.0
+      - uses: SonarSource/sonarqube-scan-action/install-build-wrapper@v7.1.0
       - run: |
           echo "BUILD_WRAPPER_OUT_DIR=$HOME/bw-output" >> $GITHUB_ENV
       - uses: ./.github/actions/default
-      - uses: SonarSource/sonarqube-scan-action@v6.0.0
+      - uses: SonarSource/sonarqube-scan-action@v7.1.0
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         with:

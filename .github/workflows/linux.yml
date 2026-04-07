@@ -64,8 +64,8 @@ jobs:
       CC: ${{ matrix.compiler || 'gcc' }}
       TEST: ${{ matrix.test }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/cache@v4
+      - uses: actions/checkout@v6
+      - uses: actions/cache@v5
         with:
           path: ~/.cache/ccache
           # with regards to ccache, monolithic builds don't differ from regular
@@ -91,7 +91,7 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
           verbose: true
       - if: ${{ failure() }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: Logs ${{ github.job }}
           path: config.log
@@ -122,8 +122,8 @@ jobs:
       TEST: ${{ matrix.test }}
       ACTIVE_TRANSFORMS_REF: .github/active-transforms/${{ matrix.test }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/cache@v4
+      - uses: actions/checkout@v6
+      - uses: actions/cache@v5
         with:
           # path is different on newer systems
           path: |
@@ -142,7 +142,7 @@ jobs:
           echo "TESTS_ACTIVE_TRANSFORMS=$HOME/active-transforms.log" >> $GITHUB_ENV
       - uses: ./.github/actions/default
       - name: Upload active transforms
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: active-transforms-${{ matrix.test }}-${{ matrix.os }}-${{ matrix.leak-detective }}
           path: ${{ env.TESTS_ACTIVE_TRANSFORMS }}
@@ -152,7 +152,7 @@ jobs:
           test ! -f $ACTIVE_TRANSFORMS_REF || diff -u --color=always $ACTIVE_TRANSFORMS_REF $TESTS_ACTIVE_TRANSFORMS
       - run: ccache -s
       - if: ${{ failure() }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: Logs ${{ github.job }}
           path: config.log
@@ -175,8 +175,8 @@ jobs:
       CC: ${{ matrix.compiler || 'gcc' }}
       TEST: ${{ matrix.test }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/cache@v4
+      - uses: actions/checkout@v6
+      - uses: actions/cache@v5
         with:
           # path is different on newer systems
           path: |
@@ -193,7 +193,7 @@ jobs:
       - uses: ./.github/actions/default
       - run: ccache -s
       - if: ${{ failure() }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: Logs ${{ github.job }}
           path: config.log
