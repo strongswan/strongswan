@@ -790,6 +790,11 @@ u_char* asn1_build_object(chunk_t *object, asn1_t type, size_t datalen)
 	/* allocate memory for the asn.1 TLV object */
 	object->len = 1 + length.len + datalen;
 	object->ptr = malloc(object->len);
+	if (!object->ptr)
+	{
+		*object = chunk_empty;
+		return NULL;
+	}
 
 	/* set position pointer at the start of the object */
 	pos = object->ptr;
