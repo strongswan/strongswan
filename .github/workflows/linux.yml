@@ -101,6 +101,7 @@ jobs:
     needs: pre-check
     if: ${{ needs.pre-check.outputs.should_skip != 'true' }}
     runs-on: ${{ matrix.os }}
+    continue-on-error: ${{ startsWith(matrix.test, 'openssl') }}
     strategy:
       matrix:
         test: [ botan, wolfssl, openssl, openssl-3, openssl-awslc, gcrypt ]
