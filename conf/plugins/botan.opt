@@ -4,3 +4,17 @@ charon.plugins.botan.internal_rng_only = no
 	If enabled, only Botan's internal RNG will be used throughout the plugin.
 	Otherwise, and if supported by Botan, rng_t implementations provided by
 	other loaded plugins will be used as RNG.
+
+charon.plugins.botan.rng.strong = user-threadsafe
+	Name of the Botan RNG used for RNG_STRONG and RNG_WEAK quality.
+
+	Name of the Botan RNG instance to use for RNG_STRONG and RNG_WEAK quality
+	(e.g. user, user-threadsafe or system). Only used if Botan's internal RNG
+	is forced via internal_rng_only.
+
+charon.plugins.botan.rng.true = system
+	Name of the Botan RNG used for RNG_TRUE quality.
+
+	Name of the Botan RNG instance to use for RNG_TRUE quality (e.g. user,
+	user-threadsafe or system). Only used if Botan's internal RNG is forced
+	via internal_rng_only.

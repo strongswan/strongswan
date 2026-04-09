@@ -372,7 +372,7 @@ bool botan_dh_key_derivation(botan_privkey_t key, chunk_t pub, chunk_t *secret)
  */
 const char *botan_map_rng_quality(rng_quality_t quality)
 {
-	const char *rng_name;
+	char *rng_name_default, *setting_path;
 
 	switch (quality)
 	{
@@ -385,18 +385,20 @@ const char *botan_map_rng_quality(rng_quality_t quality)
 			 * with leak-detective (lots of reports of frees of unknown memory)
 			 * there is a fallback to the default */
 #ifdef BOTAN_TARGET_OS_HAS_THREADS
-			rng_name = "user-threadsafe";
+			rng_name_default = "user-threadsafe";
 #else
-			rng_name = "user";
+			rng_name_default = "user";
 #endif
+			setting_path = "%s.plugins.botan.rng.strong";
 			break;
 		case RNG_TRUE:
-			rng_name = "system";
+			rng_name_default = "system";
+			setting_path = "%s.plugins.botan.rng.true";
 			break;
 		default:
 			return NULL;
 	}
-	return rng_name;
+	return lib->settings->get_str(lib->settings, setting_path, rng_name_default, lib->ns);
 }
 
 #ifdef HAVE_BOTAN_RNG_INIT_CUSTOM
