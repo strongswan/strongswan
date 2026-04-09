@@ -1400,7 +1400,7 @@ METHOD(connect_manager_t, process_check, void,
 	}
 
 	chunk_t sig = build_signature(this, checklist, check, FALSE);
-	if (!chunk_equals(sig, check->auth))
+	if (!chunk_equals_const(sig, check->auth))
 	{
 		DBG1(DBG_IKE, "connectivity check verification failed");
 		check_destroy(check);

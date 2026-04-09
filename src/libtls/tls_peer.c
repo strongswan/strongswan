@@ -302,8 +302,8 @@ static status_t process_server_hello(private_tls_peer_t *this,
 	{
 		chunk_t server_random_end = chunk_create(&this->server_random[24], 8);
 
-		if (chunk_equals(server_random_end, tls_downgrade_protection_tls11) ||
-			chunk_equals(server_random_end, tls_downgrade_protection_tls12))
+		if (chunk_equals_const(server_random_end, tls_downgrade_protection_tls11) ||
+			chunk_equals_const(server_random_end, tls_downgrade_protection_tls12))
 		{
 			DBG1(DBG_TLS, "server random indicates downgrade attack to %N",
 				 tls_version_names, version);

@@ -106,26 +106,29 @@ struct private_pkcs5_t {
 };
 
 /**
- * Verify padding of decrypted blob.
+ * Verify padding of decrypted blob in constant time.
  * Length of blob is adjusted accordingly.
  */
 static bool verify_padding(crypter_t *crypter, chunk_t *blob)
 {
 	uint8_t padding, count;
+	size_t i;
+	volatile uint8_t bad = 0;
 
 	padding = count = blob->ptr[blob->len - 1];
 
-	if (padding > crypter->get_block_size(crypter))
+	bad |= (padding > crypter->get_block_size(crypter));
+	bad |= (padding == 0);
+	/* always check up to block_size bytes to avoid timing leaks */
+	for (i = 0; i < padding && i < blob->len; i++)
+	{
+		bad |= blob->ptr[blob->len - 1 - i] ^ padding;
+	}
+	if (bad)
 	{
 		return FALSE;
 	}
-	for (; blob->len && count; --blob->len, --count)
-	{
-		if (blob->ptr[blob->len - 1] != padding)
-		{
-			return FALSE;
-		}
-	}
+	blob->len -= padding;
 	return TRUE;
 }
 

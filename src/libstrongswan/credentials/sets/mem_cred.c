@@ -412,8 +412,8 @@ static bool shared_entry_equals(shared_entry_t *a, shared_entry_t *b)
 	{
 		return FALSE;
 	}
-	if (!chunk_equals(a->shared->get_key(a->shared),
-					  b->shared->get_key(b->shared)))
+	if (!chunk_equals_const(a->shared->get_key(a->shared),
+						    b->shared->get_key(b->shared)))
 	{
 		return FALSE;
 	}
