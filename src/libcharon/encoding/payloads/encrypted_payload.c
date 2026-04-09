@@ -637,7 +637,7 @@ static status_t decrypt_content(char *label, aead_t *aead, chunk_t encrypted,
 	crypt.ptr = iv.ptr + iv.len;
 	crypt.len = encrypted.len - iv.len;
 
-	if (iv.len + icv.len > encrypted.len ||
+	if (iv.len + icv.len >= encrypted.len ||
 		(crypt.len - icv.len) % bs)
 	{
 		DBG1(DBG_ENC, "decrypting %s payload failed, invalid length", label);
