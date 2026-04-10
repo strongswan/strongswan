@@ -342,19 +342,21 @@ win*)
 			--enable-eap-tnc --enable-eap-ttls --enable-eap-identity
 			--enable-eap-radius
 			--enable-updown --enable-ext-auth --enable-libipsec --enable-pkcs11
-			--enable-tnccs-20 --enable-imc-attestation --enable-imv-attestation
-			--enable-imc-os --enable-imv-os --enable-tnc-imv --enable-tnc-imc
+			--enable-tnccs-20
 			--enable-pki --enable-swanctl --enable-socket-win
 			--enable-kernel-iph --enable-kernel-wfp --enable-winhttp"
-	# no make check for Windows binaries unless we run on a windows host
+	# no make check for Windows binaries unless we run on a Windows host
+	# building natively is slow, so don't build libimcv to save about 10 minutes
 	if test "$APPVEYOR" != "True"; then
 		TARGET=
+		CONFIG="$CONFIG --enable-imc-attestation --enable-imv-attestation
+				--enable-imc-os --enable-imv-os --enable-tnc-imv --enable-tnc-imc"
 	else
 		CONFIG="$CONFIG --enable-openssl"
 		CFLAGS="$CFLAGS -I$OPENSSL_DIR/include"
 		LDFLAGS="-L$OPENSSL_DIR/lib -fuse-ld=lld"
 		case "$IMG" in
-		2015)
+		2017)
 			# gcc/ld might be too old to find libeay32 via .lib instead of .dll
 			LDFLAGS="-L$OPENSSL_DIR"
 			;;
@@ -534,6 +536,7 @@ if [ ! -f ./configure ]; then
 fi
 
 cd $BUILD_DIR
+echo "$ LDFLAGS=\"$LDFLAGS\""
 echo "$ CC=$CC CFLAGS=\"$CFLAGS\" ./configure $CONFIG"
 CC="$CC" CFLAGS="$CFLAGS" $SRC_DIR/configure $CONFIG || exit $?
 
