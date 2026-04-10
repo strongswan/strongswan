@@ -500,6 +500,10 @@ METHOD(tun_device_t, destroy, void,
 	{
 		close(this->sock);
 	}
+	if (this->sock_v6 > 0)
+	{
+		close(this->sock_v6);
+	}
 	DESTROY_IF(this->address);
 	free(this);
 }
@@ -650,6 +654,7 @@ tun_device_t *tun_device_create(const char *name_tmpl)
 		},
 		.tunfd = -1,
 		.sock = -1,
+		.sock_v6 = -1,
 	);
 
 	if (!init_tun(this, name_tmpl))
