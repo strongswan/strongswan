@@ -122,7 +122,7 @@ static status_t delete_child(private_quick_delete_t *this,
 							child_sa->create_ts_enumerator(child_sa, FALSE));
 	if (this->expired)
 	{
-		DBG0(DBG_IKE, "closing expired CHILD_SA %s{%d} "
+		DBG0(DBG_IKE, "closing expired CHILD_SA %s{%u} "
 			 "with SPIs %.8x_i %.8x_o and TS %#R === %#R",
 			 child_sa->get_name(child_sa), child_sa->get_unique_id(child_sa),
 			 ntohl(child_sa->get_spi(child_sa, TRUE)),
@@ -133,7 +133,7 @@ static status_t delete_child(private_quick_delete_t *this,
 		child_sa->get_usestats(child_sa, TRUE, NULL, &bytes_in, NULL);
 		child_sa->get_usestats(child_sa, FALSE, NULL, &bytes_out, NULL);
 
-		DBG0(DBG_IKE, "closing CHILD_SA %s{%d} with SPIs "
+		DBG0(DBG_IKE, "closing CHILD_SA %s{%u} with SPIs "
 			 "%.8x_i (%llu bytes) %.8x_o (%llu bytes) and TS %#R === %#R",
 			 child_sa->get_name(child_sa), child_sa->get_unique_id(child_sa),
 			 ntohl(child_sa->get_spi(child_sa, TRUE)), bytes_in,

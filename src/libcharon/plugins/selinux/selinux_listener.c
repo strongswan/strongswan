@@ -96,7 +96,7 @@ static bool install_generic_trap(ike_sa_t *ike_sa, child_sa_t *child_sa)
 
 #if DEBUG_LEVEL >= 1
 	sec_label_t *label = child_sa->get_label(child_sa);
-	DBG1(DBG_IKE, "installing trap %s{%d} with generic security label '%s'",
+	DBG1(DBG_IKE, "installing trap %s{%u} with generic security label '%s'",
 		 child_sa->get_name(child_sa), child_sa->get_unique_id(child_sa),
 		 label->get_string(label));
 #endif
@@ -173,7 +173,7 @@ METHOD(listener_t, ike_updown, bool,
 			{
 #if DEBUG_LEVEL >= 1
 				sec_label_t *label = child_sa->get_label(child_sa);
-				DBG1(DBG_IKE, "uninstalling trap %s{%d} with generic security "
+				DBG1(DBG_IKE, "uninstalling trap %s{%u} with generic security "
 					 "label '%s'", child_sa->get_name(child_sa),
 					 child_sa->get_unique_id(child_sa),
 					 label->get_string(label));

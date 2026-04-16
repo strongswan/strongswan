@@ -1761,7 +1761,7 @@ bool ikev1_child_sa_is_redundant(ike_sa_t *ike_sa, child_sa_t *child_sa,
 			have_equal_ts(current, child_sa, FALSE) &&
 			(!cmp || cmp(child_sa, current)))
 		{
-			DBG1(DBG_IKE, "detected redundant CHILD_SA %s{%d}",
+			DBG1(DBG_IKE, "detected redundant CHILD_SA %s{%u}",
 				 child_sa->get_name(child_sa),
 				 child_sa->get_unique_id(child_sa));
 			redundant = TRUE;

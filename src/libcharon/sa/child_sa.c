@@ -410,7 +410,7 @@ METHOD(child_sa_t, set_state, void,
 {
 	if (this->state != state)
 	{
-		DBG2(DBG_CHD, "CHILD_SA %s{%d} state change: %N => %N",
+		DBG2(DBG_CHD, "CHILD_SA %s{%u} state change: %N => %N",
 			 get_name(this), this->unique_id,
 			 child_sa_state_names, this->state,
 			 child_sa_state_names, state);
@@ -1973,7 +1973,7 @@ METHOD(child_sa_t, update, status_t,
 				DBG1(DBG_CHD, "releasing reqid %u failed", this->reqid);
 			}
 			DBG1(DBG_CHD, "replaced reqid %u with reqid %u for updated "
-				 "CHILD_SA %s{%d}", this->reqid, new_reqid, get_name(this),
+				 "CHILD_SA %s{%u}", this->reqid, new_reqid, get_name(this),
 				 this->unique_id);
 			this->reqid = new_reqid;
 		}

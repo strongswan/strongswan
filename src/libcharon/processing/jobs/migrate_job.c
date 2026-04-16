@@ -99,7 +99,7 @@ METHOD(job_t, execute, job_requeue_t,
 			continue;
 		}
 
-		DBG2(DBG_JOB, "found CHILD_SA with reqid {%d}", this->reqid);
+		DBG2(DBG_JOB, "found CHILD_SA with reqid {%u}", this->reqid);
 
 		ike_sa->set_kmaddress(ike_sa, this->local, this->remote);
 

@@ -78,7 +78,7 @@ METHOD(job_t, execute, job_requeue_t,
 								charon->child_sa_manager, this->id, &child_sa);
 		if (!ike_sa)
 		{
-			DBG1(DBG_JOB, "CHILD_SA {%d} not found for delete", this->id);
+			DBG1(DBG_JOB, "CHILD_SA {%u} not found for delete", this->id);
 		}
 		else
 		{

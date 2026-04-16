@@ -1053,7 +1053,7 @@ bool child_rekey_conclude_rekeying(child_sa_t *old, child_sa_t *new)
 	other_ts = linked_list_create_from_enumerator(
 							new->create_ts_enumerator(new, FALSE));
 
-	DBG0(DBG_IKE, "outbound CHILD_SA %s{%d} established "
+	DBG0(DBG_IKE, "outbound CHILD_SA %s{%u} established "
 		 "with SPIs %.8x_i %.8x_o and TS %#R === %#R",
 		 new->get_name(new), new->get_unique_id(new),
 		 ntohl(new->get_spi(new, TRUE)), ntohl(new->get_spi(new, FALSE)),

@@ -396,7 +396,7 @@ static bool install(private_quick_mode_t *this)
 	other_ts = linked_list_create_from_enumerator(
 				this->child_sa->create_ts_enumerator(this->child_sa, FALSE));
 
-	DBG0(DBG_IKE, "CHILD_SA %s{%d} established "
+	DBG0(DBG_IKE, "CHILD_SA %s{%u} established "
 		 "with SPIs %.8x_i %.8x_o and TS %#R === %#R",
 		 this->child_sa->get_name(this->child_sa),
 		 this->child_sa->get_unique_id(this->child_sa),
