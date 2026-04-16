@@ -1,0 +1,9 @@
+The roadwarrior <b>alice</b> is sitting behind the router <b>moon</b> but
+at the outset of the scenario is also directly connected to the 192.168.0.0/24 network
+via an additional <b>eth1</b> interface. <b>alice</b> builds up a tunnel mode SA to
+host <b>sun</b>. When the <b>eth1</b> interface goes away, <b>alice</b> switches
+to <b>eth0</b> and signals the IP address change via a MOBIKE ADDRESS_UPDATE
+notification to peer <b>sun</b>. Then <b>eth1</b> is enabled again and the IPv4
+traffic to <b>sun</b> is blackholed to force a switch to IPv6 with another
+update. Since transport mode is used, the selectors installed on the SAs have
+to be updated in addition to the IPsec policies.
