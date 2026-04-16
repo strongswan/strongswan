@@ -94,8 +94,10 @@ METHOD(job_t, execute, job_requeue_t,
 			}
 			else
 			{
-				DBG1(DBG_JOB, "deleting half open IKE_SA with %H after "
-					 "timeout", ike_sa->get_other_host(ike_sa));
+				DBG1(DBG_JOB, "deleting half open IKE_SA %s[%u] with %H after "
+					 "timeout", ike_sa->get_name(ike_sa),
+					 ike_sa->get_unique_id(ike_sa),
+					 ike_sa->get_other_host(ike_sa));
 				charon->bus->alert(charon->bus, ALERT_HALF_OPEN_TIMEOUT);
 				charon->ike_sa_manager->checkin_and_destroy(
 												charon->ike_sa_manager, ike_sa);
