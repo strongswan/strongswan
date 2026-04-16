@@ -1,5 +1,8 @@
 alice::iptables-restore < /etc/iptables.rules
 sun::iptables-restore < /etc/iptables.rules
+# make sure packets match the marks set for testing
+sun::iptables -t mangle -A PREROUTING -s PH_IP_MOON -j MARK --set-mark 2
+sun::iptables -t mangle -A PREROUTING -d 10.3.0.3 -j MARK --set-mark 3
 moon::iptables -t nat -A POSTROUTING -o eth0 -s 10.1.0.0/16 -p udp -j SNAT --to-source PH_IP_MOON:1024-1100
 moon::iptables -t nat -A POSTROUTING -o eth0 -s 10.1.0.0/16 -p tcp -j SNAT --to-source PH_IP_MOON:2000-2100
 alice::systemctl start strongswan
