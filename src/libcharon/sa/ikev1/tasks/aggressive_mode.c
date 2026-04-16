@@ -101,7 +101,7 @@ static bool establish(private_aggressive_mode_t *this)
 		return FALSE;
 	}
 
-	DBG0(DBG_IKE, "IKE_SA %s[%d] established between %H[%Y]...%H[%Y]",
+	DBG0(DBG_IKE, "IKE_SA %s[%u] established between %H[%Y]...%H[%Y]",
 		 this->ike_sa->get_name(this->ike_sa),
 		 this->ike_sa->get_unique_id(this->ike_sa),
 		 this->ike_sa->get_my_host(this->ike_sa),
@@ -216,7 +216,7 @@ METHOD(task_t, build_i, status_t,
 			packet_t *packet;
 			uint16_t group;
 
-			DBG0(DBG_IKE, "initiating Aggressive Mode IKE_SA %s[%d] to %H",
+			DBG0(DBG_IKE, "initiating Aggressive Mode IKE_SA %s[%u] to %H",
 				 this->ike_sa->get_name(this->ike_sa),
 				 this->ike_sa->get_unique_id(this->ike_sa),
 				 this->ike_sa->get_other_host(this->ike_sa));

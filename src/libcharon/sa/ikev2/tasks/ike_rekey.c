@@ -153,7 +153,7 @@ static void establish_new(private_ike_rekey_t *this)
 		job_t *job;
 
 		this->new_sa->set_state(this->new_sa, IKE_ESTABLISHED);
-		DBG0(DBG_IKE, "IKE_SA %s[%d] rekeyed between %H[%Y]...%H[%Y]",
+		DBG0(DBG_IKE, "IKE_SA %s[%u] rekeyed between %H[%Y]...%H[%Y]",
 			 this->new_sa->get_name(this->new_sa),
 			 this->new_sa->get_unique_id(this->new_sa),
 			 this->ike_sa->get_my_host(this->ike_sa),
@@ -593,7 +593,7 @@ static bool collision_lost(private_ike_rekey_t *this, bool multi_ke)
 		else
 		{
 			DBG1(DBG_IKE, "IKE_SA rekey collision lost, deleting redundant "
-				 "IKE_SA %s[%d]", this->new_sa->get_name(this->new_sa),
+				 "IKE_SA %s[%u]", this->new_sa->get_name(this->new_sa),
 				 this->new_sa->get_unique_id(this->new_sa));
 			delete_redundant(this);
 		}
@@ -614,14 +614,14 @@ static bool collision_lost(private_ike_rekey_t *this, bool multi_ke)
 		if (multi_ke)
 		{
 			DBG1(DBG_IKE, "IKE_SA rekey collision won, continue with multi-KE "
-				 "rekeying and wait for delete for redundant IKE_SA %s[%d]",
+				 "rekeying and wait for delete for redundant IKE_SA %s[%u]",
 				 other->new_sa->get_name(other->new_sa),
 				 other->new_sa->get_unique_id(other->new_sa));
 		}
 		else
 		{
 			DBG1(DBG_IKE, "IKE_SA rekey collision won, waiting for delete for "
-				 "redundant IKE_SA %s[%d]",
+				 "redundant IKE_SA %s[%u]",
 				 other->new_sa->get_name(other->new_sa),
 				 other->new_sa->get_unique_id(other->new_sa));
 		}

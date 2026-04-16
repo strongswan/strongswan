@@ -907,7 +907,7 @@ METHOD(ike_sa_t, set_state, void,
 {
 	bool trigger_dpd = FALSE, keepalives = FALSE;
 
-	DBG2(DBG_IKE, "IKE_SA %s[%d] state change: %N => %N",
+	DBG2(DBG_IKE, "IKE_SA %s[%u] state change: %N => %N",
 		 get_name(this), this->unique_id,
 		 ike_sa_state_names, this->state,
 		 ike_sa_state_names, state);
@@ -2021,7 +2021,7 @@ METHOD(ike_sa_t, reauth, status_t,
 	}
 	if (this->state == IKE_CONNECTING)
 	{
-		DBG0(DBG_IKE, "reinitiating IKE_SA %s[%d]",
+		DBG0(DBG_IKE, "reinitiating IKE_SA %s[%u]",
 			 get_name(this), this->unique_id);
 		reset(this, TRUE);
 		return this->task_manager->initiate(this->task_manager);
@@ -2036,12 +2036,12 @@ METHOD(ike_sa_t, reauth, status_t,
 		time_t del = this->stats[STAT_DELETE];
 		time_t now = time_monotonic(NULL);
 		DBG1(DBG_IKE, "initiator did not reauthenticate as requested, IKE_SA "
-			 "%s[%d] will timeout in %V", get_name(this), this->unique_id,
+			 "%s[%u] will timeout in %V", get_name(this), this->unique_id,
 			 &now, &del);
 #endif
 		return FAILED;
 	}
-	DBG0(DBG_IKE, "reauthenticating IKE_SA %s[%d]",
+	DBG0(DBG_IKE, "reauthenticating IKE_SA %s[%u]",
 		 get_name(this), this->unique_id);
 	set_condition(this, COND_REAUTHENTICATING, TRUE);
 	this->task_manager->queue_ike_reauth(this->task_manager);

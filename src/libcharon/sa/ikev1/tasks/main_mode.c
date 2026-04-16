@@ -98,7 +98,7 @@ static bool establish(private_main_mode_t *this)
 		return FALSE;
 	}
 
-	DBG0(DBG_IKE, "IKE_SA %s[%d] established between %H[%Y]...%H[%Y]",
+	DBG0(DBG_IKE, "IKE_SA %s[%u] established between %H[%Y]...%H[%Y]",
 		 this->ike_sa->get_name(this->ike_sa),
 		 this->ike_sa->get_unique_id(this->ike_sa),
 		 this->ike_sa->get_my_host(this->ike_sa),
@@ -247,7 +247,7 @@ METHOD(task_t, build_i, status_t,
 			linked_list_t *proposals;
 			packet_t *packet;
 
-			DBG0(DBG_IKE, "initiating Main Mode IKE_SA %s[%d] to %H",
+			DBG0(DBG_IKE, "initiating Main Mode IKE_SA %s[%u] to %H",
 				 this->ike_sa->get_name(this->ike_sa),
 				 this->ike_sa->get_unique_id(this->ike_sa),
 				 this->ike_sa->get_other_host(this->ike_sa));

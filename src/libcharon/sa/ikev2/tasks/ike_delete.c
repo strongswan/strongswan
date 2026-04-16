@@ -54,7 +54,7 @@ METHOD(task_t, build_i, status_t,
 {
 	delete_payload_t *delete_payload;
 
-	DBG0(DBG_IKE, "deleting IKE_SA %s[%d] between %H[%Y]...%H[%Y]",
+	DBG0(DBG_IKE, "deleting IKE_SA %s[%u] between %H[%Y]...%H[%Y]",
 		 this->ike_sa->get_name(this->ike_sa),
 		 this->ike_sa->get_unique_id(this->ike_sa),
 		 this->ike_sa->get_my_host(this->ike_sa),
@@ -71,7 +71,7 @@ METHOD(task_t, build_i, status_t,
 	}
 	this->ike_sa->set_state(this->ike_sa, IKE_DELETING);
 
-	DBG1(DBG_IKE, "sending DELETE for IKE_SA %s[%d]",
+	DBG1(DBG_IKE, "sending DELETE for IKE_SA %s[%u]",
 		 this->ike_sa->get_name(this->ike_sa),
 		 this->ike_sa->get_unique_id(this->ike_sa));
 
@@ -122,10 +122,10 @@ METHOD(task_t, process_r, status_t,
 {
 	/* we don't even scan the payloads, as the message wouldn't have
 	 * come so far without being correct */
-	DBG1(DBG_IKE, "received DELETE for IKE_SA %s[%d]",
+	DBG1(DBG_IKE, "received DELETE for IKE_SA %s[%u]",
 		 this->ike_sa->get_name(this->ike_sa),
 		 this->ike_sa->get_unique_id(this->ike_sa));
-	DBG0(DBG_IKE, "deleting IKE_SA %s[%d] between %H[%Y]...%H[%Y]",
+	DBG0(DBG_IKE, "deleting IKE_SA %s[%u] between %H[%Y]...%H[%Y]",
 		 this->ike_sa->get_name(this->ike_sa),
 		 this->ike_sa->get_unique_id(this->ike_sa),
 		 this->ike_sa->get_my_host(this->ike_sa),

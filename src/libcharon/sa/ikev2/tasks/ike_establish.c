@@ -53,7 +53,7 @@ METHOD(task_t, process_r, status_t,
  */
 static void establish(private_ike_establish_t *this)
 {
-	DBG0(DBG_IKE, "IKE_SA %s[%d] established between %H[%Y]...%H[%Y]",
+	DBG0(DBG_IKE, "IKE_SA %s[%u] established between %H[%Y]...%H[%Y]",
 		 this->ike_sa->get_name(this->ike_sa),
 		 this->ike_sa->get_unique_id(this->ike_sa),
 		 this->ike_sa->get_my_host(this->ike_sa),
