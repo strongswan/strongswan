@@ -19,6 +19,10 @@ alice::swanctl --list-sas --raw 2> /dev/null::mobike.*state=ESTABLISHED local-ho
 sun::  swanctl --list-sas --raw 2> /dev/null::mobike.*state=ESTABLISHED local-host=PH_IP_SUN local-port=4500 local-id=sun.strongswan.org remote-host=PH_IP_MOON remote-port=5... remote-id=alice@strongswan.org.*protocol=ESP encap=yes spi-in.*local-ts=\[10.2.0.0/16] remote-ts=\[10.3.0.3/32]::YES
 alice::ping -c 1 PH_IP_BOB::64 bytes from PH_IP_BOB: icmp_.eq=1::YES
 bob::  ping -c 1 10.3.0.3::64 bytes from 10.3.0.3: icmp_.eq=1::YES
+sun::ip xfrm state::mark 0x2/0xfffffffa output-mark 0x6/0xfffffff6::1
+sun::ip xfrm state::mark 0x3/0xfffffffb output-mark 0x5/0xfffffffd::1
+sun::ip xfrm policy::mark 0x2/0xfffffffa::2
+sun::ip xfrm policy::mark 0x3/0xfffffffb::1
 moon::tcpdump::moon.strongswan.org.*sun.strongswan.org.*: UDP-encap: ESP.*::4
 moon::tcpdump::sun.strongswan.org.*moon.strongswan.org.*: UDP-encap: ESP.*::5
 bob::tcpdump::10.3.0.3.*bob.strongswan.org.*ICMP echo request::2

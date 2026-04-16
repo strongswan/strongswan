@@ -4,3 +4,6 @@ in the subnet behind. When the NAT router <b>moon</b> is restarted, the NAT
 mappings change. <b>alice</b> notices this when sending a DPD and signals the
 change via a MOBIKE ADDRESS_UPDATE notification to peer <b>sun</b>. <b>alice</b> sets
 a virtual IP of 10.3.0.3, so that the IPsec policies don't have to be changed.
+
+To test updating/migrating marks, <b>sun</b> sets all possible marks on the
+SAs it installs, which requires extra firewall rules.
