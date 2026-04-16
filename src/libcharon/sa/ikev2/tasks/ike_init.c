@@ -837,7 +837,7 @@ METHOD(task_t, build_i, status_t,
 
 	ike_cfg = this->ike_sa->get_ike_cfg(this->ike_sa);
 
-	DBG0(DBG_IKE, "initiating IKE_SA %s[%d] to %H",
+	DBG0(DBG_IKE, "initiating IKE_SA %s[%u] to %H",
 		 this->ike_sa->get_name(this->ike_sa),
 		 this->ike_sa->get_unique_id(this->ike_sa),
 		 this->ike_sa->get_other_host(this->ike_sa));
@@ -962,7 +962,9 @@ METHOD(task_t, process_r_multi_ke, status_t,
 METHOD(task_t, process_r,  status_t,
 	private_ike_init_t *this, message_t *message)
 {
-	DBG0(DBG_IKE, "%H is initiating an IKE_SA", message->get_source(message));
+	DBG0(DBG_IKE, "%H is initiating IKE_SA %s[%u]",
+		 message->get_source(message), this->ike_sa->get_name(this->ike_sa),
+		 this->ike_sa->get_unique_id(this->ike_sa));
 	this->ike_sa->set_state(this->ike_sa, IKE_CONNECTING);
 
 	if (!generate_nonce(this))
