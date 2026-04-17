@@ -199,3 +199,36 @@ jobs:
           name: Logs ${{ github.job }}
           path: config.log
           retention-days: 5
+
+  alpine:
+    needs: pre-check
+    if: ${{ needs.pre-check.outputs.should_skip != 'true' }}
+    runs-on: ubuntu-latest
+    container: alpine:latest
+    env:
+      TESTS_REDUCED_KEYLENGTHS: yes
+      TEST: alpine
+      OS_NAME: alpine
+    steps:
+      - uses: actions/checkout@v6
+      # install tar and zstd before the cache action that requires them
+      - run: |
+          apk add ccache tar zstd
+          echo "PATH=/usr/lib/ccache/bin:$PATH" >> $GITHUB_ENV
+      - uses: actions/cache@v5
+        with:
+          path: ~/.cache/ccache
+          key: ccache-alpine-${{ github.sha }}
+          restore-keys: |
+            ccache-alpine-
+      - run: ccache -z
+      # don't use the default action as we don't want to build dependencies or install bash
+      - run: ./scripts/test.sh deps
+      - run: ./scripts/test.sh
+      - run: ccache -sv
+      - if: ${{ failure() }}
+        uses: actions/upload-artifact@v6
+        with:
+          name: Logs ${{ github.job }}
+          path: config.log
+          retention-days: 5
