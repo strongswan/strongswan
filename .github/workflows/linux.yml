@@ -72,9 +72,8 @@ jobs:
           # builds and, similarly, builds with leak-detective only differ in two
           # files (LD itself and library.c); but different tests build different
           # dependencies, so different caches are needed
-          key: ccache-ubuntu-latest-${{ env.CC }}-${{ matrix.test }}-${{ github.sha }}
+          key: ccache-ubuntu-latest-${{ env.CC }}-${{ matrix.test }}
           restore-keys: |
-            ccache-ubuntu-latest-${{ env.CC }}-${{ matrix.test }}-
             ccache-ubuntu-latest-${{ env.CC }}-
       - run: |
           sudo apt-get install -qq ccache
@@ -130,11 +129,9 @@ jobs:
           path: |
             ~/.cache/ccache
             ~/.ccache
-          key: ccache-${{ matrix.os }}-${{ env.CC }}-${{ matrix.test }}-${{ github.sha }}
+          key: ccache-${{ matrix.os }}-${{ env.CC }}-${{ matrix.test }}
           restore-keys: |
-            ccache-${{ matrix.os }}-${{ env.CC }}-${{ matrix.test }}-
-            ccache-${{ matrix.os }}-${{ env.CC }}-all-${{ github.sha }}
-            ccache-${{ matrix.os }}-${{ env.CC }}-all-
+            ccache-${{ matrix.os }}-${{ env.CC }}-all
             ccache-${{ matrix.os }}-${{ env.CC }}-
       - run: |
           sudo apt-get install -qq ccache
@@ -183,9 +180,8 @@ jobs:
           path: |
             ~/.cache/ccache
             ~/.ccache
-          key: ccache-${{ matrix.os }}-${{ env.CC }}-${{ matrix.test }}-${{ github.sha }}
+          key: ccache-${{ matrix.os }}-${{ env.CC }}-${{ matrix.test }}
           restore-keys: |
-            ccache-${{ matrix.os }}-${{ env.CC }}-${{ matrix.test }}-
             ccache-${{ matrix.os }}-${{ env.CC }}-
       - run: |
           sudo apt-get install -qq ccache
@@ -218,9 +214,7 @@ jobs:
       - uses: actions/cache@v5
         with:
           path: ~/.cache/ccache
-          key: ccache-alpine-${{ github.sha }}
-          restore-keys: |
-            ccache-alpine-
+          key: ccache-alpine
       - run: ccache -z
       # don't use the default action as we don't want to build dependencies or install bash
       - run: ./scripts/test.sh deps

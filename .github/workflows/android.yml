@@ -45,9 +45,7 @@ jobs:
       - uses: actions/cache@v5
         with:
           path: ~/.cache/ccache
-          key: ccache-android-${{ github.sha }}
-          restore-keys: |
-            ccache-android-
+          key: ccache-android
       # necessary for newer versions of the Gradle plugin
       - uses: actions/setup-java@v5
         with:
