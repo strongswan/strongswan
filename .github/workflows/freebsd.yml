@@ -1,0 +1,50 @@
+name: FreeBSD
+
+on: [push, pull_request]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  TESTS_REDUCED_KEYLENGTHS: yes
+  LEAK_DETECTIVE: no
+  MONOLITHIC: no
+  TEST: freebsd
+  OS_NAME: freebsd
+
+jobs:
+  pre-check:
+    runs-on: ubuntu-latest
+    outputs:
+      should_skip: ${{ steps.skip-check.outputs.should_skip }}
+    steps:
+      - id: skip-check
+        uses: fkirc/skip-duplicate-actions@master
+        with:
+          concurrent_skipping: 'same_content_newer'
+
+  freebsd:
+    needs: pre-check
+    if: ${{ needs.pre-check.outputs.should_skip != 'true' }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        release: [ "15.0", "14.4" ]
+    steps:
+      - uses: actions/checkout@v6
+      - uses: vmactions/freebsd-vm@v1
+        with:
+          release: ${{ matrix.release }}
+          envs: 'TESTS_REDUCED_KEYLENGTHS LEAK_DETECTIVE MONOLITHIC TEST OS_NAME'
+          disable-cache: true
+          prepare: |
+            ./scripts/test.sh deps
+          run: |
+            ./scripts/test.sh
+      - if: ${{ failure() }}
+        uses: actions/upload-artifact@v6
+        with:
+          name: Logs ${{ github.job }}
+          path: config.log
+          retention-days: 5

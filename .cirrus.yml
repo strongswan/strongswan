@@ -1,22 +1,3 @@
-freebsd_task:
-  matrix:
-    - name: FreeBSD 15.0
-      freebsd_instance:
-        image_family: freebsd-15-0-amd64-ufs
-    - name: FreeBSD 14.3
-      freebsd_instance:
-        image_family: freebsd-14-3
-
-  env:
-    TESTS_REDUCED_KEYLENGTHS: yes
-    LEAK_DETECTIVE: no
-    MONOLITHIC: no
-    TEST: freebsd
-    OS_NAME: freebsd
-
-  install_script: ./scripts/test.sh deps
-  script: ./scripts/test.sh
-
 alpine_task:
   container:
     image: alpine:latest
