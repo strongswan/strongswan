@@ -8,7 +8,6 @@ concurrency:
 
 env:
   TESTS_REDUCED_KEYLENGTHS: yes
-  CCACHE_BASEDIR: ${{ github.workspace }}
   CCACHE_COMPRESS: true
   CCACHE_MAXSIZE: 200M
   # since the compilers are newly installed every time, we have to use this to
@@ -35,6 +34,7 @@ jobs:
       matrix:
         test: [ win64, win32 ]
     env:
+      CCACHE_BASEDIR: ${{ github.workspace }}
       OS_NAME: linux
       TEST: ${{ matrix.test }}
     steps:
@@ -48,8 +48,59 @@ jobs:
       - run: |
           sudo apt-get install -qq ccache
           echo "PATH=/usr/lib/ccache:$PATH" >> $GITHUB_ENV
-          ccache -z
+          ccache -sz
       - uses: ./.github/actions/default
+      - run: ccache -s
+      - if: ${{ failure() }}
+        uses: actions/upload-artifact@v6
+        with:
+          name: Logs ${{ github.job }}
+          path: config.log
+          retention-days: 5
+
+  native:
+    needs: pre-check
+    if: ${{ needs.pre-check.outputs.should_skip != 'true' }}
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        include:
+          - msystem: mingw64
+            arch: x86_64
+            test: win64
+          - msystem: mingw32
+            arch: i686
+            test: win32
+    env:
+      OS_NAME: windows
+      TEST: ${{ matrix.test }}
+    defaults:
+      run:
+        shell: msys2 {0}
+    steps:
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: ${{ matrix.msystem }}
+      - run: git config --global core.autocrlf input
+        shell: bash
+      - uses: actions/checkout@v6
+      - uses: actions/cache@v5
+        with:
+          path: ~\AppData\Local\ccache
+          key: ccache-${{ runner.os }}-${{ matrix.test }}-${{ github.sha }}
+          restore-keys: |
+            ccache-${{ runner.os }}-${{ matrix.test }}-
+      - run: |
+          pacman --noconfirm -S --needed mingw-w64-${{ matrix.arch }}-ccache
+          ccache -sz
+      - run: ./scripts/test.sh deps
+      # GITHUB_ENV doesn't work, so set PATH here
+      - name: Build and run tests
+        run: |
+          PATH=/${{ matrix.msystem }}/lib/ccache/bin:$PATH
+          ./scripts/test.sh
+        # sometimes streaming/threading tests hang completely
+        timeout-minutes: 30
       - run: ccache -s
       - if: ${{ failure() }}
         uses: actions/upload-artifact@v6
