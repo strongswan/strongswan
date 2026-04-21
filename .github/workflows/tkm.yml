@@ -35,7 +35,9 @@ jobs:
       - uses: actions/cache@v5
         with:
           path: ${{ env.CCACHE_DIR }}
-          key: ccache-tkm
+          key: ccache-tkm-${{ github.sha }}
+          restore-keys: |
+            ccache-tkm-
       - name: Build Docker Image
         run: docker build -t strongswan-tkm -f testing/tkm/Dockerfile testing
       - name: Run Tests in Container

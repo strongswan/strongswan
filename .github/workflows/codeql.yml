@@ -54,9 +54,11 @@ jobs:
       uses: actions/cache@v5
       with:
         path: ~/.cache/ccache
-        key: ccache-ubuntu-latest-gcc-codeql
+        key: ccache-ubuntu-latest-gcc-codeql-${{ github.sha }}
         restore-keys: |
-          ccache-ubuntu-latest-gcc-all
+          ccache-ubuntu-latest-gcc-codeql
+          ccache-ubuntu-latest-gcc-all-${{ github.sha }}
+          ccache-ubuntu-latest-gcc-all-
           ccache-ubuntu-latest-gcc-
     - if: matrix.language == 'cpp'
       run: |

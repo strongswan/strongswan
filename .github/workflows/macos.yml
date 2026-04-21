@@ -39,7 +39,9 @@ jobs:
       - uses: actions/cache@v5
         with:
           path: ~/Library/Caches/ccache
-          key: ccache-${{ runner.os }}
+          key: ccache-${{ runner.os }}-${{ github.sha }}
+          restore-keys: |
+            ccache-${{ runner.os }}-
       # workaround for conflict between Python installed in the image and via brew
       - run: find /usr/local/bin -lname '*/Library/Frameworks/Python.framework/*' -delete -print
       - run: |
