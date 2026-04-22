@@ -982,7 +982,7 @@ static bool parse_ipAddrBlock_ext(private_openssl_x509_t *this,
 
 	if (!X509v3_addr_is_canonical(blocks))
 	{
-		sk_IPAddressFamily_free(blocks);
+		sk_IPAddressFamily_pop_free(blocks, IPAddressFamily_free);
 		return FALSE;
 	}
 
