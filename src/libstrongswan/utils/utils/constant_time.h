@@ -16,7 +16,7 @@
 
 /**
  * @defgroup constant_time_i constant_time
- * @{ @ingroup constant_time_i
+ * @{ @ingroup utils_i
  */
 
 #ifndef CONSTANT_TIME_H_
