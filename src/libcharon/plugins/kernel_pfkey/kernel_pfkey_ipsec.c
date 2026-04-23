@@ -1355,7 +1355,7 @@ static void process_acquire(private_kernel_pfkey_ipsec_t *this,
 		reqid = response.x_sa2->sadb_x_sa2_reqid;
 		mode = response.x_sa2->sadb_x_sa2_mode;
 	}
-	else
+	else if (response.x_policy)
 	{
 		index = response.x_policy->sadb_x_policy_id;
 		this->mutex->lock(this->mutex);
@@ -1373,6 +1373,11 @@ static void process_acquire(private_kernel_pfkey_ipsec_t *this,
 		}
 		this->mutex->unlock(this->mutex);
 	}
+	else
+	{
+		DBG1(DBG_KNL, "received SADB_ACQUIRE is missing required information");
+		return;
+	}
 
 	if (reqid)
 	{
@@ -1384,7 +1389,7 @@ static void process_acquire(private_kernel_pfkey_ipsec_t *this,
 		 * only useful in transport mode with wildcard policies. in tunnel mode,
 		 * where narrowing could occur and the sequence number would be
 		 * relevant, these TS are useless and might not even match the policy */
-		if (mode == IPSEC_MODE_TRANSPORT)
+		if (mode == IPSEC_MODE_TRANSPORT && response.src && response.dst)
 		{
 			data.src = sadb_address2ts(response.src);
 			data.dst = sadb_address2ts(response.dst);
@@ -1416,12 +1421,17 @@ static void process_expire(private_kernel_pfkey_ipsec_t *this,
 		DBG1(DBG_KNL, "parsing SADB_EXPIRE from kernel failed");
 		return;
 	}
+	if (!response.sa)
+	{
+		DBG1(DBG_KNL, "received SADB_EXPIRE is missing required information");
+		return;
+	}
 
 	protocol = satype2proto(msg->sadb_msg_satype);
 	spi = response.sa->sadb_sa_spi;
 	hard = response.lft_hard != NULL;
 
-	if (protocol == IPPROTO_ESP || protocol == IPPROTO_AH)
+	if ((protocol == IPPROTO_ESP || protocol == IPPROTO_AH) && response.dst)
 	{
 		dst = host_create_from_sockaddr((sockaddr_t*)(response.dst + 1));
 		if (dst)
@@ -1450,6 +1460,11 @@ static void process_migrate(private_kernel_pfkey_ipsec_t *this,
 	if (parse_pfkey_message(msg, &response) != SUCCESS)
 	{
 		DBG1(DBG_KNL, "parsing SADB_X_MIGRATE from kernel failed");
+		return;
+	}
+	if (!response.src || !response.dst || !response.x_policy)
+	{
+		DBG1(DBG_KNL, "received SADB_X_MIGRATE is missing required information");
 		return;
 	}
 	src_ts = sadb_address2ts(response.src);
