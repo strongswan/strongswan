@@ -194,7 +194,7 @@ static const compsigs_params_t compsigs_params[] = {
 		.prehash = HASH_SHA512,
 		.label = "COMPSIG-MLDSA87-ECDSA-BP384-SHA512",
 	},
-	/*{ FIXME: perhaps define a hash function, or somehow handle the XOF
+	{
 		.type = KEY_MLDSA87_ED448,
 		.ml_dsa = KEY_ML_DSA_87,
 		.ml_dsa_sig = SIGN_ML_DSA_87,
@@ -202,9 +202,9 @@ static const compsigs_params_t compsigs_params[] = {
 		.trad = KEY_ED448,
 		.trad_key_size = 456,
 		.trad_sig = {.scheme = SIGN_ED448, },
-		.prehash = HASH_SHAKE256_64,
+		.prehash = HASH_UNKNOWN,
 		.label = "COMPSIG-MLDSA87-Ed448-SHAKE256",
-	},*/
+	},
 	{
 		.type = KEY_MLDSA87_RSA3072_PSS,
 		.ml_dsa = KEY_ML_DSA_87,
