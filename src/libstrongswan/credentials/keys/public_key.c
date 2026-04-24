@@ -161,10 +161,14 @@ key_type_t public_key_info_decode(chunk_t pkcs1, chunk_t *pubkey)
 							parser->get_level(parser)+1, NULL);
 				break;
 			case PKINFO_SUBJECT_PUBLIC_KEY:
-				if (pubkey && object.len > 0 && *object.ptr == 0x00)
+				if (pubkey)
 				{
-					/* skip initial bit string octet defining 0 unused bits */
-					*pubkey = chunk_skip(object, 1);
+					if (object.len > 0 && *object.ptr == 0x00)
+					{
+						/* skip first bit string byte defining 0 unused bits */
+						object = chunk_skip(object, 1);
+					}
+					*pubkey = object;
 				}
 				break;
 		}
