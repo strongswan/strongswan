@@ -67,15 +67,31 @@ bool compsigs_get_mprime(const compsigs_params_t *params, chunk_t ctx,
 						 chunk_t data, chunk_t *msg)
 {
 	hasher_t *hasher;
+	xof_t *xof;
 	chunk_t ph;
 
-	hasher = lib->crypto->create_hasher(lib->crypto, params->prehash);
-	if (!hasher || !hasher->allocate_hash(hasher, data, &ph))
+	/* special case this type as it's the only one with an XOF */
+	if (params->type == KEY_MLDSA87_ED448)
 	{
-		DESTROY_IF(hasher);
-		return FALSE;
+		xof = lib->crypto->create_xof(lib->crypto, XOF_SHAKE_256);
+		if (!xof || !xof->set_seed(xof, data) ||
+			!xof->allocate_bytes(xof, 64, &ph))
+		{
+			DESTROY_IF(xof);
+			return FALSE;
+		}
+		xof->destroy(xof);
 	}
-	hasher->destroy(hasher);
+	else
+	{
+		hasher = lib->crypto->create_hasher(lib->crypto, params->prehash);
+		if (!hasher || !hasher->allocate_hash(hasher, data, &ph))
+		{
+			DESTROY_IF(hasher);
+			return FALSE;
+		}
+		hasher->destroy(hasher);
+	}
 
 	*msg = chunk_cat("cccm", chunk_from_str(COMPSIG_PREFIX),
 					 chunk_from_str((char*)params->label), ctx, ph);
