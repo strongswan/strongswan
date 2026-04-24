@@ -12449,7 +12449,7 @@ START_TEST(test_compsigs_sig)
 
 	/* traditional part of the signature incorrect */
 	signature = chunk_clone(tests[_i].sig);
-	signature.ptr[signature.len-1] = 0;
+	signature.ptr[signature.len-1] = 0xff;
 	ck_assert(!pubkey->verify(pubkey, scheme, NULL, msg, signature));
 	chunk_free(&signature);
 
