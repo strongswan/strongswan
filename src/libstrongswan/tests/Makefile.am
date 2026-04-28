@@ -68,7 +68,8 @@ libstrongswan_tests_SOURCES = tests.h tests.c \
   suites/test_ed448.c \
   suites/test_signature_params.c \
   suites/test_metadata.c \
-  suites/test_metadata_set.c
+  suites/test_metadata_set.c \
+  suites/test_x509.c
 
 libstrongswan_tests_CFLAGS = \
   -I$(top_srcdir)/src/libstrongswan \
