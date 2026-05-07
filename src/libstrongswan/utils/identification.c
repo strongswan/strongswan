@@ -1766,7 +1766,7 @@ static private_identification_t *identification_create(id_type_t type)
 			this->public.hash = _hash_binary;
 			this->public.equals = _equals_binary;
 			this->public.matches = _matches_any;
-			this->public.contains_wildcards = (void*)return_true;
+			this->public.contains_wildcards = (bool (*) (identification_t *)) return_true_with_arg;
 			break;
 		case ID_FQDN:
 		case ID_RFC822_ADDR:
@@ -1801,13 +1801,13 @@ static private_identification_t *identification_create(id_type_t type)
 			this->public.hash = _hash_binary;
 			this->public.equals = _equals_binary;
 			this->public.matches = _matches_range;
-			this->public.contains_wildcards = (void*)return_false;
+			this->public.contains_wildcards = (bool (*) (identification_t *)) return_false_with_arg;
 			break;
 		default:
 			this->public.hash = _hash_binary;
 			this->public.equals = _equals_binary;
 			this->public.matches = _matches_binary;
-			this->public.contains_wildcards = (void*)return_false;
+			this->public.contains_wildcards = (bool (*) (identification_t *)) return_false_with_arg;
 			break;
 	}
 	return this;
