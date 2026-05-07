@@ -1,0 +1,75 @@
+#! /bin/bash
+
+TEST=${1:-ikev2/rw-psk-ipv4}
+
+: ${NAME_PREFIX:=strongswan}
+: ${IMAGE_NAME:=strongswan-testing}
+: ${DOCKER_NET:=strongswan}
+: ${NET_PREFIX:=192.168.0.}
+
+. tests/$TEST/test.conf
+
+echo "hosts in test: $IPSECHOSTS"
+
+set -e
+
+if true; then # XXX
+
+for host in $IPSECHOSTS
+do
+    image=$IMAGE_NAME:$host
+
+    docker build . -t $image --build-arg NET_PREFIX=$NET_PREFIX --build-arg TEST=$TEST --build-arg HOST=$host
+
+    name=${NAME_PREFIX}-$host
+    docker rm -f $name ||true
+
+    opts=""
+
+    for host2 in $IPSECHOSTS
+    do
+        case $host2 in
+        moon)     n=1  ;;
+        carol)    n=100 ;;
+        dave)     n=200 ;;
+        **) echo "unknown host: $host"; exit 1 ;;
+        esac
+
+        ip=${NET_PREFIX}$n
+
+        if [ $host = $host2 ]; then
+            my_ip=$ip
+        else
+            opts="$opts --add-host $host2:$ip"
+        fi
+    done
+
+    echo "host $host IP is $my_ip"
+
+    docker run -d --name $name \
+        --cap-add NET_ADMIN \
+        --net $DOCKER_NET \
+        --hostname $host --ip $my_ip \
+        $opts \
+        $image
+done
+
+fi # XXX
+
+script=pretest.dat
+
+set +e
+
+cat tests/$TEST/$script | ( while IFS="\n" read line; do
+    host="${line%::*}"
+    cmd="${line#*::}"
+
+    # skip VM-specific commands
+    if [ "$cmd" = "systemctl start strongswan" ]; then continue; fi
+
+    name=${NAME_PREFIX}-$host
+
+    echo "$host\$ $cmd"
+    docker exec $name sh -c "$cmd"
+done)
+
