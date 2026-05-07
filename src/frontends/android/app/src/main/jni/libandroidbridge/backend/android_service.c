@@ -31,7 +31,7 @@
 #include <processing/jobs/callback_job.h>
 #include <threading/rwlock.h>
 #include <threading/thread.h>
-
+#include <sys/poll.h>
 typedef struct private_android_service_t private_android_service_t;
 
 /**
@@ -133,16 +133,16 @@ static job_requeue_t handle_plain(private_android_service_t *this)
 {
 	ip_packet_t *packet;
 	chunk_t raw;
-	fd_set set;
+	//fd_set set; // commednted by aftab
 	ssize_t len;
 	int tunfd;
 	bool old, dns_proxy;
-	timeval_t tv = {
-		/* check every second if tunfd is still valid */
-		.tv_sec = 1,
-	};
+//	timeval_t tv = {
+//		/* check every second if tunfd is still valid */
+//		.tv_sec = 1,
+//	};
 
-	FD_ZERO(&set);
+	//FD_ZERO(&set); // commednted by aftab
 
 	this->lock->read_lock(this->lock);
 	if (this->tunfd < 0)
@@ -151,13 +151,18 @@ static job_requeue_t handle_plain(private_android_service_t *this)
 		return JOB_REQUEUE_NONE;
 	}
 	tunfd = this->tunfd;
-	FD_SET(tunfd, &set);
+	//FD_SET(tunfd, &set); // commednted by aftab
 	/* cache this while we have the lock */
 	dns_proxy = this->use_dns_proxy;
 	this->lock->unlock(this->lock);
 
 	old = thread_cancelability(TRUE);
-	len = select(tunfd + 1, &set, NULL, NULL, &tv);
+	//len = select(tunfd + 1, &set, NULL, NULL, &tv); // commednted by aftab
+	struct pollfd pfd_read;
+    int timeout = 1000;
+    pfd_read.fd = tunfd;
+    pfd_read.events = POLLIN;
+	len = poll(&pfd_read, 1, timeout);
 	thread_cancelability(old);
 
 	if (len < 0)
