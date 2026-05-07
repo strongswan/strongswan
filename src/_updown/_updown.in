@@ -257,6 +257,11 @@ up-host:iptables)
 	      -s $PLUTO_PEER -d $PLUTO_ME $IPSEC_POLICY_IN -j ACCEPT
 	fi
 	#
+	# do not masquerade IPsec traffic
+	iptables -t nat -I POSTROUTING 1 -p $PLUTO_PEER_PROTOCOL \
+	    -s $PLUTO_MY_CLIENT $S_MY_PORT \
+	    -d $PLUTO_PEER_CLIENT $D_PEER_PORT $IPSEC_POLICY_OUT -j ACCEPT
+	#
 	# log IPsec host connection setup
 	if [ $VPN_LOGGING ]
 	then
@@ -287,6 +292,11 @@ down-host:iptables)
 	  iptables -D INPUT -i $PLUTO_INTERFACE -p 4 \
 	      -s $PLUTO_PEER -d $PLUTO_ME $IPSEC_POLICY_IN -j ACCEPT
 	fi
+	#
+	# masquerading exception teardown
+	iptables -t nat -D POSTROUTING -p $PLUTO_PEER_PROTOCOL \
+	    -s $PLUTO_MY_CLIENT $S_MY_PORT \
+	    -d $PLUTO_PEER_CLIENT $D_PEER_PORT $IPSEC_POLICY_OUT -j ACCEPT
 	#
 	# log IPsec host connection teardown
 	if [ $VPN_LOGGING ]
@@ -335,6 +345,11 @@ up-client:iptables)
 	  iptables -I INPUT 1 -i $PLUTO_INTERFACE -p 4 \
 	      -s $PLUTO_PEER -d $PLUTO_ME $IPSEC_POLICY_IN -j ACCEPT
 	fi
+	#
+	# do not masquerade IPsec traffic
+	iptables -t nat -I POSTROUTING 1 -p $PLUTO_PEER_PROTOCOL \
+	    -s $PLUTO_MY_CLIENT $S_MY_PORT \
+	    -d $PLUTO_PEER_CLIENT $D_PEER_PORT $IPSEC_POLICY_OUT -j ACCEPT
 	#
 	# log IPsec client connection setup
 	if [ $VPN_LOGGING ]
@@ -385,6 +400,11 @@ down-client:iptables)
 	  iptables -D INPUT -i $PLUTO_INTERFACE -p 4 \
 	      -s $PLUTO_PEER -d $PLUTO_ME $IPSEC_POLICY_IN -j ACCEPT
 	fi
+	#
+	# masquerading exception teardown
+	iptables -t nat -D POSTROUTING -p $PLUTO_PEER_PROTOCOL \
+	    -s $PLUTO_MY_CLIENT $S_MY_PORT \
+	    -d $PLUTO_PEER_CLIENT $D_PEER_PORT $IPSEC_POLICY_OUT -j ACCEPT
 	#
 	# log IPsec client connection teardown
 	if [ $VPN_LOGGING ]
