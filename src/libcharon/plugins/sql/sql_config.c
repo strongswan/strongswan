@@ -165,12 +165,19 @@ static void add_esp_proposals(private_sql_config_t *this,
 static child_cfg_t *build_child_cfg(private_sql_config_t *this, enumerator_t *e)
 {
 	int id, lifetime, rekeytime, jitter, hostaccess, mode, ipcomp, reqid;
-	int start, dpd, close;
-	char *name, *updown;
+	int start, dpd, close, if_id_in, if_id_out, inactivity, tfc, hw_offload;
+	int copy_dscp;
+	char *name, *updown, *interface;
+	mark_t mark_in, mark_out, set_mark_in, set_mark_out;
 	child_cfg_t *child_cfg;
 
 	if (e->enumerate(e, &id, &name, &lifetime, &rekeytime, &jitter, &updown,
-						&hostaccess, &mode, &start, &dpd, &close, &ipcomp, &reqid))
+						&hostaccess, &mode, &start, &dpd, &close, &ipcomp, &reqid,
+						&if_id_in, &if_id_out, &mark_in.value, &mark_in.mask,
+						&mark_out.value, &mark_out.mask, &set_mark_in.value,
+						&set_mark_in.mask, &set_mark_out.value,
+						&set_mark_out.mask, &inactivity, &tfc, &interface,
+						&hw_offload, &copy_dscp))
 	{
 		child_cfg_create_t child = {
 			.mode = mode,
@@ -186,6 +193,17 @@ static child_cfg_t *build_child_cfg(private_sql_config_t *this, enumerator_t *e)
 			.dpd_action = dpd,
 			.close_action = close,
 			.updown = updown,
+			.if_id_in = if_id_in,
+			.if_id_out = if_id_out,
+			.mark_in = mark_in,
+			.mark_out = mark_out,
+			.set_mark_in = set_mark_in,
+			.set_mark_out = set_mark_out,
+			.inactivity = inactivity,
+			.tfc = tfc,
+			.interface = interface,
+			.hw_offload = hw_offload,
+			.copy_dscp = copy_dscp,
 		};
 		child_cfg = child_cfg_create(name, &child);
 		add_esp_proposals(this, child_cfg, id);
@@ -206,12 +224,18 @@ static void add_child_cfgs(private_sql_config_t *this, peer_cfg_t *peer, int id)
 	e = this->db->query(this->db,
 			"SELECT c.id, c.name, c.lifetime, c.rekeytime, c.jitter, c.updown, "
 			"c.hostaccess, c.mode, c.start_action, c.dpd_action, "
-			"c.close_action, c.ipcomp, c.reqid "
+			"c.close_action, c.ipcomp, c.reqid, c.if_id_in, c.if_id_out, "
+			"c.mark_in, c.mark_in_mask, c.mark_out, c.mark_out_mask, "
+			"c.set_mark_in, c.set_mark_in_mask, c.set_mark_out, "
+			"c.set_mark_out_mask, c.inactivity, c.tfc, c.interface, "
+			"c.hw_offload, c.copy_dscp "
 			"FROM child_configs AS c JOIN peer_config_child_config AS pc "
 			"ON c.id = pc.child_cfg WHERE pc.peer_cfg = ?",
 			DB_INT, id,
 			DB_INT, DB_TEXT, DB_INT, DB_INT, DB_INT, DB_TEXT, DB_INT,
-			DB_INT, DB_INT, DB_INT, DB_INT, DB_INT, DB_INT);
+			DB_INT, DB_INT, DB_INT, DB_INT, DB_INT, DB_INT, DB_INT, DB_INT,
+			DB_INT, DB_INT, DB_INT, DB_INT, DB_INT, DB_INT, DB_INT, DB_INT,
+			DB_INT, DB_INT, DB_TEXT, DB_INT, DB_INT);
 	if (e)
 	{
 		while ((child_cfg = build_child_cfg(this, e)))
@@ -326,7 +350,8 @@ static peer_cfg_t *get_peer_cfg_by_id(private_sql_config_t *this, int id)
 			"c.cert_policy, c.uniqueid, c.auth_method, c.eap_type, "
 			"c.eap_vendor, c.keyingtries, c.rekeytime, c.reauthtime, c.jitter, "
 			"c.overtime, c.mobike, c.dpd_delay, c.virtual, c.pool, "
-			"c.mediation, c.mediated_by, COALESCE(p.type, 0), p.data "
+			"c.mediation, c.mediated_by, c.if_id_in, c.if_id_out, "
+			"COALESCE(p.type, 0), p.data "
 			"FROM peer_configs AS c "
 			"JOIN identities AS l ON c.local_id = l.id "
 			"JOIN identities AS r ON c.remote_id = r.id "
@@ -337,7 +362,7 @@ static peer_cfg_t *get_peer_cfg_by_id(private_sql_config_t *this, int id)
 			DB_INT, DB_INT, DB_INT, DB_INT, DB_INT,
 			DB_INT, DB_INT, DB_INT, DB_INT, DB_INT, DB_INT,
 			DB_INT, DB_TEXT, DB_TEXT,
-			DB_INT, DB_INT, DB_INT, DB_BLOB);
+			DB_INT, DB_INT, DB_INT, DB_INT, DB_INT, DB_BLOB);
 	if (e)
 	{
 		peer_cfg = build_peer_cfg(this, e, NULL, NULL);
@@ -364,7 +389,7 @@ static peer_cfg_t *build_peer_cfg(private_sql_config_t *this, enumerator_t *e,
 	int id, ike_cfg, l_type, r_type,
 		cert_policy, uniqueid, auth_method, eap_type, eap_vendor, keyingtries,
 		rekeytime, reauthtime, jitter, overtime, mobike, dpd_delay,
-		mediation, mediated_by, p_type;
+		mediation, mediated_by, if_id_in, if_id_out, p_type;
 	chunk_t l_data, r_data, p_data;
 	char *name, *virtual, *pool;
 	enumerator_t *enumerator;
@@ -374,7 +399,7 @@ static peer_cfg_t *build_peer_cfg(private_sql_config_t *this, enumerator_t *e,
 			&cert_policy, &uniqueid, &auth_method, &eap_type, &eap_vendor,
 			&keyingtries, &rekeytime, &reauthtime, &jitter, &overtime, &mobike,
 			&dpd_delay,	&virtual, &pool,
-			&mediation, &mediated_by, &p_type, &p_data))
+			&mediation, &mediated_by, &if_id_in, &if_id_out, &p_type, &p_data))
 	{
 		identification_t *local_id, *remote_id, *peer_id = NULL;
 		peer_cfg_t *peer_cfg, *mediated_cfg = NULL;
@@ -417,6 +442,8 @@ static peer_cfg_t *build_peer_cfg(private_sql_config_t *this, enumerator_t *e,
 				.over_time = overtime,
 				.options = (mobike ? 0 : OPT_NO_MOBIKE),
 				.dpd = dpd_delay,
+				.if_id_in = if_id_in,
+				.if_id_out = if_id_out,
 #ifdef ME
 				.mediation = mediation,
 				.mediated_by = mediated_cfg ?
@@ -481,7 +508,8 @@ METHOD(backend_t, get_peer_cfg_by_name, peer_cfg_t*,
 			"c.cert_policy, c.uniqueid, c.auth_method, c.eap_type, "
 			"c.eap_vendor, c.keyingtries, c.rekeytime, c.reauthtime, c.jitter, "
 			"c.overtime, c.mobike, c.dpd_delay, c.virtual, c.pool, "
-			"c.mediation, c.mediated_by, COALESCE(p.type, 0), p.data "
+			"c.mediation, c.mediated_by, c.if_id_in, c.if_id_out, "
+			"COALESCE(p.type, 0), p.data "
 			"FROM peer_configs AS c "
 			"JOIN identities AS l ON c.local_id = l.id "
 			"JOIN identities AS r ON c.remote_id = r.id "
@@ -492,7 +520,7 @@ METHOD(backend_t, get_peer_cfg_by_name, peer_cfg_t*,
 			DB_INT, DB_INT, DB_INT, DB_INT, DB_INT,
 			DB_INT, DB_INT, DB_INT, DB_INT, DB_INT, DB_INT,
 			DB_INT, DB_TEXT, DB_TEXT,
-			DB_INT, DB_INT,	DB_INT, DB_BLOB);
+			DB_INT, DB_INT,	DB_INT, DB_INT, DB_INT, DB_BLOB);
 	if (e)
 	{
 		peer_cfg = build_peer_cfg(this, e, NULL, NULL);
@@ -629,7 +657,8 @@ METHOD(backend_t, create_peer_cfg_enumerator, enumerator_t*,
 			"c.cert_policy, c.uniqueid, c.auth_method, c.eap_type, "
 			"c.eap_vendor, c.keyingtries, c.rekeytime, c.reauthtime, c.jitter, "
 			"c.overtime, c.mobike, c.dpd_delay, c.virtual, c.pool, "
-			"c.mediation, c.mediated_by, COALESCE(p.type, 0), p.data "
+			"c.mediation, c.mediated_by, c.if_id_in, c.if_id_out, "
+			"COALESCE(p.type, 0), p.data "
 			"FROM peer_configs AS c "
 			"JOIN identities AS l ON c.local_id = l.id "
 			"JOIN identities AS r ON c.remote_id = r.id "
@@ -640,7 +669,7 @@ METHOD(backend_t, create_peer_cfg_enumerator, enumerator_t*,
 			DB_INT, DB_INT, DB_INT, DB_INT, DB_INT,
 			DB_INT, DB_INT, DB_INT, DB_INT, DB_INT, DB_INT,
 			DB_INT,	DB_TEXT, DB_TEXT,
-			DB_INT, DB_INT, DB_INT, DB_BLOB);
+			DB_INT, DB_INT, DB_INT, DB_INT, DB_INT, DB_BLOB);
 	if (!e->inner)
 	{
 		free(e);
