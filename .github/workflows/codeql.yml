@@ -7,11 +7,6 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  CCACHE_BASEDIR: ${{ github.workspace }}
-  CCACHE_COMPRESS: true
-  CCACHE_MAXSIZE: 200M
-  # CodeQL currently doesn't support ccache
-  CCACHE_DISABLE: true
   OS_NAME: linux
 
 jobs:
@@ -48,38 +43,10 @@ jobs:
       name: Autobuild
       uses: github/codeql-action/autobuild@v4
 
-    # this follows the steps of the Linux workflow
-    - if: matrix.language == 'cpp'
-      uses: actions/cache/restore@v5
-      id: cache-restore
-      with:
-        path: ~/.cache/ccache
-        key: ccache-ubuntu-latest-gcc-codeql
-        restore-keys: |
-          ccache-ubuntu-latest-gcc-all
-          ccache-ubuntu-latest-gcc-
-    - if: matrix.language == 'cpp'
-      run: |
-          sudo apt-get install -qq ccache
-          echo "PATH=/usr/lib/ccache:$PATH" >> $GITHUB_ENV
-          ccache -z
     - if: matrix.language == 'cpp'
       env:
         TEST: codeql
       uses: ./.github/actions/default
-    - if: matrix.language == 'cpp'
-      run: ccache -sv
-    # delete old cache entry as we currently can't update it any other way
-    - if: matrix.language == 'cpp' && steps.cache-restore.outputs.cache-hit
-      env:
-        GH_TOKEN: ${{ github.token }}
-      continue-on-error: true
-      run: gh cache delete -r ${{ github.ref }} ${{ steps.cache-restore.outputs.cache-primary-key }}
-    - if: matrix.language == 'cpp'
-      uses: actions/cache/save@v5
-      with:
-        path: ~/.cache/ccache
-        key: ${{ steps.cache-restore.outputs.cache-primary-key }}
 
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v4
