@@ -175,7 +175,7 @@ jobs:
           retention-days: 5
       - name: Verify active transforms
         run: |
-          test ! -f $ACTIVE_TRANSFORMS_REF || diff -u --color=always $ACTIVE_TRANSFORMS_REF $TESTS_ACTIVE_TRANSFORMS
+          test ! -f $ACTIVE_TRANSFORMS_REF || diff -us --color=always $ACTIVE_TRANSFORMS_REF $TESTS_ACTIVE_TRANSFORMS
       - run: ccache -sv
       # delete old cache entry as we currently can't update it any other way
       - env:
