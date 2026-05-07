@@ -86,8 +86,6 @@ jobs:
           # files (LD itself and library.c); but different tests build different
           # dependencies, so different caches are needed
           key: ccache-ubuntu-latest-${{ env.CC }}-${{ matrix.test }}
-          restore-keys: |
-            ccache-ubuntu-latest-${{ env.CC }}-
       - run: |
           sudo apt-get install -qq ccache
           echo "PATH=/usr/lib/ccache:$PATH" >> $GITHUB_ENV
@@ -158,9 +156,6 @@ jobs:
             ~/.cache/ccache
             ~/.ccache
           key: ccache-${{ matrix.os }}-${{ env.CC }}-${{ matrix.test }}
-          restore-keys: |
-            ccache-${{ matrix.os }}-${{ env.CC }}-all
-            ccache-${{ matrix.os }}-${{ env.CC }}-
       - run: |
           sudo apt-get install -qq ccache
           echo "PATH=/usr/lib/ccache:$PATH" >> $GITHUB_ENV
@@ -223,8 +218,6 @@ jobs:
             ~/.cache/ccache
             ~/.ccache
           key: ccache-${{ matrix.os }}-${{ env.CC }}-${{ matrix.test }}
-          restore-keys: |
-            ccache-${{ matrix.os }}-${{ env.CC }}-
       - run: |
           sudo apt-get install -qq ccache
           echo "PATH=/usr/lib/ccache:$PATH" >> $GITHUB_ENV
