@@ -79,10 +79,11 @@ jobs:
       # delete old cache entry as we currently can't update it any other way
       - env:
           GH_TOKEN: ${{ github.token }}
-        if: steps.cache-restore.outputs.cache-hit
+        if: github.event_name == 'push' && steps.cache-restore.outputs.cache-hit
         continue-on-error: true
         run: gh cache delete -r ${{ github.ref }} ${{ steps.cache-restore.outputs.cache-primary-key }}
-      - uses: actions/cache/save@v5
+      - if: github.event_name == 'push'
+        uses: actions/cache/save@v5
         with:
           path: ${{ env.CCACHE_DIR }}
           key: ${{ steps.cache-restore.outputs.cache-primary-key }}

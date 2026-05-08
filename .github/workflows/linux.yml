@@ -71,9 +71,10 @@ jobs:
       # one specific config in case there is a race
       STORE_CACHE: >-
         ${{
-          !contains(fromJSON('["all", "default", "printf-builtin"]'),
+          github.event_name == 'push' &&
+          (!contains(fromJSON('["all", "default", "printf-builtin"]'),
                     matrix.test) ||
-          (matrix.leak-detective == 'no' && matrix.monolithic == 'no')
+           (matrix.leak-detective == 'no' && matrix.monolithic == 'no'))
         }}
     steps:
       - uses: actions/checkout@v6
@@ -145,7 +146,9 @@ jobs:
       CC: ${{ matrix.compiler || 'gcc' }}
       TEST: ${{ matrix.test }}
       ACTIVE_TRANSFORMS_REF: .github/active-transforms/${{ matrix.test }}
-      STORE_CACHE: ${{ !matrix.leak-detective || matrix.leak-detective == 'no' }}
+      STORE_CACHE: >-
+        ${{ github.event_name == 'push' &&
+            (!matrix.leak-detective || matrix.leak-detective == 'no') }}
     steps:
       - uses: actions/checkout@v6
       - uses: actions/cache/restore@v5
@@ -227,10 +230,11 @@ jobs:
       # delete old cache entry as we currently can't update it any other way
       - env:
           GH_TOKEN: ${{ github.token }}
-        if: steps.cache-restore.outputs.cache-hit
+        if: github.event_name == 'push' && steps.cache-restore.outputs.cache-hit
         continue-on-error: true
         run: gh cache delete -r ${{ github.ref }} ${{ steps.cache-restore.outputs.cache-primary-key }}
-      - uses: actions/cache/save@v5
+      - if: github.event_name == 'push'
+        uses: actions/cache/save@v5
         with:
           path: |
             ~/.cache/ccache
@@ -271,10 +275,11 @@ jobs:
       # delete old cache entry as we currently can't update it any other way
       - env:
           GH_TOKEN: ${{ github.token }}
-        if: steps.cache-restore.outputs.cache-hit
+        if: github.event_name == 'push' && steps.cache-restore.outputs.cache-hit
         continue-on-error: true
         run: gh cache delete --repo ${{ github.repository }} -r ${{ github.ref }} ${{ steps.cache-restore.outputs.cache-primary-key }}
-      - uses: actions/cache/save@v5
+      - if: github.event_name == 'push'
+        uses: actions/cache/save@v5
         with:
           path: ~/.cache/ccache
           key: ${{ steps.cache-restore.outputs.cache-primary-key }}
