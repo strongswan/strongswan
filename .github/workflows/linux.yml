@@ -39,12 +39,8 @@ jobs:
       matrix:
         test: [ all, default, printf-builtin ]
         compiler: [ gcc, clang ]
-        leak-detective: [ no, yes ]
         monolithic: [ no, yes ]
         exclude:
-          # leaks will show up whether we build monolithic or not
-          - leak-detective: yes
-            monolithic: yes
           # monolithic builds don't affect the printf-hook implementation
           - test: printf-builtin
             monolithic: yes
@@ -52,6 +48,8 @@ jobs:
           - test: apidoc
           - test: coverage
           - test: dist
+          - test: ld
+            leak-detective: yes
           - test: nm
           - test: no-dbg
           - test: no-dbg
@@ -72,21 +70,27 @@ jobs:
       STORE_CACHE: >-
         ${{
           github.event_name == 'push' &&
+          !contains(fromJSON('["apidoc"]'), matrix.test) &&
           (!contains(fromJSON('["all", "default", "printf-builtin"]'),
-                    matrix.test) ||
-           (matrix.leak-detective == 'no' && matrix.monolithic == 'no'))
+                     matrix.test) ||
+           ((!matrix.leak-detective || matrix.leak-detective == 'no') &&
+            matrix.monolithic == 'no'))
         }}
+      # with regards to ccache, monolithic builds don't differ from regular
+      # builds; but some tests build different dependencies or use different
+      # compiler flags, so we use different caches for these
+      CACHE_KEY: >-
+        ${{ case(contains(fromJSON('["apidoc"]'), matrix.test),
+              'ccache-ubuntu-latest-gcc-default',
+              format('ccache-ubuntu-latest-{0}-{1}', matrix.compiler || 'gcc',
+                     matrix.test)) }}
     steps:
       - uses: actions/checkout@v6
       - uses: actions/cache/restore@v5
         id: cache-restore
         with:
           path: ~/.cache/ccache
-          # with regards to ccache, monolithic builds don't differ from regular
-          # builds and, similarly, builds with leak-detective only differ in two
-          # files (LD itself and library.c); but different tests build different
-          # dependencies, so different caches are needed
-          key: ccache-ubuntu-latest-${{ env.CC }}-${{ matrix.test }}
+          key: ${{ env.CACHE_KEY }}
       - run: |
           sudo apt-get install -qq ccache
           echo "PATH=/usr/lib/ccache:$PATH" >> $GITHUB_ENV
@@ -128,7 +132,6 @@ jobs:
       matrix:
         test: [ botan, wolfssl, openssl-sys, openssl-3, openssl-4, openssl-awslc, gcrypt ]
         os: [ ubuntu-latest, ubuntu-22.04 ]
-        leak-detective: [ no, yes ]
         exclude:
           # test custom-built libs only on the latest platform
           - os: ubuntu-22.04
@@ -174,7 +177,7 @@ jobs:
       - name: Upload active transforms
         uses: actions/upload-artifact@v6
         with:
-          name: active-transforms-${{ matrix.test }}-${{ matrix.os }}-${{ matrix.leak-detective }}
+          name: active-transforms-${{ matrix.test }}-${{ matrix.os }}
           path: ${{ env.TESTS_ACTIVE_TRANSFORMS }}
           retention-days: 5
       - name: Verify active transforms

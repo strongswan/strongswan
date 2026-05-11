@@ -211,7 +211,7 @@ DEPS="libgmp-dev"
 CFLAGS="-g -O2"
 
 case "$TEST" in
-default)
+default|ld)
 	# should be the default, but lets make sure
 	CONFIG="--with-printf-hooks=glibc"
 	if system_uses_openssl3; then
