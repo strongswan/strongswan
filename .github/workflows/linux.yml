@@ -146,19 +146,25 @@ jobs:
       CC: ${{ matrix.compiler || 'gcc' }}
       TEST: ${{ matrix.test }}
       ACTIVE_TRANSFORMS_REF: .github/active-transforms/${{ matrix.test }}
+      # only store a cache for some tests as the others have a minimal diff (if
+      # any) compared to the 'all' build
       STORE_CACHE: >-
         ${{ github.event_name == 'push' &&
+            contains(fromJSON('["openssl-4", "openssl-awslc"]'), matrix.test) &&
             (!matrix.leak-detective || matrix.leak-detective == 'no') }}
+      CACHE_KEY: >-
+        ${{ case(contains(fromJSON('["openssl-4", "openssl-awslc"]'), matrix.test),
+              format('ccache-{0}-gcc-{1}', matrix.os, matrix.test),
+              matrix.os == 'ubuntu-latest' && matrix.test == 'openssl-sys',
+              format('ccache-{0}-gcc-default', matrix.os),
+              format('ccache-{0}-gcc-all', matrix.os)) }}
     steps:
       - uses: actions/checkout@v6
       - uses: actions/cache/restore@v5
         id: cache-restore
         with:
-          # path is different on newer systems
-          path: |
-            ~/.cache/ccache
-            ~/.ccache
-          key: ccache-${{ matrix.os }}-${{ env.CC }}-${{ matrix.test }}
+          path: ~/.cache/ccache
+          key: ${{ env.CACHE_KEY }}
       - run: |
           sudo apt-get install -qq ccache
           echo "PATH=/usr/lib/ccache:$PATH" >> $GITHUB_ENV
@@ -184,9 +190,7 @@ jobs:
       - if: fromJSON(env.STORE_CACHE)
         uses: actions/cache/save@v5
         with:
-          path: |
-            ~/.cache/ccache
-            ~/.ccache
+          path: ~/.cache/ccache
           key: ${{ steps.cache-restore.outputs.cache-primary-key }}
       - if: ${{ failure() }}
         uses: actions/upload-artifact@v6
@@ -216,10 +220,7 @@ jobs:
       - uses: actions/cache/restore@v5
         id: cache-restore
         with:
-          # path is different on newer systems
-          path: |
-            ~/.cache/ccache
-            ~/.ccache
+          path: ~/.cache/ccache
           key: ccache-${{ matrix.os }}-${{ env.CC }}-${{ matrix.test }}
       - run: |
           sudo apt-get install -qq ccache
@@ -236,9 +237,7 @@ jobs:
       - if: github.event_name == 'push'
         uses: actions/cache/save@v5
         with:
-          path: |
-            ~/.cache/ccache
-            ~/.ccache
+          path: ~/.cache/ccache
           key: ${{ steps.cache-restore.outputs.cache-primary-key }}
       - if: ${{ failure() }}
         uses: actions/upload-artifact@v6
