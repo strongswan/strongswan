@@ -104,17 +104,6 @@ build_openssl()
 		return
 	fi
 
-	if test "$LEAK_DETECTIVE" = "yes"; then
-		# insist on compiling with gcc and debug information as symbols are
-		# otherwise not found, but we can disable SRP (see below)
-		SSL_OPT="$SSL_OPT no-srp CC=gcc -d"
-	elif test "$CC" != "clang"; then
-		# when using ASan with clang, llvm-symbolizer is used to resolve symbols
-		# and this tool links libcurl, which in turn requires SRP, so we can
-		# only disable it when not building with clang
-		SSL_OPT="$SSL_OPT no-srp"
-	fi
-
 	echo "$ build_openssl()"
 
 	git clone https://github.com/openssl/openssl.git --depth 1 -b $SSL_REV $SSL_DIR || exit $?
