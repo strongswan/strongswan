@@ -12,7 +12,7 @@ permissions:
 env:
   TESTS_REDUCED_KEYLENGTHS: yes
   CCACHE_COMPRESS: true
-  CCACHE_MAXSIZE: 200M
+  CCACHE_MAXSIZE: 100M
   # since the compilers are newly installed every time, we have to use this to
   # avoid cache misses
   CCACHE_COMPILERCHECK: content

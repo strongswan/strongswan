@@ -16,7 +16,7 @@ env:
   TESTS_REDUCED_KEYLENGTHS: yes
   CCACHE_BASEDIR: ${{ github.workspace }}
   CCACHE_COMPRESS: true
-  CCACHE_MAXSIZE: 200M
+  CCACHE_MAXSIZE: 100M
   OS_NAME: linux
 
 jobs:
@@ -67,18 +67,21 @@ jobs:
       TEST: ${{ matrix.test }}
       # as several jobs use the same key, make sure we only store the cache for
       # one specific config in case there is a race
+      STORE_DEPS_CACHE: >-
+        ${{
+          github.event_name == 'push' &&
+          matrix.test == 'all' &&
+          matrix.monolithic == 'no'
+        }}
       STORE_CACHE: >-
         ${{
           github.event_name == 'push' &&
           !contains(fromJSON('["apidoc"]'), matrix.test) &&
           (!contains(fromJSON('["all", "default", "printf-builtin"]'),
-                     matrix.test) ||
-           ((!matrix.leak-detective || matrix.leak-detective == 'no') &&
-            matrix.monolithic == 'no'))
+                     matrix.test) || matrix.monolithic == 'no')
         }}
-      # with regards to ccache, monolithic builds don't differ from regular
-      # builds; but some tests build different dependencies or use different
-      # compiler flags, so we use different caches for these
+      # with regards to ccache, monolithic builds don't differ from regular builds.
+      # but most tests use different compiler flags, so we use separate caches
       CACHE_KEY: >-
         ${{ case(contains(fromJSON('["apidoc"]'), matrix.test),
               'ccache-ubuntu-latest-gcc-default',
@@ -86,16 +89,37 @@ jobs:
                      matrix.test)) }}
     steps:
       - uses: actions/checkout@v6
+      - run: ./scripts/test.sh deps
+      - uses: actions/cache/restore@v5
+        id: deps-cache-restore
+        with:
+          path: ~/.cache/ccache
+          key: ccache-deps-ubuntu-latest-${{ env.CC }}-all
+      - run: |
+          sudo apt-get install -qq ccache
+          echo "PATH=/usr/lib/ccache:$PATH" >> $GITHUB_ENV
+          ccache -z
+      - run: ./scripts/test.sh build-deps
+      - run: ccache -sv
+      # delete old cache entry as we currently can't update it any other way
+      - env:
+          GH_TOKEN: ${{ github.token }}
+        if: steps.deps-cache-restore.outputs.cache-hit && fromJSON(env.STORE_DEPS_CACHE)
+        continue-on-error: true
+        run: gh cache delete -r ${{ github.ref }} ${{ steps.deps-cache-restore.outputs.cache-primary-key }}
+      - if: fromJSON(env.STORE_DEPS_CACHE)
+        uses: actions/cache/save@v5
+        with:
+          path: ~/.cache/ccache
+          key: ${{ steps.deps-cache-restore.outputs.cache-primary-key }}
+      - run: rm -rf ~/.cache/ccache
       - uses: actions/cache/restore@v5
         id: cache-restore
         with:
           path: ~/.cache/ccache
           key: ${{ env.CACHE_KEY }}
-      - run: |
-          sudo apt-get install -qq ccache
-          echo "PATH=/usr/lib/ccache:$PATH" >> $GITHUB_ENV
-          ccache -z
-      - uses: ./.github/actions/default
+      - run: ccache -z
+      - run: ./scripts/test.sh
       - run: ccache -sv
       # delete old cache entry as we currently can't update it any other way
       - env:
@@ -151,29 +175,58 @@ jobs:
       ACTIVE_TRANSFORMS_REF: .github/active-transforms/${{ matrix.test }}
       # only store a cache for some tests as the others have a minimal diff (if
       # any) compared to the 'all' build
-      STORE_CACHE: >-
-        ${{ github.event_name == 'push' &&
-            contains(fromJSON('["openssl-4", "openssl-awslc"]'), matrix.test) &&
-            (!matrix.leak-detective || matrix.leak-detective == 'no') }}
+      STORE_DEPS_CACHE: >-
+        ${{
+          github.event_name == 'push' &&
+          contains(fromJSON('["openssl-4", "openssl-awslc"]'), matrix.test)
+        }}
+      DEPS_CACHE_KEY: >-
+        ${{
+          case(contains(fromJSON('["openssl-4", "openssl-awslc"]'), matrix.test),
+            format('ccache-deps-{0}-gcc-{1}', matrix.os, matrix.test),
+            format('ccache-deps-{0}-gcc-all', matrix.os))
+        }}
       CACHE_KEY: >-
-        ${{ case(contains(fromJSON('["openssl-4", "openssl-awslc"]'), matrix.test),
-              format('ccache-{0}-gcc-{1}', matrix.os, matrix.test),
-              matrix.os == 'ubuntu-latest' && matrix.test == 'openssl-sys',
-              format('ccache-{0}-gcc-default', matrix.os),
-              format('ccache-{0}-gcc-all', matrix.os)) }}
+        ${{
+          case(matrix.os == 'ubuntu-latest' && matrix.test == 'openssl-sys',
+            format('ccache-{0}-gcc-default', matrix.os),
+            format('ccache-{0}-gcc-all', matrix.os))
+        }}
     steps:
       - uses: actions/checkout@v6
+      - run: ./scripts/test.sh deps
       - uses: actions/cache/restore@v5
-        id: cache-restore
+        id: deps-cache-restore
         with:
           path: ~/.cache/ccache
-          key: ${{ env.CACHE_KEY }}
+          key: ${{ env.DEPS_CACHE_KEY }}
       - run: |
           sudo apt-get install -qq ccache
           echo "PATH=/usr/lib/ccache:$PATH" >> $GITHUB_ENV
           ccache -z
           echo "TESTS_ACTIVE_TRANSFORMS=$HOME/active-transforms.log" >> $GITHUB_ENV
-      - uses: ./.github/actions/default
+      - run: ./scripts/test.sh build-deps
+      - run: ccache -sv
+      # delete old cache entry as we currently can't update it any other way
+      - env:
+          GH_TOKEN: ${{ github.token }}
+        if: steps.deps-cache-restore.outputs.cache-hit && fromJSON(env.STORE_DEPS_CACHE)
+        continue-on-error: true
+        run: gh cache delete -r ${{ github.ref }} ${{ steps.deps-cache-restore.outputs.cache-primary-key }}
+      - if: fromJSON(env.STORE_DEPS_CACHE)
+        uses: actions/cache/save@v5
+        with:
+          path: ~/.cache/ccache
+          key: ${{ steps.deps-cache-restore.outputs.cache-primary-key }}
+      - run: rm -rf ~/.cache/ccache
+      - uses: actions/cache/restore@v5
+        id: cache-restore
+        with:
+          path: ~/.cache/ccache
+          key: ${{ env.CACHE_KEY }}
+      - run: ccache -z
+      - run: ./scripts/test.sh
+      - run: ccache -sv
       - name: Upload active transforms
         uses: actions/upload-artifact@v6
         with:
@@ -184,17 +237,6 @@ jobs:
         run: |
           test ! -f $ACTIVE_TRANSFORMS_REF || diff -us --color=always $ACTIVE_TRANSFORMS_REF $TESTS_ACTIVE_TRANSFORMS
       - run: ccache -sv
-      # delete old cache entry as we currently can't update it any other way
-      - env:
-          GH_TOKEN: ${{ github.token }}
-        if: steps.cache-restore.outputs.cache-hit && fromJSON(env.STORE_CACHE)
-        continue-on-error: true
-        run: gh cache delete -r ${{ github.ref }} ${{ steps.cache-restore.outputs.cache-primary-key }}
-      - if: fromJSON(env.STORE_CACHE)
-        uses: actions/cache/save@v5
-        with:
-          path: ~/.cache/ccache
-          key: ${{ steps.cache-restore.outputs.cache-primary-key }}
       - if: ${{ failure() }}
         uses: actions/upload-artifact@v6
         with:
@@ -218,18 +260,44 @@ jobs:
       LEAK_DETECTIVE: ${{ matrix.leak-detective || 'no' }}
       CC: ${{ matrix.compiler || 'gcc' }}
       TEST: ${{ matrix.test }}
+      STORE_DEPS_CACHE: >-
+        ${{
+          github.event_name == 'push' &&
+          matrix.test == 'all'
+        }}
     steps:
       - uses: actions/checkout@v6
+      - run: ./scripts/test.sh deps
+      - uses: actions/cache/restore@v5
+        id: deps-cache-restore
+        with:
+          path: ~/.cache/ccache
+          key: ccache-deps-${{ matrix.os }}-${{ env.CC }}-all
+      - run: |
+          sudo apt-get install -qq ccache
+          echo "PATH=/usr/lib/ccache:$PATH" >> $GITHUB_ENV
+          ccache -z
+      - run: ./scripts/test.sh build-deps
+      - run: ccache -sv
+      # delete old cache entry as we currently can't update it any other way
+      - env:
+          GH_TOKEN: ${{ github.token }}
+        if: steps.deps-cache-restore.outputs.cache-hit && fromJSON(env.STORE_DEPS_CACHE)
+        continue-on-error: true
+        run: gh cache delete -r ${{ github.ref }} ${{ steps.deps-cache-restore.outputs.cache-primary-key }}
+      - if: fromJSON(env.STORE_DEPS_CACHE)
+        uses: actions/cache/save@v5
+        with:
+          path: ~/.cache/ccache
+          key: ${{ steps.deps-cache-restore.outputs.cache-primary-key }}
+      - run: rm -rf ~/.cache/ccache
       - uses: actions/cache/restore@v5
         id: cache-restore
         with:
           path: ~/.cache/ccache
           key: ccache-${{ matrix.os }}-${{ env.CC }}-${{ matrix.test }}
-      - run: |
-          sudo apt-get install -qq ccache
-          echo "PATH=/usr/lib/ccache:$PATH" >> $GITHUB_ENV
-          ccache -z
-      - uses: ./.github/actions/default
+      - run: ccache -z
+      - run: ./scripts/test.sh
       - run: ccache -sv
       # delete old cache entry as we currently can't update it any other way
       - env:

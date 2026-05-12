@@ -14,7 +14,7 @@ env:
   CCACHE_CONTAINER: /root/.ccache
   CCACHE_COMPILERCHECK: content
   CCACHE_COMPRESS: true
-  CCACHE_MAXSIZE: 200M
+  CCACHE_MAXSIZE: 100M
 
 jobs:
   pre-check:

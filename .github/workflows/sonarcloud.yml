@@ -12,7 +12,7 @@ permissions:
 env:
   CCACHE_BASEDIR: ${{ github.workspace }}
   CCACHE_COMPRESS: true
-  CCACHE_MAXSIZE: 200M
+  CCACHE_MAXSIZE: 100M
   OS_NAME: linux
 
 jobs:
@@ -36,19 +36,28 @@ jobs:
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
+      - run: ./scripts/test.sh deps
+      - uses: actions/cache/restore@v5
+        with:
+          path: ~/.cache/ccache
+          key: ccache-deps-ubuntu-latest-gcc-all
+      - run: |
+          sudo apt-get install -qq ccache
+          echo "PATH=/usr/lib/ccache:$PATH" >> $GITHUB_ENV
+          ccache -z
+      - run: ./scripts/test.sh build-deps
+      - run: ccache -sv
+      - run: rm -rf ~/.cache/ccache
       - uses: actions/cache/restore@v5
         id: cache-restore
         with:
           path: ~/.cache/ccache
           key: ccache-sonarcloud
-      - run: |
-          sudo apt-get install -qq ccache
-          echo "PATH=/usr/lib/ccache:$PATH" >> $GITHUB_ENV
-          ccache -z
+      - run: ccache -z
       - uses: SonarSource/sonarqube-scan-action/install-build-wrapper@v7.1.0
       - run: |
           echo "BUILD_WRAPPER_OUT_DIR=$HOME/bw-output" >> $GITHUB_ENV
-      - uses: ./.github/actions/default
+      - run: ./scripts/test.sh
       - uses: SonarSource/sonarqube-scan-action@v7.1.0
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}

@@ -7,6 +7,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
+  CCACHE_BASEDIR: ${{ github.workspace }}
   OS_NAME: linux
 
 jobs:
@@ -30,7 +31,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        language: [ 'cpp', 'python', 'ruby' ]
+        language: [ 'python', 'ruby' ]
     steps:
     - uses: actions/checkout@v6
     - name: Initialize CodeQL
@@ -40,16 +41,47 @@ jobs:
         config-file: ./.github/codeql/config.yml
         trap-caching: false
 
-    - if: matrix.language == 'python' || matrix.language == 'ruby'
-      name: Autobuild
+    - name: Autobuild
       uses: github/codeql-action/autobuild@v4
-
-    - if: matrix.language == 'cpp'
-      env:
-        TEST: codeql
-      uses: ./.github/actions/default
 
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v4
       with:
         category: "/language:${{matrix.language}}"
+
+  analyze-cpp:
+    needs: pre-check
+    if: ${{ needs.pre-check.outputs.should_skip != 'true' }}
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+      security-events: write
+    env:
+      TEST: codeql
+    steps:
+    - uses: actions/checkout@v6
+    - run: ./scripts/test.sh deps
+    - uses: actions/cache/restore@v5
+      with:
+        path: ~/.cache/ccache
+        key: ccache-deps-ubuntu-latest-gcc-all
+    - run: |
+        sudo apt-get install -qq ccache
+        echo "OLD_PATH=$PATH" >> $GITHUB_ENV
+        echo "PATH=/usr/lib/ccache:$PATH" >> $GITHUB_ENV
+        ccache -z
+    - run: ./scripts/test.sh build-deps
+    - run: ccache -sv
+    - run: echo "PATH=$OLD_PATH" >> $GITHUB_ENV
+
+    - name: Initialize CodeQL
+      uses: github/codeql-action/init@v4
+      with:
+        languages: cpp
+        config-file: ./.github/codeql/config.yml
+        trap-caching: false
+    - run: ./scripts/test.sh
+    - name: Perform CodeQL Analysis
+      uses: github/codeql-action/analyze@v4
+      with:
+        category: "/language:cpp"

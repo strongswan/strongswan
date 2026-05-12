@@ -12,7 +12,7 @@ permissions:
 env:
   CCACHE_BASEDIR: ${{ github.workspace }}
   CCACHE_COMPRESS: true
-  CCACHE_MAXSIZE: 400M
+  CCACHE_MAXSIZE: 150M
   CC: gcc
   OS_NAME: linux
 
