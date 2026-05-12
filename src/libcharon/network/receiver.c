@@ -281,7 +281,7 @@ static bool check_cookie(private_receiver_t *this, message_t *message)
 		 IKE_HEADER_LENGTH + NOTIFY_PAYLOAD_HEADER_LENGTH +
 		 sizeof(uint32_t) + this->hasher->get_hash_size(this->hasher) ||
 		*(data.ptr + 16) != PLV2_NOTIFY ||
-		*(uint16_t*)(data.ptr + IKE_HEADER_LENGTH + 6) != htons(COOKIE))
+		untoh16(data.ptr + IKE_HEADER_LENGTH + 6) != COOKIE)
 	{
 		/* no cookie found */
 		return FALSE;
