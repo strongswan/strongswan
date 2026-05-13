@@ -1567,7 +1567,7 @@ ADD_PLUGIN([x509],                 [s charon swanctl pki scripts attest nm cmd a
 ADD_PLUGIN([revocation],           [s charon pki nm cmd])
 ADD_PLUGIN([constraints],          [s charon pki nm cmd])
 ADD_PLUGIN([acert],                [s charon])
-ADD_PLUGIN([pubkey],               [s charon swanctl pki cmd aikgen])
+ADD_PLUGIN([pubkey],               [s charon swanctl cmd aikgen])
 ADD_PLUGIN([pkcs1],                [s charon swanctl pki scripts manager medsrv attest nm cmd aikgen fd fc])
 ADD_PLUGIN([pkcs7],                [s charon swanctl pki scripts nm cmd])
 ADD_PLUGIN([pkcs12],               [s charon swanctl pki scripts cmd])
