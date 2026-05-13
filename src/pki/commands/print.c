@@ -25,7 +25,7 @@
 /**
  * Print private key information
  */
-static void print_key(private_key_t *key)
+static void print_private_key(private_key_t *key)
 {
 	public_key_t *public;
 
@@ -76,8 +76,8 @@ static int print()
 				}
 				else if (streq(arg, "pub"))
 				{
-					type = CRED_CERTIFICATE;
-					subtype = CERT_TRUSTED_PUBKEY;
+					type = CRED_PUBLIC_KEY;
+					subtype = KEY_ANY;
 				}
 				else if (streq(arg, "priv"))
 				{
@@ -176,11 +176,18 @@ static int print()
 		printer->destroy(printer);
 		cert->destroy(cert);
 	}
-	if (type == CRED_PRIVATE_KEY)
+	else if (type == CRED_PUBLIC_KEY)
+	{
+		public_key_t *public = (public_key_t*)cred;
+
+		certificate_printer_print_pubkey(stdout, "  pubkey:", public, FALSE);
+		public->destroy(public);
+	}
+	else if (type == CRED_PRIVATE_KEY)
 	{
 		private_key_t *key = (private_key_t*)cred;
 
-		print_key(key);
+		print_private_key(key);
 		key->destroy(key);
 	}
 
