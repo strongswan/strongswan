@@ -132,6 +132,14 @@ pki --signcrl --cakey strongswanKey.pem --cacert strongswanCert.pem \
     > ${ROOT}/strongswan_ed25519.crl
 
 ##
+# strongSwan ML-DSA Root CA
+cd /etc/ca/ml_dsa
+
+# generate CRL for strongSwan ML-DSA Root CA
+pki --signcrl --cakey strongswanKey.pem --cacert strongswanCert.pem \
+    > ${ROOT}/strongswan_ml_dsa.crl
+
+##
 # strongSwan Monster Root CA
 cd /etc/ca/monster
 

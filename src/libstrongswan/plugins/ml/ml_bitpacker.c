@@ -98,6 +98,10 @@ METHOD(ml_bitpacker_t, write_bits, bool,
 		flush_buffer(this);
 		this->bits_buf = 0;
 		this->bits_left = 32;
+		if (bits == 0)
+		{
+			return TRUE;
+		}
 	}
 }
 
