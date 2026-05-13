@@ -328,6 +328,7 @@ METHOD(public_key_t, verify, bool,
 	private_public_key_t *this, signature_scheme_t scheme,
 	void *params, chunk_t data, chunk_t signature)
 {
+	const u_char pre_hash = 0;
 	const u_int k = this->params->k;
 	const u_int l = this->params->l;
 	const int32_t bound = (1 << this->params->gamma1_exp) - this->params->beta;
@@ -376,7 +377,8 @@ METHOD(public_key_t, verify, bool,
 	}
 
 	/* compute message representative mu */
-	seed = chunk_cat("ccc", tr, pqc_params.pre_ctx, data);
+	seed = chunk_cat("cccc", tr, chunk_from_thing(pre_hash), pqc_params.pre_ctx,
+					 data);
 	if (!H->set_seed(H, seed) ||
 		!H->get_bytes(H, ML_DSA_MU_LEN, mu.ptr))
 	{
