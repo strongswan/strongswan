@@ -93,6 +93,28 @@ static bool build_signature(botan_privkey_t key, const char *hash_and_padding,
 	return TRUE;
 }
 
+METHOD(private_key_t, get_keysize, int,
+	private_botan_ec_private_key_t *this)
+{
+	botan_mp_t p;
+	size_t bits = 0;
+
+	if (botan_mp_init(&p))
+	{
+		return 0;
+	}
+
+	if (botan_privkey_get_field(p, this->key, "p") ||
+		botan_mp_num_bits(p, &bits))
+	{
+		botan_mp_destroy(p);
+		return 0;
+	}
+
+	botan_mp_destroy(p);
+	return bits;
+}
+
 METHOD(private_key_t, sign, bool,
 	private_botan_ec_private_key_t *this, signature_scheme_t scheme,
 	void *params, chunk_t data, chunk_t *signature)
@@ -116,21 +138,36 @@ METHOD(private_key_t, sign, bool,
 		case SIGN_ECDSA_WITH_SHA512_DER:
 			return build_signature(this->key, "EMSA1(SHA-512)",
 								   SIG_FORMAT_DER_SEQUENCE, data, signature);
-		/* r||s -> Botan::IEEE_1363 */
+		/* r||s -> Botan::IEEE_1363, these schemes are only defined with
+		 * matching NIST curves. as we can't determine the curve easily, just
+		 * check the size */
 		case SIGN_ECDSA_256:
-			return build_signature(this->key, "EMSA1(SHA-256)",
-								   SIG_FORMAT_IEEE_1363, data, signature);
+			if (get_keysize(this) == 256)
+			{
+				return build_signature(this->key, "EMSA1(SHA-256)",
+									   SIG_FORMAT_IEEE_1363, data, signature);
+			}
+			break;
 		case SIGN_ECDSA_384:
-			return build_signature(this->key, "EMSA1(SHA-384)",
-								   SIG_FORMAT_IEEE_1363, data, signature);
+			if (get_keysize(this) == 384)
+			{
+				return build_signature(this->key, "EMSA1(SHA-384)",
+									   SIG_FORMAT_IEEE_1363, data, signature);
+			}
+			break;
 		case SIGN_ECDSA_521:
-			return build_signature(this->key, "EMSA1(SHA-512)",
-								   SIG_FORMAT_IEEE_1363, data, signature);
+			if (get_keysize(this) == 521)
+			{
+				return build_signature(this->key, "EMSA1(SHA-512)",
+									   SIG_FORMAT_IEEE_1363, data, signature);
+			}
+			break;
 		default:
-			DBG1(DBG_LIB, "signature scheme %N not supported via botan",
-				 signature_scheme_names, scheme);
-			return FALSE;
+			break;
 	}
+	DBG1(DBG_LIB, "signature scheme %N not supported via botan",
+		 signature_scheme_names, scheme);
+	return FALSE;
 }
 
 METHOD(private_key_t, decrypt, bool,
@@ -139,28 +176,6 @@ METHOD(private_key_t, decrypt, bool,
 {
 	DBG1(DBG_LIB, "EC private key decryption not implemented");
 	return FALSE;
-}
-
-METHOD(private_key_t, get_keysize, int,
-	private_botan_ec_private_key_t *this)
-{
-	botan_mp_t p;
-	size_t bits = 0;
-
-	if (botan_mp_init(&p))
-	{
-		return 0;
-	}
-
-	if (botan_privkey_get_field(p, this->key, "p") ||
-		botan_mp_num_bits(p, &bits))
-	{
-		botan_mp_destroy(p);
-		return 0;
-	}
-
-	botan_mp_destroy(p);
-	return bits;
 }
 
 METHOD(private_key_t, get_type, key_type_t,
