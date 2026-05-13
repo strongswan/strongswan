@@ -275,7 +275,7 @@ METHOD(private_key_t, sign, bool,
 	private_private_key_t *this, signature_scheme_t scheme,
 	void *params, chunk_t data, chunk_t *signature)
 {
-
+	const u_char pre_hash = 0;
 	const u_int k = this->params->k;
 	const u_int l = this->params->l;
 	const u_int gamma2 = this->params->gamma2;
@@ -325,7 +325,8 @@ METHOD(private_key_t, sign, bool,
 	}
 
 	/* compute message representative mu */
-	seed = chunk_cat("cmc", tr, pqc_params.pre_ctx, data);
+	seed = chunk_cat("ccmc", tr, chunk_from_thing(pre_hash), pqc_params.pre_ctx,
+					 data);
 	if (!this->H->set_seed(this->H, seed) ||
 		!this->H->get_bytes(this->H, ML_DSA_MU_LEN, mu.ptr))
 	{
