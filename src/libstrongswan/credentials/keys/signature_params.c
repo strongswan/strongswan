@@ -422,9 +422,8 @@ bool pqc_params_create(pqc_params_t *p_in, pqc_params_t *p_out)
 	{
 		p_out->deterministic = FALSE;
 
-		p_out->pre_ctx = chunk_alloc(2);
+		p_out->pre_ctx = chunk_alloc(1);
 		p_out->pre_ctx.ptr[0] = 0x00;
-		p_out->pre_ctx.ptr[1] = 0x00;
 	}
 	else
 	{
@@ -437,12 +436,11 @@ bool pqc_params_create(pqc_params_t *p_in, pqc_params_t *p_out)
 						  p_in->ctx.len, PQC_MAX_CTX_LEN);
 			return FALSE;
 		}
-		p_out->pre_ctx = chunk_alloc(2 + p_in->ctx.len);
-		p_out->pre_ctx.ptr[0] = 0x00;
-		p_out->pre_ctx.ptr[1] = (uint8_t)p_in->ctx.len;
-		memcpy(p_out->pre_ctx.ptr + 2, p_in->ctx.ptr, p_in->ctx.len);
+		p_out->pre_ctx = chunk_alloc(p_in->ctx.len + 1);
+		p_out->pre_ctx.ptr[0] = (uint8_t)p_in->ctx.len;
+		memcpy(p_out->pre_ctx.ptr + 1, p_in->ctx.ptr, p_in->ctx.len);
 	}
-	p_out->ctx = chunk_skip(p_out->pre_ctx, 2);
+	p_out->ctx = chunk_skip(p_out->pre_ctx, 1);
 
 	return TRUE;
 }
