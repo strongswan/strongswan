@@ -137,9 +137,10 @@ METHOD(public_key_t, verify, bool,
 	private_botan_ec_public_key_t *this, signature_scheme_t scheme,
 	void *params, chunk_t data, chunk_t signature)
 {
-	size_t keylen = (get_keysize(this) + 7) / 8;
-	const char *hash_and_padding;
-	int sig_format;
+	int keybits = get_keysize(this);
+	size_t keylen = (keybits + 7) / 8;
+	const char *hash_and_padding = NULL;
+	int sig_format = SIG_FORMAT_DER_SEQUENCE;
 
 	switch (scheme)
 	{
@@ -151,39 +152,49 @@ METHOD(public_key_t, verify, bool,
 		/* DER SEQUENCE of two INTEGERS r,s -> Botan::DER_SEQUENCE */
 		case SIGN_ECDSA_WITH_SHA1_DER:
 			hash_and_padding = "EMSA1(SHA-1)";
-			sig_format = SIG_FORMAT_DER_SEQUENCE;
 			break;
 		case SIGN_ECDSA_WITH_SHA256_DER:
 			hash_and_padding = "EMSA1(SHA-256)";
-			sig_format = SIG_FORMAT_DER_SEQUENCE;
 			break;
 		case SIGN_ECDSA_WITH_SHA384_DER:
 			hash_and_padding = "EMSA1(SHA-384)";
-			sig_format = SIG_FORMAT_DER_SEQUENCE;
 			break;
 		case SIGN_ECDSA_WITH_SHA512_DER:
 			hash_and_padding = "EMSA1(SHA-512)";
-			sig_format = SIG_FORMAT_DER_SEQUENCE;
 			break;
-		/* r||s -> Botan::IEEE_1363 */
+		/* r||s -> Botan::IEEE_1363, these schemes are only defined with
+		 * matching NIST curves. as we can't determine the curve easily, just
+		 * check the size */
 		case SIGN_ECDSA_256:
-			hash_and_padding = "EMSA1(SHA-256)";
-			sig_format = SIG_FORMAT_IEEE_1363;
+			if (keybits == 256)
+			{
+				hash_and_padding = "EMSA1(SHA-256)";
+				sig_format = SIG_FORMAT_IEEE_1363;
+			}
 			break;
 		case SIGN_ECDSA_384:
-			hash_and_padding = "EMSA1(SHA-384)";
-			sig_format = SIG_FORMAT_IEEE_1363;
+			if (keybits == 384)
+			{
+				hash_and_padding = "EMSA1(SHA-384)";
+				sig_format = SIG_FORMAT_IEEE_1363;
+			}
 			break;
 		case SIGN_ECDSA_521:
-			hash_and_padding = "EMSA1(SHA-512)";
-			sig_format = SIG_FORMAT_IEEE_1363;
+			if (keybits == 521)
+			{
+				hash_and_padding = "EMSA1(SHA-512)";
+				sig_format = SIG_FORMAT_IEEE_1363;
+			}
 			break;
 		default:
-			DBG1(DBG_LIB, "signature scheme %N not supported via botan",
-				 signature_scheme_names, scheme);
-			return FALSE;
+			break;
 	}
-
+	if (!hash_and_padding)
+	{
+		DBG1(DBG_LIB, "signature scheme %N not supported via botan",
+			 signature_scheme_names, scheme);
+		return FALSE;
+	}
 	return verify_signature(this, hash_and_padding,
 							sig_format, keylen, data, signature);
 }
