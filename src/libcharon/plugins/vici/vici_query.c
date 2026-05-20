@@ -209,6 +209,29 @@ static void list_label(vici_builder_t *b, child_sa_t *child, child_cfg_t *cfg)
 }
 
 /**
+ * List proposals for a config
+ */
+static void list_proposals(vici_builder_t *b, linked_list_t *proposals,
+						   char *label, protocol_id_t protocol)
+{
+	enumerator_t *enumerator;
+	proposal_t *proposal;
+
+	b->begin_list(b, label);
+	enumerator = proposals->create_enumerator(proposals);
+	while (enumerator->enumerate(enumerator, &proposal))
+	{
+		if (protocol == PROTO_NONE ||
+			proposal->get_protocol(proposal) == protocol)
+		{
+			b->add_li(b, "%P", proposal);
+		}
+	}
+	enumerator->destroy(enumerator);
+	b->end_list(b);
+}
+
+/**
  * List additional key exchanges
  */
 static void list_ake(vici_builder_t *b, proposal_t *proposal)
@@ -1006,6 +1029,10 @@ CALLBACK(list_conns, vici_message_t*,
 		b->add_kv(b, "unique", "%N", unique_policy_names,
 				  peer_cfg->get_unique_policy(peer_cfg));
 
+		list = ike_cfg->get_proposals(ike_cfg);
+		list_proposals(b, list, "proposals", PROTO_NONE);
+		list->destroy_offset(list, offsetof(proposal_t, destroy));
+
 		dpd_delay = peer_cfg->get_dpd(peer_cfg);
 		if (dpd_delay)
 		{
@@ -1051,6 +1078,11 @@ CALLBACK(list_conns, vici_message_t*,
 					  child_cfg->get_dpd_action(child_cfg));
 			b->add_kv(b, "close_action", "%N", action_names,
 					  child_cfg->get_close_action(child_cfg));
+
+			list = child_cfg->get_proposals(child_cfg, FALSE);
+			list_proposals(b, list, "esp_proposals", PROTO_ESP);
+			list_proposals(b, list, "ah_proposals", PROTO_AH);
+			list->destroy_offset(list, offsetof(proposal_t, destroy));
 
 			b->begin_list(b, "local-ts");
 			list = child_cfg->get_traffic_selectors(child_cfg, TRUE, NULL);

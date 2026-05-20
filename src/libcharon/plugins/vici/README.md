@@ -893,6 +893,9 @@ _list-conns_ command.
 			version = <IKE version as string, IKEv1|IKEv2 or 0 for any>
 			reauth_time = <IKE_SA reauthentication interval in seconds>
 			rekey_time = <IKE_SA rekeying interval in seconds>
+			proposals = [
+				<list of configured IKE proposals>
+			]
 
 			local*, remote* = { # multiple local and remote auth sections
 				class = <authentication type>
@@ -921,6 +924,12 @@ _list-conns_ command.
 					rekey_time = <CHILD_SA rekeying interval in seconds>
 					rekey_bytes = <CHILD_SA rekeying interval in bytes>
 					rekey_packets = <CHILD_SA rekeying interval in packets>
+					esp_proposals = [
+						<list of configured ESP proposals>
+					]
+					ah_proposals = [
+						<list of configured AH proposals>
+					]
 					local-ts = [
 						<list of local traffic selectors>
 					]
