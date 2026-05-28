@@ -516,14 +516,23 @@ METHOD(private_key_t, get_encoding, bool,
 		{
 			bool success = TRUE;
 			int oid = key_type_to_oid(this->type);
+			int asn1_type = ASN1_CONTEXT_S_0;
+			chunk_t content = this->keyseed;
+
+			/* generally, we produce a seed-only encoding, however, if we loaded
+			 * an expanded key without seed, we can't, so export it as such */
+			if (!content.len)
+			{
+				asn1_type = ASN1_OCTET_STRING;
+				content = this->privkey;
+			}
 
 			*encoding = asn1_wrap(ASN1_SEQUENCE, "cmm",
 							ASN1_INTEGER_0,
 							asn1_algorithmIdentifier(oid),
 							asn1_wrap(ASN1_OCTET_STRING, "m",
-								asn1_simple_object(ASN1_CONTEXT_S_0,
-												   this->keyseed))
-						);
+								asn1_simple_object(asn1_type, content)));
+
 			if (type == PRIVKEY_PEM)
 			{
 				chunk_t asn1_encoding = *encoding;

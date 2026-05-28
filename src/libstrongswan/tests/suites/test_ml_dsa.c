@@ -2591,9 +2591,9 @@ START_TEST(test_ml_dsa_sig)
 	private_key_t *key;
 	signature_scheme_t scheme;
 	pqc_params_t pqc_params;
-	chunk_t msg, signature, asn1, asn1_privkey;
+	chunk_t msg, signature, asn1, asn1_privkey, encoding;
 
-	/* load private key in seed format*/
+	/* load private key in seed format */
 	key = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, tests[_i].type,
 							 BUILD_BLOB, tests[_i].seed, BUILD_END);
 	ck_assert(key != NULL);
@@ -2629,11 +2629,10 @@ START_TEST(test_ml_dsa_sig)
 	chunk_free(&signature);
 	key->destroy(key);
 
-	/* load private key in expanded format*/
+	/* load private key in expanded format */
 	asn1 = chunk_cat("cc", tests[_i].asn1_privkey, tests[_i].privkey);
 	key = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, KEY_ANY,
 							 BUILD_BLOB_ASN1_DER, asn1, BUILD_END);
-	chunk_free(&asn1);
 
 	if (key == NULL)
 	{
@@ -2641,14 +2640,19 @@ START_TEST(test_ml_dsa_sig)
 	}
 	else
 	{
+		/* check ML-DSA private key encoding (expanded-only) */
+		ck_assert(key->get_encoding(key, PRIVKEY_ASN1_DER, &encoding));
+		ck_assert_chunk_eq(encoding, asn1);
+		chunk_free(&encoding);
 		/* generate and verify signature with empty context string */
 		ck_assert(key->sign(key, scheme, &pqc_params, msg, &signature));
 		ck_assert_chunk_eq(signature, tests[_i].sig);
 		chunk_free(&signature);
 		key->destroy(key);
 	}
+	chunk_free(&asn1);
 
-	/* load private key in combined seed/expanded format*/
+	/* load private key in combined seed/expanded format */
 	asn1_privkey = chunk_skip(tests[_i].asn1_privkey,
 							  tests[_i].asn1_privkey.len - 4);
 	asn1 = chunk_cat("cccc", tests[_i].asn1_seed_key, tests[_i].seed,
@@ -2663,6 +2667,12 @@ START_TEST(test_ml_dsa_sig)
 	}
 	else
 	{
+		/* check ML-DSA private key encoding (seed-only) */
+		asn1 = chunk_cat("cc", tests[_i].asn1_seed, tests[_i].seed);
+		ck_assert(key->get_encoding(key, PRIVKEY_ASN1_DER, &encoding));
+		ck_assert_chunk_eq(encoding, asn1);
+		chunk_free(&asn1);
+		chunk_free(&encoding);
 		/* generate and verify signature with empty context string */
 		ck_assert(key->sign(key, scheme, &pqc_params, msg, &signature));
 		ck_assert_chunk_eq(signature, tests[_i].sig);
