@@ -517,14 +517,23 @@ METHOD(private_key_t, get_encoding, bool,
 		{
 			bool success = TRUE;
 			int oid = key_type_to_oid(this->type);
+			int asn1_type = ASN1_CONTEXT_S_0;
+			chunk_t content = this->keyseed;
+
+			/* generally, we produce a seed-only encoding, however, if we loaded
+			 * an expanded key without seed, we can't, so export it as such */
+			if (!content.len)
+			{
+				asn1_type = ASN1_OCTET_STRING;
+				content = this->privkey;
+			}
 
 			*encoding = asn1_wrap(ASN1_SEQUENCE, "cmm",
 							ASN1_INTEGER_0,
 							asn1_algorithmIdentifier(oid),
 							asn1_wrap(ASN1_OCTET_STRING, "m",
-								asn1_simple_object(ASN1_CONTEXT_S_0,
-												   this->keyseed))
-						);
+								asn1_simple_object(asn1_type, content)));
+
 			if (type == PRIVKEY_PEM)
 			{
 				chunk_t asn1_encoding = *encoding;
@@ -792,6 +801,56 @@ end:
 }
 
 /**
+ * Generate and encode a public key from a private key. Returns t0.
+ *
+ * Part of Algorithm 6 in FIPS 204.
+ */
+static bool generate_public_key(private_private_key_t *this, chunk_t rho,
+								ml_dsa_poly_t *s1, ml_dsa_poly_t *s2,
+								ml_dsa_poly_t *t0)
+{
+	const u_int k = this->params->k;
+	const u_int l = this->params->l;
+	ml_dsa_poly_t a[k*l], s1_hat[l], t1[k];
+	bool success = FALSE;
+
+	if (!ml_dsa_expand_a(this->params, this->G, rho, a))
+	{
+		goto cleanup;
+	}
+
+	/* apply NTT to a copy of the s1 vector */
+	ml_dsa_poly_copy_vec(l, s1, s1_hat);
+	ml_dsa_poly_ntt_vec(l, s1_hat);
+
+	/* multiply vector s1_hat with matrix a in the NTT domain */
+	ml_dsa_poly_mult_mat(k, l, a, s1_hat, t1);
+
+	/* reduce the elements of vector t1 to the range -6283008 <= r <= 6283008 */
+	ml_dsa_poly_reduce_vec(k, t1);
+
+	/* apply the inverse NTT to vector t1 */
+	ml_dsa_poly_inv_ntt_vec(k, t1);
+
+	/* add error vector s2 to t1 */
+	ml_dsa_poly_add_vec(k, s2, t1, t1);
+
+	/* make all polynomial coefficients positive by conditionally adding q */
+	ml_dsa_poly_cond_add_q_vec(k, t1);
+
+	/* decomposes t1 into (t1, t0) such that t1 ≡ t1 * 2^d + t0 mod q */
+	ml_dsa_poly_power2round_vec(k, t1, t0, t1);
+
+	success = encode_public_key(this, rho, t1);
+
+cleanup:
+	memwipe(a, sizeof(a));
+	memwipe(s1_hat, sizeof(s1_hat));
+
+	return success;
+}
+
+/**
  * Generates a public/private key pair from a seed
  *
  * Algorithm 6 in FIPS 204.
@@ -800,7 +859,7 @@ static bool generate_keypair(private_private_key_t *this, chunk_t keyseed)
 {
 	const u_int k = this->params->k;
 	const u_int l = this->params->l;
-	ml_dsa_poly_t a[k*l], s1[l], s1_hat[l], s2[k], t1[k], t0[k];
+	ml_dsa_poly_t s1[l], s2[k], t0[k];
 	bool success = FALSE;
 
 	/**
@@ -834,44 +893,53 @@ static bool generate_keypair(private_private_key_t *this, chunk_t keyseed)
 
 	if (!this->H->set_seed(this->H, seed) ||
 		!this->H->get_bytes(this->H, sizeof(seedbuf), seedbuf) ||
-		!ml_dsa_expand_a(this->params, this->G, rho, a) ||
 		!expand_s(this, rhoprime, s1, s2))
 	{
 		goto cleanup;
 	}
 
-	/* apply NTT to a copy of the s1 vector */
-	ml_dsa_poly_copy_vec(l, s1, s1_hat);
-	ml_dsa_poly_ntt_vec(l, s1_hat);
-
-	/* multiply vector s1_hat with matrix a in the NTT domain */
-	ml_dsa_poly_mult_mat(k, l, a, s1_hat, t1);
-
-	/* reduce the elements of vector t1 to the range -6283008 <= r <= 6283008 */
-	ml_dsa_poly_reduce_vec(k, t1);
-
-	/* apply the inverse NTT to vector t1 */
-	ml_dsa_poly_inv_ntt_vec(k, t1);
-
-	/* add error vector s2 to t1 */
-	ml_dsa_poly_add_vec(k, s2, t1, t1);
-
-	/* make all polynomial coefficients positive by conditionally adding q */
-	ml_dsa_poly_cond_add_q_vec(k, t1);
-
-	/* decomposes t1 into (t1, t0) such that t1 ≡ t1 * 2^d + t0 mod q */
-	ml_dsa_poly_power2round_vec(k, t1, t0, t1);
-
-	success = encode_public_key(this, rho, t1) &&
+	success = generate_public_key(this, rho, s1, s2, t0) &&
 			  encode_secret_key(this, rho, K, s1, s2, t0);
 
 cleanup:
 	memwipe(seedbuf, sizeof(seedbuf));
-	memwipe(a, sizeof(a));
 	memwipe(s1, sizeof(s1));
-	memwipe(s1_hat, sizeof(s1_hat));
 	memwipe(s2, sizeof(s2));
 	memwipe(t0, sizeof(t0));
+
+	return success;
+}
+
+/**
+ * Derive the public key from an expanded private key and check its consistency.
+ */
+static bool derive_public_key(private_private_key_t *this)
+{
+	const u_int k = this->params->k;
+	const u_int l = this->params->l;
+	ml_dsa_poly_t s1[l], s2[k], t0[k], t0_d[k];
+	bool success = FALSE;
+
+	chunk_t rho  = chunk_alloca(ML_DSA_SEED_LEN);
+	chunk_t K    = chunk_alloca(ML_DSA_K_LEN);
+	chunk_t tr   = chunk_alloca(ML_DSA_TR_LEN);
+	chunk_t tr_d = chunk_alloca(ML_DSA_TR_LEN);
+
+	if (!decode_secret_key(this, rho, K, tr, s1, s2, t0) ||
+		!generate_public_key(this, rho, s1, s2, t0_d) ||
+		!this->H->set_seed(this->H, this->pubkey) ||
+		!this->H->get_bytes(this->H, ML_DSA_TR_LEN, tr_d.ptr))
+	{
+		goto cleanup;
+	}
+	success = chunk_equals_const(tr, tr_d) && memeq_const(t0, t0_d, sizeof(t0));
+
+cleanup:
+	memwipe(s1, sizeof(s1));
+	memwipe(s2, sizeof(s2));
+	memwipe(t0, sizeof(t0));
+	memwipe(t0_d, sizeof(t0_d));
+	memwipe(K.ptr, K.len);
 
 	return success;
 }
@@ -1039,6 +1107,12 @@ private_key_t *ml_dsa_private_key_load(key_type_t type, va_list args)
 				return NULL;
 			}
 			memcpy(this->privkey.ptr, priv.ptr, priv.len);
+			if (!derive_public_key(this))
+			{
+				DBG1(DBG_LIB, "failed to verify ML-DSA expanded private key");
+				destroy(this);
+				return NULL;
+			}
 			break;
 
 		/* private key in both seed and expanded format */
@@ -1063,7 +1137,7 @@ private_key_t *ml_dsa_private_key_load(key_type_t type, va_list args)
 				destroy(this);
 				return NULL;
 			}
-			if (!chunk_equals(priv, this->privkey))
+			if (!chunk_equals_const(priv, this->privkey))
 			{
 				DBG1(DBG_LIB, "loaded expanded private key is not derived "
 							  "from loaded seed");
