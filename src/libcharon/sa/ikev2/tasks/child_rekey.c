@@ -403,7 +403,7 @@ METHOD(task_t, build_r, status_t,
 	child_sa_t *child_sa, *old_replacement;
 	child_sa_state_t state = CHILD_INSTALLED;
 	uint32_t reqid;
-	bool followup_sent = FALSE;
+	bool active, followup_sent = FALSE;
 
 	if (!this->child_sa)
 	{
@@ -423,7 +423,8 @@ METHOD(task_t, build_r, status_t,
 		message->add_notify(message, TRUE, TEMPORARY_FAILURE, chunk_empty);
 		return SUCCESS;
 	}
-	if (actively_rekeying(this, &followup_sent) && followup_sent)
+	active = actively_rekeying(this, &followup_sent);
+	if (active && followup_sent)
 	{
 		DBG1(DBG_IKE, "peer initiated rekeying, but we did too and already "
 			 "sent IKE_FOLLOWUP_KE");
@@ -483,8 +484,9 @@ METHOD(task_t, build_r, status_t,
 		/* like installing the outbound SA, we only trigger the child-rekey
 		 * event once the old SA is deleted */
 	}
-	else if (this->child_sa->get_state(this->child_sa) == CHILD_REKEYING)
-	{	/* rekeying failed, reuse old child */
+	else if (!active &&
+			 this->child_sa->get_state(this->child_sa) == CHILD_REKEYING)
+	{	/* rekeying failed, reuse old child, unless we are actively rekeying */
 		this->child_sa->set_state(this->child_sa, state);
 	}
 	return SUCCESS;
