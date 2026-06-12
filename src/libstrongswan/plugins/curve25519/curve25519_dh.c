@@ -120,12 +120,19 @@ METHOD(key_exchange_t, set_seed, bool,
 METHOD(key_exchange_t, get_shared_secret, bool,
 	private_curve25519_dh_t *this, chunk_t *secret)
 {
-	if (!this->computed &&
-		!this->drv->curve25519(this->drv, this->pubkey, this->shared))
+	if (!this->computed)
 	{
-		return FALSE;
+		if (!this->drv->curve25519(this->drv, this->pubkey, this->shared))
+		{
+			return FALSE;
+		}
+		if (memeq_const(this->shared, (u_char[CURVE25519_KEY_SIZE]){0},
+                        CURVE25519_KEY_SIZE))
+		{
+			return FALSE;
+		}
+		this->computed = TRUE;
 	}
-	this->computed = TRUE;
 	*secret = chunk_clone(chunk_from_thing(this->shared));
 	return TRUE;
 }
