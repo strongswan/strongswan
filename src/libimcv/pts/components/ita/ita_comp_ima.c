@@ -718,8 +718,13 @@ METHOD(pts_component_t, verify, status_t,
 		pts_meas_algorithms_t hash_algo;
 
 		evidence->get_validation(evidence, &uri);
-		hash_algo = parse_validation_uri(uri, &ima_name, &ima_algo,
-										 algo_buf);
+		if (!uri)
+		{
+			DBG1(DBG_PTS, "ima: evidence is missing validation URI");
+			return FAILED;
+		}
+
+		hash_algo = parse_validation_uri(uri, &ima_name, &ima_algo, algo_buf);
 
 		switch (this->state)
 		{
