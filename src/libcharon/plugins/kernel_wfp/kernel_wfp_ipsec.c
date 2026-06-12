@@ -1715,7 +1715,7 @@ static void WINAPI event_callback(void *user, const FWPM_NET_EVENT1 *event)
 		{
 			from_local = to_local = event->header.localPort;
 		}
-		if (event->header.flags & FWPM_NET_EVENT_FLAG_LOCAL_PORT_SET)
+		if (event->header.flags & FWPM_NET_EVENT_FLAG_REMOTE_PORT_SET)
 		{
 			from_remote = to_remote = event->header.remotePort;
 		}
