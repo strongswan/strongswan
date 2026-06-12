@@ -64,6 +64,8 @@ libstrongswan_tests_SOURCES = tests.h tests.c \
   suites/test_rng_tester.c \
   suites/test_mgf1.c \
   suites/test_prf_plus.c \
+  suites/test_curve25519.c \
+  suites/test_curve448.c \
   suites/test_ed25519.c \
   suites/test_ed448.c \
   suites/test_signature_params.c \
