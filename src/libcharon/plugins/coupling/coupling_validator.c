@@ -48,9 +48,9 @@ struct private_coupling_validator_t {
 	FILE *f;
 
 	/**
-	 * Hasher to create hashes
+	 * Hasher algorithm
 	 */
-	hasher_t *hasher;
+	hash_algorithm_t alg;
 
 	/**
 	 * maximum number of couplings
@@ -64,21 +64,30 @@ struct private_coupling_validator_t {
 static bool get_cert_hash(private_coupling_validator_t *this,
 						  certificate_t *cert, char *hex)
 {
+	hasher_t *hasher;
 	char buf[MAX_HASH_SIZE];
 	chunk_t encoding;
 
-	if (!cert->get_encoding(cert, CERT_ASN1_DER, &encoding))
+	hasher = lib->crypto->create_hasher(lib->crypto, this->alg);
+	if (!hasher)
 	{
 		return FALSE;
 	}
-	if (!this->hasher->get_hash(this->hasher, encoding, buf))
+	if (!cert->get_encoding(cert, CERT_ASN1_DER, &encoding))
+	{
+		hasher->destroy(hasher);
+		return FALSE;
+	}
+	if (!hasher->get_hash(hasher, encoding, buf))
 	{
 		free(encoding.ptr);
+		hasher->destroy(hasher);
 		return FALSE;
 	}
 	free(encoding.ptr);
-	chunk_to_hex(chunk_create(buf, this->hasher->get_hash_size(this->hasher)),
+	chunk_to_hex(chunk_create(buf, hasher->get_hash_size(hasher)),
 				 hex, FALSE);
+	hasher->destroy(hasher);
 	return TRUE;
 }
 
@@ -191,7 +200,6 @@ METHOD(coupling_validator_t, destroy, void,
 	{
 		fclose(this->f);
 	}
-	DESTROY_IF(this->hasher);
 	this->mutex->destroy(this->mutex);
 	free(this);
 }
@@ -203,6 +211,7 @@ coupling_validator_t *coupling_validator_create()
 {
 	private_coupling_validator_t *this;
 	hash_algorithm_t alg;
+	hasher_t *hasher;
 	char *path, *hash;
 
 	INIT(this,
@@ -226,13 +235,15 @@ coupling_validator_t *coupling_validator_create()
 		destroy(this);
 		return NULL;
 	}
-	this->hasher = lib->crypto->create_hasher(lib->crypto, alg);
-	if (!this->hasher)
+	hasher = lib->crypto->create_hasher(lib->crypto, alg);
+	if (!hasher)
 	{
 		DBG1(DBG_CFG, "unsupported coupling hash algorithm: %s", hash);
 		destroy(this);
 		return NULL;
 	}
+	hasher->destroy(hasher);
+	this->alg = alg;
 
 	path = lib->settings->get_str(lib->settings,
 								  "%s.plugins.coupling.file", NULL, lib->ns);
