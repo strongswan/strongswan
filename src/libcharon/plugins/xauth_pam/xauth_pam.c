@@ -77,12 +77,12 @@ static int auth_conv(int num_msg, const struct pam_message **msg,
  */
 static bool authenticate(char *service, char *user, char *password)
 {
+	struct pam_conv conv = {
+		.conv = (void*)auth_conv,
+		.appdata_ptr = password,
+	};
 	pam_handle_t *pamh = NULL;
-	static struct pam_conv conv;
 	int ret;
-
-	conv.conv = (void*)auth_conv;
-	conv.appdata_ptr = password;
 
 	ret = pam_start(service, user, &conv, &pamh);
 	if (ret != PAM_SUCCESS)
