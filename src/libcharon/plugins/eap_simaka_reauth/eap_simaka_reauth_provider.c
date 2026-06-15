@@ -18,6 +18,7 @@
 
 #include <daemon.h>
 #include <collections/hashtable.h>
+#include <threading/mutex.h>
 
 typedef struct private_eap_simaka_reauth_provider_t private_eap_simaka_reauth_provider_t;
 
@@ -45,6 +46,11 @@ struct private_eap_simaka_reauth_provider_t {
 	 * RNG for pseudonyms/reauth identities
 	 */
 	rng_t *rng;
+
+	/**
+	 * Lock for reauth mappings
+	 */
+	mutex_t *mutex;
 };
 
 /**
@@ -98,21 +104,27 @@ METHOD(simaka_provider_t, is_reauth, identification_t*,
 	identification_t *permanent;
 	reauth_data_t *data;
 
+	this->mutex->lock(this->mutex);
+
 	/* look up permanent identity */
 	permanent = this->permanent->get(this->permanent, id);
 	if (!permanent)
 	{
+		this->mutex->unlock(this->mutex);
 		return NULL;
 	}
 	/* look up reauthentication data */
 	data = this->reauth->get(this->reauth, permanent);
 	if (!data)
 	{
+		this->mutex->unlock(this->mutex);
 		return NULL;
 	}
 	*counter = ++data->counter;
 	memcpy(mk, data->mk, HASH_SIZE_SHA1);
-	return permanent->clone(permanent);
+	permanent = permanent->clone(permanent);
+	this->mutex->unlock(this->mutex);
+	return permanent;
 }
 
 METHOD(simaka_provider_t, gen_reauth, identification_t*,
@@ -122,10 +134,12 @@ METHOD(simaka_provider_t, gen_reauth, identification_t*,
 	reauth_data_t *data;
 	identification_t *permanent, *new_id;
 
+	this->mutex->lock(this->mutex);
 	new_id = gen_identity(this);
 	if (!new_id)
 	{
 		DBG1(DBG_CFG, "failed to generate identity");
+		this->mutex->unlock(this->mutex);
 		return NULL;
 	}
 
@@ -155,7 +169,9 @@ METHOD(simaka_provider_t, gen_reauth, identification_t*,
 	}
 	memcpy(data->mk, mk, HASH_SIZE_SHA1);
 
-	return data->id->clone(data->id);
+	new_id = data->id->clone(data->id);
+	this->mutex->unlock(this->mutex);
+	return new_id;
 }
 
 METHOD(eap_simaka_reauth_provider_t, destroy, void,
@@ -183,7 +199,8 @@ METHOD(eap_simaka_reauth_provider_t, destroy, void,
 
 	this->permanent->destroy(this->permanent);
 	this->reauth->destroy(this->reauth);
-	this->rng->destroy(this->rng);
+	this->mutex->destroy(this->mutex);
+	DESTROY_IF(this->rng);
 	free(this);
 }
 
@@ -207,16 +224,16 @@ eap_simaka_reauth_provider_t *eap_simaka_reauth_provider_create()
 			},
 			.destroy = _destroy,
 		},
+		.permanent = hashtable_create((void*)hash, (void*)equals, 0),
+		.reauth = hashtable_create((void*)hash, (void*)equals, 0),
 		.rng = lib->crypto->create_rng(lib->crypto, RNG_WEAK),
+		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
 	);
 	if (!this->rng)
 	{
-		free(this);
+		destroy(this);
 		return NULL;
 	}
-	this->permanent = hashtable_create((void*)hash, (void*)equals, 0);
-	this->reauth = hashtable_create((void*)hash, (void*)equals, 0);
-
 	return &this->public;
 }
 
