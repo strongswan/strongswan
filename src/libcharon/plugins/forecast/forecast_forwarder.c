@@ -323,10 +323,10 @@ static bool attach_filter(int fd, uint32_t broadcast, uint32_t ifindex)
 {
 	struct sock_filter filter_code[] = {
 		/* handle any marked packets (from clients) */
-		BPF_STMT(BPF_LD+BPF_B+BPF_ABS, SKF_AD_OFF+SKF_AD_MARK),
+		BPF_STMT(BPF_LD+BPF_W+BPF_ABS, SKF_AD_OFF+SKF_AD_MARK),
 		BPF_JUMP(BPF_JMP+BPF_JEQ+BPF_K, 0, 0, 2),
 		/* and those from the internal interface */
-		BPF_STMT(BPF_LD+BPF_B+BPF_ABS, SKF_AD_OFF+SKF_AD_IFINDEX),
+		BPF_STMT(BPF_LD+BPF_W+BPF_ABS, SKF_AD_OFF+SKF_AD_IFINDEX),
 		BPF_JUMP(BPF_JMP+BPF_JEQ+BPF_K, ifindex, 0, 5),
 		/* destination address: is ... */
 		BPF_STMT(BPF_LD+BPF_W+BPF_ABS, offsetof(struct iphdr, daddr)),
