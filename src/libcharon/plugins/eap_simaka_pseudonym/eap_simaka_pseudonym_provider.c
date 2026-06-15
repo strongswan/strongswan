@@ -18,6 +18,7 @@
 
 #include <utils/debug.h>
 #include <collections/hashtable.h>
+#include <threading/rwlock.h>
 
 typedef struct private_eap_simaka_pseudonym_provider_t private_eap_simaka_pseudonym_provider_t;
 
@@ -45,6 +46,11 @@ struct private_eap_simaka_pseudonym_provider_t {
 	 * RNG for pseudonyms/reauth identities
 	 */
 	rng_t *rng;
+
+	/**
+	 * Lock for pseudonym mappings
+	 */
+	rwlock_t *lock;
 };
 
 /**
@@ -68,12 +74,14 @@ METHOD(simaka_provider_t, is_pseudonym, identification_t*,
 {
 	identification_t *permanent;
 
+	this->lock->read_lock(this->lock);
 	permanent = this->permanent->get(this->permanent, id);
 	if (permanent)
 	{
-		return permanent->clone(permanent);
+		permanent = permanent->clone(permanent);
 	}
-	return NULL;
+	this->lock->unlock(this->lock);
+	return permanent;
 }
 
 /**
@@ -98,6 +106,8 @@ METHOD(simaka_provider_t, gen_pseudonym, identification_t*,
 {
 	identification_t *pseudonym, *permanent;
 
+	this->lock->write_lock(this->lock);
+
 	/* remove old entry */
 	pseudonym = this->pseudonym->remove(this->pseudonym, id);
 	if (pseudonym)
@@ -113,6 +123,7 @@ METHOD(simaka_provider_t, gen_pseudonym, identification_t*,
 	pseudonym = gen_identity(this);
 	if (!pseudonym)
 	{
+		this->lock->unlock(this->lock);
 		DBG1(DBG_CFG, "failed to generate pseudonym");
 		return NULL;
 	}
@@ -121,8 +132,10 @@ METHOD(simaka_provider_t, gen_pseudonym, identification_t*,
 	id = id->clone(id);
 	this->pseudonym->put(this->pseudonym, id, pseudonym);
 	this->permanent->put(this->permanent, pseudonym, id);
+	pseudonym = pseudonym->clone(pseudonym);
 
-	return pseudonym->clone(pseudonym);
+	this->lock->unlock(this->lock);
+	return pseudonym;
 }
 
 METHOD(eap_simaka_pseudonym_provider_t, destroy, void,
@@ -148,7 +161,8 @@ METHOD(eap_simaka_pseudonym_provider_t, destroy, void,
 
 	this->pseudonym->destroy(this->pseudonym);
 	this->permanent->destroy(this->permanent);
-	this->rng->destroy(this->rng);
+	this->lock->destroy(this->lock);
+	DESTROY_IF(this->rng);
 	free(this);
 }
 
@@ -172,16 +186,16 @@ eap_simaka_pseudonym_provider_t *eap_simaka_pseudonym_provider_create()
 			},
 			.destroy = _destroy,
 		},
+		.pseudonym = hashtable_create((void*)hash, (void*)equals, 0),
+		.permanent = hashtable_create((void*)hash, (void*)equals, 0),
 		.rng = lib->crypto->create_rng(lib->crypto, RNG_WEAK),
+		.lock = rwlock_create(RWLOCK_TYPE_DEFAULT),
 	);
 	if (!this->rng)
 	{
-		free(this);
+		destroy(this);
 		return NULL;
 	}
-	this->pseudonym = hashtable_create((void*)hash, (void*)equals, 0);
-	this->permanent = hashtable_create((void*)hash, (void*)equals, 0);
-
 	return &this->public;
 }
 
