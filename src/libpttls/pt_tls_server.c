@@ -439,7 +439,7 @@ static status_t assess(private_pt_tls_server_t *this, tls_t *tnccs)
 			case FAILED:
 			default:
 				reader->destroy(reader);
-				return FALSE;
+				return FAILED;
 			case NEED_MORE:
 				break;
 		}
