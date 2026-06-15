@@ -192,6 +192,7 @@ tnccs_msg_t *imc_imv_msg_create_from_node(xmlNodePtr node, linked_list_t *errors
 		{
 			content = xmlNodeGetContent(cur);
 			b64_body = chunk_create(content, strlen(content));
+			free(this->msg_body.ptr);
 			this->msg_body = decode_base64(b64_body);
 			xmlFree(content);
 		}
