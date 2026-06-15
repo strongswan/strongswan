@@ -18,7 +18,6 @@
 #include "eap_mschapv2.h"
 
 #include <ctype.h>
-#include <unistd.h>
 
 #include <daemon.h>
 #include <library.h>
@@ -77,11 +76,6 @@ struct private_eap_mschapv2_t
 	 * MS-CHAPv2-ID (session ID, increases with each retry)
 	 */
 	uint8_t mschapv2id;
-
-	/**
-	 * Number of retries
-	 */
-	int retries;
 
 	/**
 	 * Provide EAP-Identity
@@ -160,15 +154,8 @@ ENUM_END(mschapv2_error_names, ERROR_CHANGING_PASSWORD);
 #define MSCHAPV2_HOST_NAME "strongSwan"
 /* Message sent on success */
 #define SUCCESS_MESSAGE " M=Welcome2strongSwan"
-/* Message sent on failure */
-#define FAILURE_MESSAGE "E=691 R=1 C="
-/* Length of the complete failure message */
-#define FAILURE_MESSAGE_LEN (sizeof(FAILURE_MESSAGE) + CHALLENGE_LEN * 2)
-
-/* Number of seconds to delay retries */
-#define RETRY_DELAY 2
-/* Maximum number of retries */
-#define MAX_RETRIES 2
+/* Dummy NT hash used to avoid timing leaks when no secret is found */
+static const u_char dummy_nt_hash[16];
 
 typedef struct eap_mschapv2_header_t eap_mschapv2_header_t;
 typedef struct eap_mschapv2_challenge_t eap_mschapv2_challenge_t;
@@ -1107,68 +1094,6 @@ METHOD(eap_method_t, process_peer, status_t,
 }
 
 /**
- * Handles retries on the server
- */
-static status_t process_server_retry(private_eap_mschapv2_t *this,
-									 eap_payload_t **out)
-{
-	eap_mschapv2_header_t *eap;
-	rng_t *rng;
-	chunk_t hex;
-	char msg[FAILURE_MESSAGE_LEN];
-	uint16_t len = HEADER_LEN + FAILURE_MESSAGE_LEN - 1; /* no null byte */
-
-	if (++this->retries > MAX_RETRIES)
-	{
-		/* we MAY send a Failure Request with R=0, but windows 7 does not
-		 * really like that and does not respond with a Failure Response.
-		 * so, to clean up our state we just fail with an EAP-Failure.
-		 * this gives an unknown error on the windows side, but is also fine
-		 * with the standard. */
-		DBG1(DBG_IKE, "EAP-MS-CHAPv2 verification failed: "
-			 "maximum number of retries reached");
-		return FAILED;
-	}
-
-	DBG1(DBG_IKE, "EAP-MS-CHAPv2 verification failed, retry (%d)", this->retries);
-
-	rng = lib->crypto->create_rng(lib->crypto, RNG_WEAK);
-	if (!rng || !rng->get_bytes(rng, CHALLENGE_LEN, this->challenge.ptr))
-	{
-		DBG1(DBG_IKE, "EAP-MS-CHAPv2 failed, allocating challenge failed");
-		DESTROY_IF(rng);
-		return FAILED;
-	}
-	rng->destroy(rng);
-
-	chunk_free(&this->nt_response);
-	chunk_free(&this->auth_response);
-	chunk_free(&this->msk);
-
-	eap = alloca(len);
-	eap->code = EAP_REQUEST;
-	eap->identifier = ++this->identifier;
-	eap->length = htons(len);
-	eap->type = EAP_MSCHAPV2;
-	eap->opcode = MSCHAPV2_FAILURE;
-	eap->ms_chapv2_id = this->mschapv2id++; /* increase for each retry */
-	set_ms_length(eap, len);
-
-	hex = chunk_to_hex(this->challenge, NULL, TRUE);
-	snprintf(msg, FAILURE_MESSAGE_LEN, "%s%s", FAILURE_MESSAGE, hex.ptr);
-	chunk_free(&hex);
-	memcpy(eap->data, msg, FAILURE_MESSAGE_LEN - 1); /* no null byte */
-	*out = eap_payload_create_data(chunk_create((void*) eap, len));
-
-	/* delay the response for some time to make brute-force attacks harder */
-	sleep(RETRY_DELAY);
-
-	/* since the error is retriable the state does not change, we still
-	 * expect an MSCHAPV2_RESPONSE from the peer */
-	return NEED_MORE;
-}
-
-/**
  * Process MS-CHAPv2 Response response packets
  */
 static status_t process_server_response(private_eap_mschapv2_t *this,
@@ -1207,14 +1132,11 @@ static status_t process_server_response(private_eap_mschapv2_t *this,
 	{
 		DBG1(DBG_IKE, "no EAP key found for hosts '%Y' - '%Y'",
 					  this->server, userid);
-		/* FIXME: windows 7 always sends the username that is first entered in
-		 * the username box, even, if the user changes it during retries (probably
-		 * to keep consistent with the EAP-Identity).
-		 * thus, we could actually fail here, because retries do not make much
-		 * sense. on the other hand, an attacker could guess usernames, if the
-		 * error messages were different. */
+		/* make sure we don't leak much timing information */
+		GenerateStuff(this, this->challenge, peer_challenge, username,
+					  chunk_from_thing(dummy_nt_hash));
 		userid->destroy(userid);
-		return process_server_retry(this, out);
+		return FAILED;
 	}
 
 	if (GenerateStuff(this, this->challenge, peer_challenge,
@@ -1255,7 +1177,7 @@ static status_t process_server_response(private_eap_mschapv2_t *this,
 		return NEED_MORE;
 	}
 	userid->destroy(userid);
-	return process_server_retry(this, out);
+	return FAILED;
 }
 
 METHOD(eap_method_t, process_server, status_t,
