@@ -59,11 +59,6 @@ struct private_wolfssl_ec_private_key_t {
 	ecc_key ec;
 
 	/**
-	 * Random number generator
-	 */
-	WC_RNG rng;
-
-	/**
 	 * Reference count
 	 */
 	refcount_t ref;
@@ -79,25 +74,32 @@ static bool build_signature(private_wolfssl_ec_private_key_t *this,
 							chunk_t hash, chunk_t *signature)
 {
 	bool success = FALSE;
+	WC_RNG rng;
 	mp_int r, s;
 
+	if (wc_InitRng(&rng) != 0)
+	{
+		return FALSE;
+	}
 	if (mp_init(&r) != 0)
 	{
+		wc_FreeRng(&rng);
 		return FALSE;
 	}
 	if (mp_init(&s) != 0)
 	{
 		mp_free(&r);
+		wc_FreeRng(&rng);
 		return FALSE;
 	}
-	if (wc_ecc_sign_hash_ex(hash.ptr, hash.len, &this->rng, &this->ec, &r,
-							&s) == 0)
+	if (wc_ecc_sign_hash_ex(hash.ptr, hash.len, &rng, &this->ec, &r, &s) == 0)
 	{
 		success = wolfssl_mp_cat(this->ec.dp->size * 2, &r, &s, signature);
 	}
 
 	mp_free(&s);
 	mp_free(&r);
+	wc_FreeRng(&rng);
 	return success;
 }
 
@@ -135,14 +137,19 @@ static bool build_der_signature(private_wolfssl_ec_private_key_t *this,
 {
 	chunk_t dgst = chunk_empty;
 	bool success = FALSE;
+	WC_RNG rng;
 	word32 len;
 
+	if (wc_InitRng(&rng) != 0)
+	{
+		return FALSE;
+	}
 	if (wolfssl_hash_chunk(hash, data, &dgst))
 	{
 		*signature = chunk_alloc(wc_ecc_sig_size(&this->ec));
 		len = signature->len;
 		if (wc_ecc_sign_hash(dgst.ptr, dgst.len, signature->ptr, &len,
-							   &this->rng, &this->ec) == 0)
+							 &rng, &this->ec) == 0)
 		{
 			signature->len = len;
 			success = TRUE;
@@ -153,6 +160,7 @@ static bool build_der_signature(private_wolfssl_ec_private_key_t *this,
 		}
 	}
 	chunk_free(&dgst);
+	wc_FreeRng(&rng);
 	return success;
 }
 
@@ -306,7 +314,6 @@ METHOD(private_key_t, destroy, void,
 	if (ref_put(&this->ref))
 	{
 		lib->encoding->clear_cache(lib->encoding, &this->ec);
-		wc_FreeRng(&this->rng);
 		wc_ecc_free(&this->ec);
 		free(this);
 	}
@@ -345,13 +352,6 @@ static private_wolfssl_ec_private_key_t *create_empty(void)
 		free(this);
 		return NULL;
 	}
-	if (wc_InitRng(&this->rng) != 0)
-	{
-		DBG1(DBG_LIB, "RNG initialization for EC private key failed");
-		wc_ecc_free(&this->ec);
-		free(this);
-		return NULL;
-	}
 	return this;
 }
 
@@ -364,6 +364,7 @@ wolfssl_ec_private_key_t *wolfssl_ec_private_key_gen(key_type_t type,
 	private_wolfssl_ec_private_key_t *this;
 	u_int key_size = 0;
 	ecc_curve_id curve_id;
+	WC_RNG rng;
 
 	while (TRUE)
 	{
@@ -407,13 +408,19 @@ wolfssl_ec_private_key_t *wolfssl_ec_private_key_gen(key_type_t type,
 			return NULL;
 	}
 
-	if (wc_ecc_make_key_ex(&this->rng, (key_size + 7) / 8, &this->ec,
-						   curve_id) < 0)
+	if (wc_InitRng(&rng) != 0)
 	{
-		DBG1(DBG_LIB, "EC private key generation failed");
 		destroy(this);
 		return NULL;
 	}
+	if (wc_ecc_make_key_ex(&rng, (key_size + 7) / 8, &this->ec, curve_id) < 0)
+	{
+		DBG1(DBG_LIB, "EC private key generation failed");
+		destroy(this);
+		wc_FreeRng(&rng);
+		return NULL;
+	}
+	wc_FreeRng(&rng);
 	return &this->public;
 }
 

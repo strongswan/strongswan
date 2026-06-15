@@ -58,6 +58,11 @@ struct private_wolfssl_rsa_public_key_t {
 	WC_RNG rng;
 
 	/**
+	 * Mutex to protect access to the RNG via API calls.
+	 */
+	wolfSSL_Mutex mutex;
+
+	/**
 	 * Reference counter
 	 */
 	refcount_t ref;
@@ -81,7 +86,9 @@ static bool verify_signature(private_wolfssl_rsa_public_key_t *this,
 
 	padded = chunk_copy_pad(chunk_alloca(len), signature, 0x00);
 
+	wc_LockMutex(&this->mutex);
 	len = wc_RsaSSL_VerifyInline(padded.ptr, len, &p, &this->rsa);
+	wc_UnLockMutex(&this->mutex);
 	if (len > 0)
 	{
 		success = chunk_equals_const(data, chunk_create(p, len));
@@ -149,8 +156,10 @@ static bool verify_emsa_pss_signature(private_wolfssl_rsa_public_key_t *this,
 	}
 	padded = chunk_copy_pad(chunk_alloca(len), signature, 0x00);
 
+	wc_LockMutex(&this->mutex);
 	len = wc_RsaPSS_VerifyInline_ex(padded.ptr, len, &p, hash, mgf,
 									params->salt_len, &this->rsa);
+	wc_UnLockMutex(&this->mutex);
 	if (len > 0)
 	{
 		success = wc_RsaPSS_CheckPadding_ex(dgst.ptr, dgst.len, p, len, hash,
@@ -280,9 +289,11 @@ METHOD(public_key_t, encrypt_, bool,
 	}
 	len = wc_RsaEncryptSize(&this->rsa);
 	*crypto = chunk_alloc(len);
+	wc_LockMutex(&this->mutex);
 	len = wc_RsaPublicEncrypt_ex(plain.ptr, plain.len, crypto->ptr, len,
 								 &this->rsa, &this->rng, padding, hash, mgf,
 								 label.ptr, label.len);
+	wc_UnLockMutex(&this->mutex);
 	if (len < 0)
 	{
 		DBG1(DBG_LIB, "RSA encryption failed");
@@ -423,6 +434,7 @@ METHOD(public_key_t, destroy, void,
 	{
 		lib->encoding->clear_cache(lib->encoding, &this->rsa);
 		wc_FreeRsaKey(&this->rsa);
+		wc_FreeMutex(&this->mutex);
 		wc_FreeRng(&this->rng);
 		free(this);
 	}
@@ -459,13 +471,28 @@ static private_wolfssl_rsa_public_key_t *create_empty()
 		free(this);
 		return NULL;
 	}
-	if (wc_InitRsaKey(&this->rsa, NULL) != 0)
+	if (wc_InitMutex(&this->mutex) != 0)
 	{
-		DBG1(DBG_LIB, "init RSA failed, rsa public key load failed");
+		DBG1(DBG_LIB, "init mutex failed, rsa public key load failed");
 		wc_FreeRng(&this->rng);
 		free(this);
 		return NULL;
 	}
+	if (wc_InitRsaKey(&this->rsa, NULL) != 0)
+	{
+		DBG1(DBG_LIB, "init RSA failed, rsa public key load failed");
+		wc_FreeMutex(&this->mutex);
+		wc_FreeRng(&this->rng);
+		free(this);
+		return NULL;
+	}
+#ifdef WC_RSA_BLINDING
+	if (wc_RsaSetRNG(&this->rsa, &this->rng) != 0)
+	{
+		destroy(this);
+		return NULL;
+	}
+#endif
 	return this;
 }
 
