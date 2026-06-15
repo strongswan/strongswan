@@ -229,6 +229,7 @@ static mac_t *hmac_create(hash_algorithm_t algo)
 	EVP_MAC_free(mac);
 	if (!this->hmac_base || !EVP_MAC_CTX_set_params(this->hmac_base, params))
 	{
+		EVP_MAC_CTX_free(this->hmac_base);
 		free(this);
 		return NULL;
 	}
