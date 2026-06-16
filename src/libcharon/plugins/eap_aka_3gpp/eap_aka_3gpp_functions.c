@@ -106,14 +106,15 @@ bool eap_aka_3gpp_get_k_opc(identification_t *id, uint8_t k[AKA_K_LEN],
 void eap_aka_3gpp_get_sqn(uint8_t sqn[AKA_SQN_LEN], int offset)
 {
 	timeval_t time;
+	uint32_t sec, usec;
 
 	gettimeofday(&time, NULL);
 	/* set sqn to an integer containing 4 bytes seconds + 2 bytes usecs */
-	time.tv_sec = htonl(time.tv_sec + offset);
+	sec = htonl((uint32_t)(time.tv_sec + offset));
 	/* usec's are never larger than 0x000f423f, so we shift the 12 first bits */
-	time.tv_usec = htonl(time.tv_usec << 12);
-	memcpy(sqn, (uint8_t*)&time.tv_sec + sizeof(time_t) - 4, 4);
-	memcpy(sqn + 4, &time.tv_usec, 2);
+	usec = htonl((uint32_t)time.tv_usec << 12);
+	memcpy(sqn, &sec, 4);
+	memcpy(sqn + 4, &usec, 2);
 }
 
 static bool f1andf1star(private_eap_aka_3gpp_functions_t *this,
