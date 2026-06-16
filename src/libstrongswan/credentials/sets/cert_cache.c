@@ -45,6 +45,11 @@ struct relation_t {
 	certificate_t *subject;
 
 	/**
+	 * cached certificate type
+	 */
+	certificate_type_t type;
+
+	/**
 	 * issuer of this relation
 	 */
 	certificate_t *issuer;
@@ -82,6 +87,28 @@ struct private_cert_cache_t {
 };
 
 /**
+ * Replaces the information in the given relation using the passed data.
+ *
+ * Hits are not touched.
+ *
+ * The lock must be held.
+ */
+static void replace_relation(relation_t *rel, certificate_t *subject,
+							 certificate_t *issuer, signature_params_t *scheme)
+{
+	if (rel->subject)
+	{
+		rel->subject->destroy(rel->subject);
+		rel->issuer->destroy(rel->issuer);
+		signature_params_destroy(rel->scheme);
+	}
+	rel->subject = subject->get_ref(subject);
+	rel->type = subject->get_type(subject);
+	rel->issuer = issuer->get_ref(issuer);
+	rel->scheme = signature_params_clone(scheme);
+}
+
+/**
  * Cache relation in a free slot/replace an other
  */
 static void cache(private_cert_cache_t *this,
@@ -104,12 +131,12 @@ static void cache(private_cert_cache_t *this,
 		{
 			rel = &this->relations[i];
 
-			if (rel->subject &&
-				rel->subject->get_type(rel->subject) == CERT_X509_CRL &&
+			if (rel->type == CERT_X509_CRL &&
 				rel->lock->try_write_lock(rel->lock))
 			{
 				/* double-check having lock */
-				if (rel->subject->get_type(rel->subject) == CERT_X509_CRL &&
+				if (rel->subject &&
+					rel->subject->get_type(rel->subject) == CERT_X509_CRL &&
 					rel->issuer->equals(rel->issuer, issuer))
 				{
 					cached_crl = (crl_t*)rel->subject;
@@ -118,10 +145,7 @@ static void cache(private_cert_cache_t *this,
 							   crl->is_delta_crl(crl, NULL) &&
 						crl_is_newer(crl, cached_crl))
 					{
-						rel->subject->destroy(rel->subject);
-						rel->subject = subject->get_ref(subject);
-						signature_params_destroy(rel->scheme);
-						rel->scheme = signature_params_clone(scheme);
+						replace_relation(rel, subject, issuer, scheme);
 						return rel->lock->unlock(rel->lock);
 					}
 				}
@@ -146,12 +170,12 @@ static void cache(private_cert_cache_t *this,
 			{
 				rel = &this->relations[i];
 
-				if (rel->subject &&
-					rel->subject->get_type(rel->subject) == CERT_X509_OCSP_RESPONSE &&
+				if (rel->type == CERT_X509_OCSP_RESPONSE &&
 					rel->lock->try_write_lock(rel->lock))
 				{
 					/* double-check having lock */
-					if (rel->subject->get_type(rel->subject) == CERT_X509_OCSP_RESPONSE &&
+					if (rel->subject &&
+						rel->subject->get_type(rel->subject) == CERT_X509_OCSP_RESPONSE &&
 						rel->issuer->equals(rel->issuer, issuer) &&
 						certificate_is_newer(subject, rel->subject))
 					{
@@ -164,10 +188,7 @@ static void cache(private_cert_cache_t *this,
 						{
 							e1->destroy(e1);
 							e->destroy(e);
-							rel->subject->destroy(rel->subject);
-							rel->subject = subject->get_ref(subject);
-							signature_params_destroy(rel->scheme);
-							rel->scheme = signature_params_clone(scheme);
+							replace_relation(rel, subject, issuer, scheme);
 							return rel->lock->unlock(rel->lock);
 						}
 						e1->destroy(e1);
@@ -189,9 +210,7 @@ static void cache(private_cert_cache_t *this,
 			/* double-check having lock */
 			if (!rel->subject)
 			{
-				rel->subject = subject->get_ref(subject);
-				rel->issuer = issuer->get_ref(issuer);
-				rel->scheme = signature_params_clone(scheme);
+				replace_relation(rel, subject, issuer, scheme);
 				return rel->lock->unlock(rel->lock);
 			}
 			rel->lock->unlock(rel->lock);
@@ -213,15 +232,7 @@ static void cache(private_cert_cache_t *this,
 			}
 			if (rel->lock->try_write_lock(rel->lock))
 			{
-				if (rel->subject)
-				{
-					rel->subject->destroy(rel->subject);
-					rel->issuer->destroy(rel->issuer);
-					signature_params_destroy(rel->scheme);
-				}
-				rel->subject = subject->get_ref(subject);
-				rel->issuer = issuer->get_ref(issuer);
-				rel->scheme = signature_params_clone(scheme);
+				replace_relation(rel, subject, issuer, scheme);
 				rel->hits = 0;
 				return rel->lock->unlock(rel->lock);
 			}
@@ -442,6 +453,7 @@ METHOD(cert_cache_t, flush, void,
 				rel->issuer->destroy(rel->issuer);
 				signature_params_destroy(rel->scheme);
 				rel->subject = NULL;
+				rel->type = CERT_ANY;
 				rel->issuer = NULL;
 				rel->scheme = NULL;
 				rel->hits = 0;
@@ -497,6 +509,7 @@ cert_cache_t *cert_cache_create()
 	for (i = 0; i < CACHE_SIZE; i++)
 	{
 		this->relations[i].subject = NULL;
+		this->relations[i].type = CERT_ANY;
 		this->relations[i].issuer = NULL;
 		this->relations[i].scheme = NULL;
 		this->relations[i].hits = 0;
