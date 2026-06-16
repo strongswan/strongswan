@@ -618,6 +618,7 @@ METHOD(ipsec_sa_mgr_t, del_sa, status_t,
 {
 	ipsec_sa_entry_t *current, *found = NULL;
 	enumerator_t *enumerator;
+	uint32_t *spi_alloc = NULL;
 
 	this->mutex->lock(this->mutex);
 	enumerator = this->sas->create_enumerator(this->sas);
@@ -634,6 +635,10 @@ METHOD(ipsec_sa_mgr_t, del_sa, status_t,
 		}
 	}
 	enumerator->destroy(enumerator);
+	if (!found)
+	{
+		spi_alloc = this->allocated_spis->remove(this->allocated_spis, &spi);
+	}
 	this->mutex->unlock(this->mutex);
 
 	if (found)
@@ -641,6 +646,12 @@ METHOD(ipsec_sa_mgr_t, del_sa, status_t,
 		DBG2(DBG_ESP, "deleted %sbound SAD entry with SPI %.8x",
 			 found->sa->is_inbound(found->sa) ? "in" : "out", ntohl(spi));
 		destroy_entry(found);
+		return SUCCESS;
+	}
+	else if (spi_alloc)
+	{
+		DBG2(DBG_ESP, "deleted pre-allocated SPI %.8x", ntohl(spi));
+		free(spi_alloc);
 		return SUCCESS;
 	}
 	return FAILED;
