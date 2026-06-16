@@ -285,7 +285,7 @@ static int open_tcp_socket(int family, uint16_t port)
 	}
 	if (family == AF_INET6)
 	{
-	if (setsockopt(skt, IPPROTO_IPV6, IPV6_V6ONLY,
+		if (setsockopt(skt, IPPROTO_IPV6, IPV6_V6ONLY,
 							(void *)&on, sizeof(on)) < 0)
 		{
 			DBG1(DBG_CFG, "unable to set IPV6_V6ONLY on socket: %s",
@@ -656,8 +656,11 @@ static bool pt_tls_receive(private_tnc_pdp_t *this, int fd, watcher_event_t even
 	pt_tls_fd = accept(fd, (sockaddr_t*)&addr, &addrlen);
 	if (pt_tls_fd == -1)
 	{
-		DBG1(DBG_TNC, "accepting PT-TLS stream failed: %s", strerror(errno));
-		return FALSE;
+		if (errno != EINTR)
+		{
+			DBG1(DBG_TNC, "accepting PT-TLS stream failed: %s", strerror(errno));
+		}
+		return TRUE;
 	}
 	client_ip = host_create_from_sockaddr((sockaddr_t*)&addr);
 	DBG1(DBG_TNC, "accepting PT-TLS stream from %H", client_ip);
@@ -680,7 +683,7 @@ static bool pt_tls_receive(private_tnc_pdp_t *this, int fd, watcher_event_t even
 	{
 		DBG1(DBG_TNC, "could not create TNCCS 2.0 connection instance");
 		close(pt_tls_fd);
-		return FALSE;
+		return TRUE;
 	}
 
 	pt_tls = pt_tls_server_create(this->server, pt_tls_fd, auth, tnccs);
@@ -688,7 +691,7 @@ static bool pt_tls_receive(private_tnc_pdp_t *this, int fd, watcher_event_t even
 	{
 		DBG1(DBG_TNC, "could not create PT-TLS connection instance");
 		close(pt_tls_fd);
-		return FALSE;
+		return TRUE;
 	}
 
 	lib->watcher->add(lib->watcher, pt_tls_fd, WATCHER_READ,
@@ -734,12 +737,12 @@ static bool radius_receive(private_tnc_pdp_t *this, int fd, watcher_event_t even
 	if (bytes_read < 0)
 	{
 		DBG1(DBG_CFG, "error reading RADIUS socket: %s", strerror(errno));
-		return FALSE;
+		return TRUE;
 	}
 	if (msg.msg_flags & MSG_TRUNC)
 	{
 		DBG1(DBG_CFG, "receive buffer too small, RADIUS packet discarded");
-		return FALSE;
+		return TRUE;
 	}
 	source = host_create_from_sockaddr((sockaddr_t*)&src);
 	DBG2(DBG_CFG, "received RADIUS packet from %#H", source);
