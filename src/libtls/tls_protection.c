@@ -74,6 +74,15 @@ METHOD(tls_protection_t, process, status_t,
 		return NEED_MORE;
 	}
 
+	if (this->version >= TLS_1_3 && this->aead_in &&
+		type != TLS_APPLICATION_DATA && type != TLS_CHANGE_CIPHER_SPEC)
+	{
+		DBG1(DBG_TLS, "received unencrypted TLS 1.3 %N record",
+			 tls_content_type_names, type);
+		this->alert->add(this->alert, TLS_FATAL, TLS_UNEXPECTED_MESSAGE);
+		return NEED_MORE;
+	}
+
 	if (this->version < TLS_1_3 ||
 		type == TLS_APPLICATION_DATA)
 	{
