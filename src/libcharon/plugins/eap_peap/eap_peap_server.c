@@ -106,7 +106,8 @@ static status_t start_phase2_auth(private_eap_peap_server_t *this)
 		return FAILED;
 	}
 	DBG1(DBG_IKE, "phase2 method %N selected", eap_type_names, type);
-		this->ph2_method = charon->eap->create_instance(charon->eap, type, 0,
+	this->phase2_result = EAP_FAILURE;
+	this->ph2_method = charon->eap->create_instance(charon->eap, type, 0,
 								EAP_SERVER, this->server, this->peer);
 	if (this->ph2_method == NULL)
 	{
@@ -125,7 +126,7 @@ static status_t start_phase2_auth(private_eap_peap_server_t *this)
 	else
 	{
 		DBG1(DBG_IKE, "%N method failed", eap_type_names, type);
-			return FAILED;
+		return FAILED;
 	}
 }
 
@@ -138,6 +139,7 @@ static status_t start_phase2_tnc(private_eap_peap_server_t *this)
 						"%s.plugins.eap-peap.phase2_tnc", FALSE, lib->ns))
 	{
 		DBG1(DBG_IKE, "phase2 method %N selected", eap_type_names, EAP_TNC);
+		this->phase2_result = EAP_FAILURE;
 		this->ph2_method = charon->eap->create_instance(charon->eap, EAP_TNC,
 									0, EAP_SERVER, this->server, this->peer);
 		if (this->ph2_method == NULL)
@@ -218,9 +220,14 @@ METHOD(tls_application_t, process, status_t,
 		DBG1(DBG_IKE, "received tunneled EAP-PEAP AVP [EAP/%N]",
 								eap_code_short_names, code);
 		in->destroy(in);
-		/* if EAP_SUCCESS check if to continue phase2 with EAP-TNC */
-		return (this->phase2_result == EAP_SUCCESS && code == EAP_SUCCESS) ?
-			   start_phase2_tnc(this) : FAILED;
+
+		if (this->phase2_result == EAP_SUCCESS && code == EAP_SUCCESS)
+		{
+			/* only accept SUCCESS once after a successful inner method */
+			this->phase2_result = EAP_FAILURE;
+			return start_phase2_tnc(this);
+		}
+		return FAILED;
 	}
 
 	if (this->ph2_method)
@@ -292,7 +299,7 @@ METHOD(tls_application_t, process, status_t,
 		}
 	}
 
-	if (this->ph2_method == 0)
+	if (this->ph2_method == NULL)
 	{
 		DBG1(DBG_IKE, "no %N phase2 method installed", eap_type_names, EAP_PEAP);
 		in->destroy(in);
