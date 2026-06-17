@@ -200,16 +200,27 @@ static status_t receive_response(int fd, int timeout, uint8_t id,
 								 radius_message_t **response)
 {
 	radius_message_t *msg;
+	timeval_t deadline, now, diff;
 	char buf[4096];
-	int res;
+	int res, remaining;
 	struct pollfd pfd = {
 		.fd = fd,
 		.events = POLLIN,
 	};
 
+	time_monotonic(&deadline);
+	timeval_add_ms(&deadline, timeout);
+
 	while (TRUE)
 	{
-		res = poll(&pfd, 1, timeout);
+		time_monotonic(&now);
+		timersub(&deadline, &now, &diff);
+		remaining = diff.tv_sec * 1000 + diff.tv_usec / 1000;
+		if (remaining <= 0)
+		{	/* poll() would interpret negative values as no timeout */
+			return OUT_OF_RES;
+		}
+		res = poll(&pfd, 1, remaining);
 		if (res < 0)
 		{
 			DBG1(DBG_CFG, "waiting for RADIUS message failed: %s",
