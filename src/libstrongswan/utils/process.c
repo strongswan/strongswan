@@ -571,7 +571,7 @@ process_t* process_start_shell(char *const envp[], int *in, int *out, int *err,
 			 GetLastError());
 		return NULL;
 	}
-	if (path[len + 1] != '\\')
+	if (path[len - 1] != '\\')
 	{
 		strncat(path, "\\", sizeof(path) - len++);
 	}
