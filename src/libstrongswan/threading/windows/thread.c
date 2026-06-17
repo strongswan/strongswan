@@ -238,9 +238,7 @@ void* thread_tls_remove(void *key)
 	thread = get_current_thread();
 
 	old = set_leak_detective(FALSE);
-	threads_lock->lock(threads_lock);
 	value = thread->tls->remove(thread->tls, key);
-	threads_lock->unlock(threads_lock);
 	set_leak_detective(old);
 
 	return value;
@@ -274,7 +272,6 @@ static void docleanup(private_thread_t *this)
 		set_leak_detective(FALSE);
 	}
 
-	threads_lock->lock(threads_lock);
 	enumerator = this->tls->create_enumerator(this->tls);
 	while (enumerator->enumerate(enumerator, NULL, &tls))
 	{
@@ -285,7 +282,6 @@ static void docleanup(private_thread_t *this)
 		set_leak_detective(FALSE);
 	}
 	enumerator->destroy(enumerator);
-	threads_lock->unlock(threads_lock);
 
 	set_leak_detective(old);
 }
