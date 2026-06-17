@@ -520,14 +520,14 @@ static certificate_t *get_better_crl(certificate_t *cand, certificate_t *best,
 }
 
 /**
- * Find or fetch a certificate for a given crlIssuer
+ * Find or fetch a CRL for a given subject/issuer, the validation state and
+ * best CRL are updated accordingly
  */
-static cert_validation_t find_crl(private_revocation_validator_t *this,
-								  x509_t *subject, identification_t *issuer,
-								  crl_t *base, certificate_t **best,
-								  bool *uri_found, u_int timeout)
+static void find_crl(private_revocation_validator_t *this, x509_t *subject,
+					 identification_t *issuer, crl_t *base,
+					 cert_validation_t *valid, certificate_t **best,
+					 bool *uri_found, u_int timeout)
 {
-	cert_validation_t valid = VALIDATION_SKIPPED;
 	enumerator_t *enumerator;
 	certificate_t *current;
 	char *uri;
@@ -538,8 +538,8 @@ static cert_validation_t find_crl(private_revocation_validator_t *this,
 	while (enumerator->enumerate(enumerator, &current))
 	{
 		current->get_ref(current);
-		*best = get_better_crl(current, *best, subject, &valid, FALSE, base);
-		if (*best && valid != VALIDATION_STALE)
+		*best = get_better_crl(current, *best, subject, valid, FALSE, base);
+		if (*best && *valid != VALIDATION_STALE)
 		{
 			DBG1(DBG_CFG, "  using cached crl");
 			break;
@@ -548,7 +548,7 @@ static cert_validation_t find_crl(private_revocation_validator_t *this,
 	enumerator->destroy(enumerator);
 
 	/* fallback to fetching crls from credential sets cdps */
-	if (!base && valid != VALIDATION_GOOD && valid != VALIDATION_REVOKED)
+	if (!base && *valid != VALIDATION_GOOD && *valid != VALIDATION_REVOKED)
 	{
 		enumerator = lib->credmgr->create_cdp_enumerator(lib->credmgr,
 														 CERT_X509_CRL, issuer);
@@ -565,9 +565,9 @@ static cert_validation_t find_crl(private_revocation_validator_t *this,
 					current->destroy(current);
 					continue;
 				}
-				*best = get_better_crl(current, *best, subject,
-									   &valid, TRUE, base);
-				if (*best && valid != VALIDATION_STALE)
+				*best = get_better_crl(current, *best, subject, valid,
+									   TRUE, base);
+				if (*best && *valid != VALIDATION_STALE)
 				{
 					break;
 				}
@@ -575,7 +575,6 @@ static cert_validation_t find_crl(private_revocation_validator_t *this,
 		}
 		enumerator->destroy(enumerator);
 	}
-	return valid;
 }
 
 /**
@@ -625,7 +624,7 @@ static cert_validation_t check_delta_crl(private_revocation_validator_t *this,
 	if (chunk.len)
 	{
 		id = identification_create_from_encoding(ID_KEY_ID, chunk);
-		valid = find_crl(this, subject, id, base, &best, &uri, timeout);
+		find_crl(this, subject, id, base, &valid, &best, &uri, timeout);
 		id->destroy(id);
 	}
 
@@ -636,8 +635,8 @@ static cert_validation_t check_delta_crl(private_revocation_validator_t *this,
 	{
 		if (cdp->issuer)
 		{
-			valid = find_crl(this, subject, cdp->issuer, base, &best, &uri,
-							 timeout);
+			find_crl(this, subject, cdp->issuer, base, &valid, &best, &uri,
+					 timeout);
 		}
 	}
 	enumerator->destroy(enumerator);
@@ -697,7 +696,7 @@ static cert_validation_t check_crl(private_revocation_validator_t *this,
 	if (chunk.len)
 	{
 		id = identification_create_from_encoding(ID_KEY_ID, chunk);
-		valid = find_crl(this, subject, id, NULL, &best, &uri_found, timeout);
+		find_crl(this, subject, id, NULL, &valid, &best, &uri_found, timeout);
 		id->destroy(id);
 	}
 
@@ -708,8 +707,8 @@ static cert_validation_t check_crl(private_revocation_validator_t *this,
 	{
 		if (cdp->issuer)
 		{
-			valid = find_crl(this, subject, cdp->issuer, NULL, &best,
-							 &uri_found, timeout);
+			find_crl(this, subject, cdp->issuer, NULL, &valid, &best,
+					 &uri_found, timeout);
 		}
 	}
 	enumerator->destroy(enumerator);
