@@ -175,6 +175,7 @@ CALLBACK(handle_response, bool,
 		}
 		packet = ip_packet_create_udp_from_data(src, this->src,
 												chunk_create(buf, len));
+		src->destroy(src);
 		if (!packet)
 		{
 			DBG1(DBG_NET, "failed to parse DNS response");
@@ -349,6 +350,7 @@ METHOD(android_dns_proxy_t, handle, bool,
 		DBG1(DBG_NET, "sending DNS request failed: %s", strerror(errno));
 	}
 	this->lock->unlock(this->lock);
+	packet->destroy(packet);
 	return TRUE;
 }
 
