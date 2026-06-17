@@ -80,6 +80,15 @@ START_TEST(test_from_data)
 	ck_assert(chunk_equals(expected, encoding));
 	a->destroy(a);
 
+	/* data that contains 0 characters is not handled with the string parser */
+	expected = chunk_from_chars('f', 'o', 'o', '\0', 'b', 'a', 'r');
+	a = identification_create_from_data(expected);
+	ck_assert(ID_KEY_ID == a->get_type(a));
+	encoding = a->get_encoding(a);
+	ck_assert(expected.ptr != encoding.ptr);
+	ck_assert(chunk_equals(expected, encoding));
+	a->destroy(a);
+
 	/* everything else is handled by the string parser */
 	expected = chunk_from_str("moon@strongswan.org");
 	a = identification_create_from_data(expected);
