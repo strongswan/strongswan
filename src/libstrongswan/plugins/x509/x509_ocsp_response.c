@@ -728,6 +728,7 @@ static bool parse_basicOCSPResponse(private_x509_ocsp_response_t *this,
 					asn1_parse_simple_object(&object, ASN1_OCTET_STRING,
 										parser->get_level(parser)+1, "nonce"))
 				{
+					chunk_free(&this->nonce);
 					this->nonce = chunk_clone(object);
 				}
 				break;
