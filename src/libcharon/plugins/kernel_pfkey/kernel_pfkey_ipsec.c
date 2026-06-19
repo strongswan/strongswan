@@ -2564,6 +2564,7 @@ static bool install_route(private_kernel_pfkey_ipsec_t *this,
 				 "%R === %R %N", out->src_ts, out->dst_ts,
 				policy_dir_names, policy->direction);
 		}
+		remove_exclude_route(this, old);
 		route_entry_destroy(old);
 		policy->route = NULL;
 	}
