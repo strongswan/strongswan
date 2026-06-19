@@ -528,7 +528,7 @@ METHOD(dhcp_socket_t, release, void,
  */
 static void handle_offer(private_dhcp_socket_t *this, dhcp_t *dhcp, size_t optlen)
 {
-	dhcp_transaction_t *transaction = NULL;
+	dhcp_transaction_t *discover, *transaction = NULL;
 	enumerator_t *enumerator;
 	host_t *offer, *server = NULL;
 
@@ -547,12 +547,13 @@ static void handle_offer(private_dhcp_socket_t *this, dhcp_t *dhcp, size_t optle
 
 	this->mutex->lock(this->mutex);
 	enumerator = this->discover->create_enumerator(this->discover);
-	while (enumerator->enumerate(enumerator, &transaction))
+	while (enumerator->enumerate(enumerator, &discover))
 	{
-		if (transaction->get_id(transaction) == dhcp->transaction_id)
+		if (discover->get_id(discover) == dhcp->transaction_id)
 		{
 			this->discover->remove_at(this->discover, enumerator);
-			this->request->insert_last(this->request, transaction);
+			this->request->insert_last(this->request, discover);
+			transaction = discover;
 			break;
 		}
 	}
