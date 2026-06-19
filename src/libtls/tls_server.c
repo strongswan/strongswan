@@ -721,6 +721,7 @@ static status_t process_certificate(private_tls_server_t *this,
 			this->alert->add(this->alert, TLS_FATAL,
 							 this->tls->get_version_max(this->tls) > TLS_1_2 ?
 							 TLS_CERTIFICATE_REQUIRED : TLS_HANDSHAKE_FAILURE);
+			certs->destroy(certs);
 			return NEED_MORE;
 		}
 	}
@@ -769,6 +770,7 @@ static status_t process_certificate(private_tls_server_t *this,
 			{
 				DBG1(DBG_TLS, "failed to read extensions of CertificateEntry");
 				this->alert->add(this->alert, TLS_FATAL, TLS_DECODE_ERROR);
+				certs->destroy(certs);
 				return NEED_MORE;
 			}
 		}
@@ -958,7 +960,7 @@ static status_t process_cert_verify(private_tls_server_t *this,
 static status_t process_finished(private_tls_server_t *this,
 								 bio_reader_t *reader)
 {
-	chunk_t received, verify_data;
+	chunk_t received, verify_data = chunk_empty;
 	u_char buf[12];
 
 	if (this->tls->get_version_max(this->tls) < TLS_1_3)
@@ -985,7 +987,7 @@ static status_t process_finished(private_tls_server_t *this,
 		{
 			DBG1(DBG_TLS, "calculating client finished failed");
 			this->alert->add(this->alert, TLS_FATAL, TLS_INTERNAL_ERROR);
-			return NEED_MORE;
+			goto out;
 		}
 		this->crypto->change_cipher(this->crypto, TRUE);
 	}
@@ -994,16 +996,17 @@ static status_t process_finished(private_tls_server_t *this,
 	{
 		DBG1(DBG_TLS, "received client finished invalid");
 		this->alert->add(this->alert, TLS_FATAL, TLS_DECRYPT_ERROR);
-		return NEED_MORE;
-	}
-
-	if (verify_data.ptr != buf)
-	{
-		chunk_free(&verify_data);
+		goto out;
 	}
 
 	this->crypto->append_handshake(this->crypto, TLS_FINISHED, received);
 	this->state = STATE_FINISHED_RECEIVED;
+
+out:
+	if (verify_data.ptr && verify_data.ptr != buf)
+	{
+		chunk_free(&verify_data);
+	}
 	return NEED_MORE;
 }
 
