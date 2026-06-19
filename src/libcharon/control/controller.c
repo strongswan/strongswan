@@ -341,13 +341,12 @@ METHOD(listener_t, child_state_change, bool,
 					case CHILD_RETRYING:
 						/* retrying with a different DH group; survive another
 						 * initiation round */
-						this->status = NEED_MORE;
+						this->status = INVALID_ARG;
 						return TRUE;
 					case CHILD_CREATED:
-						if (this->status == NEED_MORE)
+						if (this->status == INVALID_ARG)
 						{
 							this->status = FAILED;
-							return TRUE;
 						}
 						break;
 					default:
