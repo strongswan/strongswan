@@ -167,6 +167,7 @@ METHOD(af_alg_ops_t, crypt_, bool,
 				continue;
 			}
 			DBG1(DBG_LIB, "writing to AF_ALG crypter failed: %s", strerror(errno));
+			close(op);
 			return FALSE;
 		}
 		while (read(op, out, len) != len)
@@ -175,10 +176,12 @@ METHOD(af_alg_ops_t, crypt_, bool,
 			{
 				DBG1(DBG_LIB, "reading from AF_ALG crypter failed: %s",
 					 strerror(errno));
+				close(op);
 				return FALSE;
 			}
 		}
 		data = chunk_skip(data, len);
+		out += len;
 		/* no IV for subsequent data chunks */
 		msg.msg_controllen = 0;
 	}
