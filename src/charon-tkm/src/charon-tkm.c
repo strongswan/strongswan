@@ -174,23 +174,35 @@ static bool lookup_uid_gid()
 static bool check_pidfile()
 {
 	struct stat stb;
+	int fd, flags = 0;
 
-	if (stat(pidfile_name, &stb) == 0)
+#ifndef WIN32
+	flags |= O_NOFOLLOW;
+#endif
+	fd = open(pidfile_name, O_RDONLY | flags);
+	if (fd != -1)
 	{
-		pidfile = fopen(pidfile_name, "r");
-		if (pidfile)
+		if (fstat(fd, &stb) == 0 && S_ISREG(stb.st_mode))
 		{
 			char buf[64];
 			pid_t pid = 0;
 
-			memset(buf, 0, sizeof(buf));
-			if (fread(buf, 1, sizeof(buf), pidfile))
+			pidfile = fdopen(fd, "r");
+			if (pidfile)
 			{
-				buf[sizeof(buf) - 1] = '\0';
-				pid = atoi(buf);
+				memset(buf, 0, sizeof(buf));
+				if (fread(buf, 1, sizeof(buf), pidfile))
+				{
+					buf[sizeof(buf) - 1] = '\0';
+					pid = atoi(buf);
+				}
+				fclose(pidfile);
+				pidfile = NULL;
 			}
-			fclose(pidfile);
-			pidfile = NULL;
+			else
+			{
+				close(fd);
+			}
 			if (pid && pid != getpid() && kill(pid, 0) == 0)
 			{
 				DBG1(DBG_DMN, "%s already running ('%s' exists)", dmn_name,
@@ -198,39 +210,45 @@ static bool check_pidfile()
 				return TRUE;
 			}
 		}
+		else
+		{
+			close(fd);
+		}
+	}
+
+	if (fd != -1 || errno != ENOENT)
+	{
 		DBG1(DBG_DMN, "removing pidfile '%s', process not running", pidfile_name);
 		unlink(pidfile_name);
 	}
 
-	/* create new pidfile */
-	pidfile = fopen(pidfile_name, "w");
-	if (pidfile)
-	{
-		int fd;
-
-		fd = fileno(pidfile);
-		if (fd == -1)
-		{
-			DBG1(DBG_DMN, "unable to determine fd for '%s'", pidfile_name);
-			return TRUE;
-		}
-		if (fcntl(fd, F_SETFD, FD_CLOEXEC) == -1)
-		{
-			DBG1(DBG_LIB, "setting FD_CLOEXEC for '%s' failed: %s",
-				 pidfile_name, strerror(errno));
-		}
-		ignore_result(fchown(fd,
-							 lib->caps->get_uid(lib->caps),
-							 lib->caps->get_gid(lib->caps)));
-		fprintf(pidfile, "%d\n", getpid());
-		fflush(pidfile);
-		return FALSE;
-	}
-	else
+	/* create new pidfile securely without following symlinks */
+	fd = open(pidfile_name, O_CREAT | O_EXCL | O_WRONLY, 0644);
+	if (fd == -1)
 	{
 		DBG1(DBG_DMN, "unable to create pidfile '%s'", pidfile_name);
 		return TRUE;
 	}
+	if (fcntl(fd, F_SETFD, FD_CLOEXEC) == -1)
+	{
+		DBG1(DBG_LIB, "setting FD_CLOEXEC for '%s' failed: %s",
+			 pidfile_name, strerror(errno));
+	}
+	ignore_result(fchown(fd,
+						 lib->caps->get_uid(lib->caps),
+						 lib->caps->get_gid(lib->caps)));
+	pidfile = fdopen(fd, "w");
+	if (!pidfile)
+	{
+		DBG1(DBG_DMN, "unable to open pidfile '%s': %s", pidfile_name,
+			 strerror(errno));
+		close(fd);
+		unlink(pidfile_name);
+		return TRUE;
+	}
+	fprintf(pidfile, "%d\n", getpid());
+	fflush(pidfile);
+	return FALSE;
 }
 
 /**
