@@ -152,6 +152,7 @@ static status_t process_sasl(private_pt_tls_server_t *this,
 			writer->write_uint8(writer, PT_TLS_SASL_RESULT_ABORT);
 			pt_tls_write(this->tls, PT_TLS_SASL_RESULT,
 						 this->identifier++, writer->get_buf(writer));
+			writer->destroy(writer);
 			return FAILED;
 	}
 }
