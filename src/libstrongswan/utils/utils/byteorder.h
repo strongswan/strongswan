@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2014 Tobias Brunner
+ * Copyright (C) 2008-2026 Tobias Brunner
  * Copyright (C) 2008 Martin Willi
  *
  * Copyright (C) secunet Security Networks AG
@@ -244,6 +244,34 @@ static inline void htoule32(void *p, uint32_t v)
 {
 	v = htole32(v);
 	memcpy(p, &v, sizeof(v));
+}
+
+/**
+ * Read a 32-bit value from an unaligned address without byte order conversion.
+ *
+ * @param p			unaligned address to read value from
+ * @return			host order value
+ */
+static inline uint32_t uread32(void *p)
+{
+	uint32_t ret;
+
+	memcpy(&ret, p, sizeof(ret));
+	return ret;
+}
+
+/**
+ * Read a 64-bit value from an unaligned address without byte order conversion.
+ *
+ * @param p			unaligned address to read value from
+ * @return			host order value
+ */
+static inline uint64_t uread64(void *p)
+{
+	uint64_t ret;
+
+	memcpy(&ret, p, sizeof(ret));
+	return ret;
 }
 
 #endif /** BYTEORDER_H_ @} */
