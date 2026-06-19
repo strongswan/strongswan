@@ -344,6 +344,7 @@ METHOD(task_t, process_r, status_t,
 			{
 				DBG1(DBG_IKE, "received ME_CONNECT without ID_PEER payload"
 					 ", aborting");
+				this->invalid_syntax = TRUE;
 				break;
 			}
 			this->peer_id = id_payload->get_identification(id_payload);
