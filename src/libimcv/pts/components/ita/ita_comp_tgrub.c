@@ -83,17 +83,17 @@ METHOD(pts_component_t, measure, status_t,
 	pts_pcr_transform_t pcr_transform;
 	pts_meas_algorithms_t hash_algo;
 	pts_comp_evidence_t *evid;
-	uint32_t extended_pcr;
+	uint32_t pcr;
 	time_t measurement_time;
 	chunk_t measurement, pcr_before, pcr_after;
 
 	/* Provisional implementation for TGRUB */
-	extended_pcr = PCR_DEBUG;
+	pcr = PCR_DEBUG;
 	time(&measurement_time);
 
-	if (!pts->read_pcr(pts, extended_pcr, &pcr_after, HASH_SHA1))
+	if (!pts->read_pcr(pts, pcr, &pcr_after, HASH_SHA1))
 	{
-		DBG1(DBG_PTS, "error occurred while reading PCR: %d", extended_pcr);
+		DBG1(DBG_PTS, "error occurred while reading PCR: %d", pcr);
 		return FAILED;
 	}
 
@@ -108,7 +108,7 @@ METHOD(pts_component_t, measure, status_t,
 	memset(pcr_before.ptr, 0x00, pcr_before.len);
 
 	evid = *evidence = pts_comp_evidence_create(this->name->clone(this->name),
-								this->depth, extended_pcr,
+								this->depth, pcr,
 								hash_algo, pcr_transform,
 								measurement_time, measurement);
 	evid->set_pcr_info(evid, pcr_before, pcr_after);
@@ -121,22 +121,21 @@ METHOD(pts_component_t, verify, status_t,
 	pts_comp_evidence_t *evidence)
 {
 	bool has_pcr_info;
-	uint32_t extended_pcr;
+	uint32_t pcr;
 	pts_meas_algorithms_t algo;
 	pts_pcr_transform_t transform;
 	pts_pcr_t *pcrs;
 	time_t measurement_time;
-	chunk_t pcr_before, pcr_after;
-	chunk_t measurement __attribute__((unused));
+	chunk_t measurement, pcr_value, pcr_before, pcr_after;
 
 	pcrs = pts->get_pcrs(pts);
 	if (!pcrs)
 	{
 		return FAILED;
 	}
-	measurement = evidence->get_measurement(evidence, &extended_pcr,
+	measurement = evidence->get_measurement(evidence, &pcr,
 								&algo, &transform, &measurement_time);
-	if (extended_pcr != PCR_DEBUG)
+	if (pcr != PCR_DEBUG)
 	{
 		return FAILED;
 	}
@@ -144,16 +143,22 @@ METHOD(pts_component_t, verify, status_t,
 	/* TODO check measurement in database */
 
 	has_pcr_info = evidence->get_pcr_info(evidence, &pcr_before, &pcr_after);
-	if (has_pcr_info)
+	if (has_pcr_info && !chunk_equals_const(pcr_before, pcrs->get(pcrs, pcr)))
 	{
-		if (!chunk_equals_const(pcr_before, pcrs->get(pcrs, extended_pcr)))
-		{
-			DBG1(DBG_PTS, "PCR %2u: pcr_before is not equal to pcr value");
-		}
-		if (pcrs->set(pcrs, extended_pcr, pcr_after))
-		{
-			return SUCCESS;
-		}
+		DBG1(DBG_PTS, "PCR %2u: pcr_before is not equal to pcr value", pcr);
+		return FAILED;
+	}
+
+	pcr_value = pcrs->extend(pcrs, pcr, measurement);
+	if (!pcr_value.ptr)
+	{
+		return FAILED;
+	}
+
+	if (has_pcr_info && !chunk_equals_const(pcr_after, pcr_value))
+	{
+		DBG1(DBG_PTS, "PCR %2u: pcr_after is not equal to register value", pcr);
+		return FAILED;
 	}
 
 	return SUCCESS;

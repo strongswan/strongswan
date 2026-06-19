@@ -627,7 +627,7 @@ METHOD(pts_component_t, verify, status_t,
 	pts_pcr_transform_t transform;
 	pts_pcr_t *pcrs;
 	time_t creation_time;
-	chunk_t measurement, pcr_before, pcr_after;
+	chunk_t measurement, pcr_value, pcr_before, pcr_after;
 	status_t status = NOT_FOUND;
 
 	this->aik_id = pts->get_aik_id(pts);
@@ -646,7 +646,7 @@ METHOD(pts_component_t, verify, status_t,
 	if (algo != pcr_algo)
 	{
 		DBG1(DBG_PTS, "received %N measurement hash but PCR bank is %N",
-			 pts_meas_algorithm_names, algo, pts_meas_algorithm_names, algo);
+			 pts_meas_algorithm_names, algo, pts_meas_algorithm_names, pcr_algo);
 		return FAILED;
 	}
 	this->pcr_padding = (transform == PTS_PCR_TRANSFORM_SHORT);
@@ -861,27 +861,25 @@ METHOD(pts_component_t, verify, status_t,
 	}
 
 	has_pcr_info = evidence->get_pcr_info(evidence, &pcr_before, &pcr_after);
-	if (has_pcr_info)
+	if (has_pcr_info && !chunk_equals_const(pcr_before, pcrs->get(pcrs, pcr)))
 	{
-		if (!chunk_equals_const(pcr_before, pcrs->get(pcrs, pcr)))
-		{
-			DBG1(DBG_PTS, "PCR %2u: pcr_before is not equal to register value",
-						   pcr);
-		}
-		if (pcrs->set(pcrs, pcr, pcr_after))
-		{
-			return status;
-		}
+		DBG1(DBG_PTS, "PCR %2u: pcr_before is not equal to register value", pcr);
+		return FAILED;
 	}
-	else
+
+	pcr_value = pcrs->extend(pcrs, pcr, measurement);
+	if (!pcr_value.ptr)
 	{
-		pcr_after = pcrs->extend(pcrs, pcr, measurement);
-		if (pcr_after.ptr)
-		{
-			return status;
-		}
+		return FAILED;
 	}
-	return FAILED;
+
+	if (has_pcr_info && !chunk_equals_const(pcr_after, pcr_value))
+	{
+		DBG1(DBG_PTS, "PCR %2u: pcr_after is not equal to register value", pcr);
+		return FAILED;
+	}
+
+	return status;
 }
 
 METHOD(pts_component_t, finalize, bool,
