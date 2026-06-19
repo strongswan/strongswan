@@ -499,7 +499,11 @@ METHOD(listener_t, ike_update, bool,
 	struct iptc_handle *ipth;
 	enumerator_t *enumerator;
 	child_sa_t *child_sa;
+	host_t *oldlocal, *oldremote;
 	bool oldencap, newencap;
+
+	oldlocal = ike_sa->get_my_host(ike_sa);
+	oldremote = ike_sa->get_other_host(ike_sa);
 
 	/* during ike_update(), has_encap() on the CHILD_SA has not yet been
 	 * updated, but shows the old state. */
@@ -514,7 +518,7 @@ METHOD(listener_t, ike_update, bool,
 			ipth = init_handle();
 			if (ipth)
 			{
-				if (manage_policies(this, ipth, local, remote, oldencap,
+				if (manage_policies(this, ipth, oldlocal, oldremote, oldencap,
 									child_sa, FALSE) &&
 					manage_policies(this, ipth, local, remote, newencap,
 									child_sa, TRUE))
