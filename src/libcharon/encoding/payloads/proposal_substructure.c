@@ -993,10 +993,10 @@ METHOD(proposal_substructure_t, get_proposals, void,
 	switch (this->spi.len)
 	{
 		case 4:
-			spi =  *((uint32_t*)this->spi.ptr);
+			spi = uread32(this->spi.ptr);
 			break;
 		case 8:
-			spi = *((uint64_t*)this->spi.ptr);
+			spi = uread64(this->spi.ptr);
 			break;
 		default:
 			break;
