@@ -104,7 +104,7 @@ METHOD(tls_aead_t, decrypt, bool,
 	uint64_t seq, chunk_t *data)
 {
 	chunk_t assoc, mac, iv;
-	uint8_t bs, padlen;
+	uint8_t bs, padlen, valid;
 	sigheader_t hdr;
 	size_t i;
 
@@ -124,26 +124,26 @@ METHOD(tls_aead_t, decrypt, bool,
 	{
 		return FALSE;
 	}
+	/* check and remove padding in constant time */
 	padlen = data->ptr[data->len - 1];
-	if (padlen < data->len)
-	{	/* If padding looks valid, remove it */
-		for (i = data->len - padlen - 1; i < data->len - 1; i++)
-		{
-			if (data->ptr[i] != padlen)
-			{
-				return FALSE;
-			}
-		}
-		data->len -= padlen + 1;
-	}
-
-	bs = this->signer->get_block_size(this->signer);
-	if (data->len < bs)
+	valid = constant_time_lt64(padlen, data->len);
+	for (i = 1; i < min(data->len, 256); i++)
 	{
-		return FALSE;
+		/* ignore comparison for bytes outside of padding */
+		valid &= constant_time_lt(padlen, i) |
+				 constant_time_eq(data->ptr[data->len - 1 - i], padlen);
 	}
-	mac = chunk_skip(*data, data->len - bs);
-	data->len -= bs;
+	data->len = constant_time_select64(data->len - padlen - 1, data->len, valid);
+
+	/* make sure to always verify a MAC value */
+	bs = this->signer->get_block_size(this->signer);
+	valid &= constant_time_ge64(data->len, bs);
+	data->len = constant_time_select64(data->len - bs, data->len, valid);
+
+	mac = chunk_alloca(bs);
+	memset(mac.ptr, 0, mac.len);
+	memcpy(mac.ptr, data->ptr + constant_time_select64(data->len, 0, valid),
+		   constant_time_select(mac.len, min(mac.len, data->len), valid));
 
 	hdr.type = *type;
 	htoun64(&hdr.seq, seq);
@@ -156,7 +156,7 @@ METHOD(tls_aead_t, decrypt, bool,
 	{
 		return FALSE;
 	}
-	return TRUE;
+	return valid;
 }
 
 METHOD(tls_aead_t, get_mac_key_size, size_t,
