@@ -184,7 +184,10 @@ METHOD(xauth_method_t, process, status_t,
 			/* trim password to any null termination. As User-Password
 			 * uses null padding, we can't have any null in it, and some
 			 * clients actually send null terminated strings (Android). */
-			pass.len = strnlen(pass.ptr, pass.len);
+			if (pass.ptr)
+			{
+				pass.len = strnlen(pass.ptr, pass.len);
+			}
 		}
 	}
 	enumerator->destroy(enumerator);
