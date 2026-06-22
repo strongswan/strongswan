@@ -37,6 +37,18 @@ static inline u_int constant_time_neq(uint32_t x, uint32_t y)
 }
 
 /**
+ * Check if the given values are not equal in constant time.
+ *
+ * @param x		first value to check
+ * @param y		second value to check
+ * @return		1 if values are not equal, 0 otherwise
+ */
+static inline u_int constant_time_neq64(uint64_t x, uint64_t y)
+{
+	return ((x-y) | (y-x)) >> 63;
+}
+
+/**
  * Check if the given values are equal in constant time.
  *
  * @param x		first value to check
@@ -46,6 +58,18 @@ static inline u_int constant_time_neq(uint32_t x, uint32_t y)
 static inline u_int constant_time_eq(uint32_t x, uint32_t y)
 {
 	return 1 ^ constant_time_neq(x, y);
+}
+
+/**
+ * Check if the given values are equal in constant time.
+ *
+ * @param x		first value to check
+ * @param y		second value to check
+ * @return		1 if values are equal, 0 otherwise
+ */
+static inline u_int constant_time_eq64(uint64_t x, uint64_t y)
+{
+	return 1 ^ constant_time_neq64(x, y);
 }
 
 /**
@@ -62,6 +86,19 @@ static inline u_int constant_time_lt(uint32_t x, uint32_t y)
 }
 
 /**
+ * Compare the two values and return 1 if the first argument is lower than
+ * the second in constant time.
+ *
+ * @param x		first value to check
+ * @param y		second value to check
+ * @return		1 if first value is lower than second
+ */
+static inline u_int constant_time_lt64(uint64_t x, uint64_t y)
+{
+	return (x ^ ((x^y) | ((x-y) ^ y))) >> 63;
+}
+
+/**
  * Compare the two values and return 1 if the first argument greater or equal to
  * the second in constant time.
  *
@@ -72,6 +109,19 @@ static inline u_int constant_time_lt(uint32_t x, uint32_t y)
 static inline u_int constant_time_ge(uint32_t x, uint32_t y)
 {
 	return 1 ^ constant_time_lt(x, y);
+}
+
+/**
+ * Compare the two values and return 1 if the first argument greater or equal to
+ * the second in constant time.
+ *
+ * @param x		first value to check
+ * @param y		second value to check
+ * @return		1 if first value is greater or equal to the second
+ */
+static inline u_int constant_time_ge64(uint64_t x, uint64_t y)
+{
+	return 1 ^ constant_time_lt64(x, y);
 }
 
 /**
@@ -86,6 +136,17 @@ static inline uint32_t constant_time_mask(uint32_t x)
 }
 
 /**
+ * Return a 64-bit all bit-set mask if the given value is not 0.
+ *
+ * @param x		value to check
+ * @return		0xffffffffffffffff if value is != 0, 0 otherwise
+ */
+static inline uint64_t constant_time_mask64(uint64_t x)
+{
+	return -(uint64_t)constant_time_neq64(x, 0);
+}
+
+/**
  * Select one of two values depending on whether the condition is != 0 or not.
  * Basically equivalent to 'c ? x : y'.
  *
@@ -97,6 +158,21 @@ static inline uint32_t constant_time_mask(uint32_t x)
 static inline uint32_t constant_time_select(uint32_t x, uint32_t y, uint32_t c)
 {
 	uint32_t m = constant_time_mask(c);
+	return (x & m) | (y & ~m);
+}
+
+/**
+ * Select one of two values depending on whether the condition is != 0 or not.
+ * Basically equivalent to 'c ? x : y'.
+ *
+ * @param x		first value to select
+ * @param y		second value to select
+ * @param c		condition
+ * @return		x if c is != 0, y otherwise
+ */
+static inline uint64_t constant_time_select64(uint64_t x, uint64_t y, uint64_t c)
+{
+	uint64_t m = constant_time_mask64(c);
 	return (x & m) | (y & ~m);
 }
 
