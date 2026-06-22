@@ -203,7 +203,7 @@ char *asn1_oid_to_string(chunk_t oid)
 	size_t len = 64;
 	char buf[len], *pos = buf;
 	int written;
-	u_int val;
+	uint32_t val;
 
 	if (!oid.len)
 	{
@@ -222,7 +222,11 @@ char *asn1_oid_to_string(chunk_t oid)
 
 	while (oid.len)
 	{
-		val = (val << 7) + (u_int)(oid.ptr[0] & 0x7f);
+		if (val > (UINT32_MAX >> 7))
+		{
+			return NULL;
+		}
+		val = (val << 7) + (uint32_t)(oid.ptr[0] & 0x7f);
 
 		if (oid.ptr[0] < 128)
 		{
