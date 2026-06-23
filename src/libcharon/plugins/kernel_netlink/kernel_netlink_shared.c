@@ -920,8 +920,16 @@ void netlink_log_error(struct nlmsghdr *hdr, const char *prefix)
 	struct rtattr *rta;
 	size_t offset, rtasize;
 	const char *msg = NULL;
-	bool is_error = err->error != 0;
+	bool is_error;
 
+	if (hdr->nlmsg_len < NLMSG_LENGTH(sizeof(*err)))
+	{
+		DBG1(DBG_KNL, "%s%sreceived truncated netlink error/warning",
+			 prefix ? prefix : "", prefix ? ": " : "");
+		return;
+	}
+
+	is_error = err->error != 0;
 	if (!prefix)
 	{
 		prefix = is_error ? "received netlink error"
@@ -935,7 +943,15 @@ void netlink_log_error(struct nlmsghdr *hdr, const char *prefix)
 		offset = sizeof(*err);
 		if (!(hdr->nlmsg_flags & NLM_F_CAPPED))
 		{
+			if (err->msg.nlmsg_len < NLMSG_HDRLEN)
+			{
+				goto log;
+			}
 			offset += err->msg.nlmsg_len - NLMSG_HDRLEN;
+			if (NLMSG_SPACE(offset) > hdr->nlmsg_len)
+			{
+				goto log;
+			}
 		}
 
 		rta = (struct rtattr*)(NLMSG_DATA(hdr) + NLMSG_ALIGN(offset));
@@ -956,6 +972,7 @@ void netlink_log_error(struct nlmsghdr *hdr, const char *prefix)
 		}
 	}
 
+log:
 	if (msg && *msg)
 	{
 		if (is_error)
