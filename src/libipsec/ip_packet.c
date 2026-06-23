@@ -247,7 +247,10 @@ static bool parse_transport_header_v6(struct ip6_hdr *ip, chunk_t packet,
 		{
 			case 44:  /* Fragment Header */
 				fragment = TRUE;
-				/* skip the header */
+				ext = (struct ip6_ext*)payload->ptr;
+				*proto = ext->ip6e_nxt;
+				*payload = chunk_skip(*payload, 8);
+				continue;
 			case 0:   /* Hop-by-Hop Options Header */
 			case 43:  /* Routing Header */
 			case 60:  /* Destination Options Header */
