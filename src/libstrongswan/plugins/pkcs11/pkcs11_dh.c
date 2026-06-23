@@ -100,8 +100,31 @@ static bool derive_secret(private_pkcs11_dh_t *this, chunk_t other)
 		other.ptr,
 		other.len,
 	};
+	CK_ECDH1_DERIVE_PARAMS ecdh_params = {
+		CKD_NULL,
+		0,
+		NULL,
+		other.len,
+		other.ptr,
+	};
 	CK_OBJECT_HANDLE secret;
 	CK_RV rv;
+
+	switch (this->group)
+	{
+		case ECP_192_BIT:
+		case ECP_224_BIT:
+		case ECP_256_BIT:
+		case ECP_384_BIT:
+		case ECP_521_BIT:
+		{
+			mech.pParameter = &ecdh_params;
+			mech.ulParameterLen = sizeof(ecdh_params);
+			break;
+		}
+		default:
+			break;
+	}
 
 	rv = this->lib->f->C_DeriveKey(this->session, &mech, this->pri_key,
 								   attr, countof(attr), &secret);
@@ -137,16 +160,7 @@ METHOD(key_exchange_t, set_public_key, bool,
 		case ECP_521_BIT:
 		{	/* we expect the public value to just be the concatenated x and y
 			 * coordinates, so we tag the value as an uncompressed ECPoint */
-			chunk_t tag = chunk_from_chars(0x04);
-			chunk_t pubkey = chunk_cata("cc", tag, value);
-			CK_ECDH1_DERIVE_PARAMS params = {
-				CKD_NULL,
-				0,
-				NULL,
-				pubkey.len,
-				pubkey.ptr,
-			};
-			this->other = chunk_clone(chunk_from_thing(params));
+			this->other = chunk_cat("cc", chunk_from_chars(0x04), value);
 			break;
 		}
 		default:
@@ -368,7 +382,7 @@ static pkcs11_dh_t *create_ecp(key_exchange_method_t group, chunk_t ecparam)
 			return &this->public;
 		}
 		chunk_free(&ecparam);
-		free(this);
+		destroy(this);
 	}
 	return NULL;
 }
@@ -388,7 +402,7 @@ static pkcs11_dh_t *create_modp(key_exchange_method_t group, size_t exp_len,
 		{
 			return &this->public;
 		}
-		free(this);
+		destroy(this);
 	}
 	return NULL;
 }
