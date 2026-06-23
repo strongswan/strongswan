@@ -65,7 +65,8 @@ static int conv(int num_msg, const struct pam_message **msg,
 			return PAM_CONV_ERR;
 		}
 	}
-	return PAM_SUCCESS;
+	*resp = calloc(num_msg, sizeof(struct pam_response));
+	return (*resp || !num_msg) ? PAM_SUCCESS : PAM_BUF_ERR;
 }
 
 METHOD(listener_t, ike_updown, bool,
