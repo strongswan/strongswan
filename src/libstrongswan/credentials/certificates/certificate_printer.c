@@ -265,9 +265,25 @@ static void print_x509(private_certificate_printer_t *this, x509_t *x509)
 			}
 			issuer_oid = asn1_oid_to_string(mapping->issuer);
 			subject_oid = asn1_oid_to_string(mapping->subject);
-			fprintf(f, "           %s => %s\n", issuer_oid, subject_oid);
-			free(issuer_oid);
-			free(subject_oid);
+			if (issuer_oid)
+			{
+				fprintf(f, "           %s", issuer_oid);
+				free(issuer_oid);
+			}
+			else
+			{
+				fprintf(f, "           %#B", &mapping->issuer);
+			}
+			fprintf(f, " => ");
+			if (subject_oid)
+			{
+				fprintf(f, "%s\n", subject_oid);
+				free(subject_oid);
+			}
+			else
+			{
+				fprintf(f, "%#B\n", &mapping->subject);
+			}
 		}
 		enumerator->destroy(enumerator);
 
