@@ -697,9 +697,18 @@ static bool check_policy(x509_t *subject, x509_t *issuer)
 		if (!has_policy(issuer, mapping->issuer))
 		{
 			oid = asn1_oid_to_string(mapping->issuer);
-			DBG1(DBG_CFG, "certificate '%Y' maps policy from %s, but issuer "
-				 "misses it", cert->get_subject(cert), oid);
-			free(oid);
+			if (oid)
+			{
+				DBG1(DBG_CFG, "certificate '%Y' maps policy from %s, but "
+					 "issuer misses it", cert->get_subject(cert), oid);
+				free(oid);
+			}
+			else
+			{
+				DBG1(DBG_CFG, "certificate '%Y' maps policy from %#B, but "
+					 "issuer misses it", cert->get_subject(cert),
+					 &mapping->issuer);
+			}
 			enumerator->destroy(enumerator);
 			return FALSE;
 		}
@@ -712,9 +721,17 @@ static bool check_policy(x509_t *subject, x509_t *issuer)
 		if (!has_policy(issuer, policy->oid))
 		{
 			oid = asn1_oid_to_string(policy->oid);
-			DBG1(DBG_CFG, "policy %s missing in issuing certificate '%Y'",
-				 oid, cert->get_issuer(cert));
-			free(oid);
+			if (oid)
+			{
+				DBG1(DBG_CFG, "policy %s missing in issuing certificate '%Y'",
+					 oid, cert->get_issuer(cert));
+				free(oid);
+			}
+			else
+			{
+				DBG1(DBG_CFG, "policy %#B missing in issuing certificate '%Y'",
+					 &policy->oid, cert->get_issuer(cert));
+			}
 			enumerator->destroy(enumerator);
 			return FALSE;
 		}
