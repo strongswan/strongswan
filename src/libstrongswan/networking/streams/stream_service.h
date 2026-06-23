@@ -76,10 +76,12 @@ struct stream_service_t {
 /**
  * Create a service from a file descriptor.
  *
- * The file descriptor MUST be a socket.
+ * The file descriptor MUST be a socket. It is set to non-blocking mode to
+ * safely accept() connections from the watcher thread. For consistency, the
+ * accepted connection sockets are set to blocking mode on all platforms.
  *
- * @param fd		file descriptor to wrap into a stream_service_t
- * @return			stream_service instance
+ * @param fd		file descriptor to wrap (adopted, closed on failure)
+ * @return			service, NULL if fd can't be switched to non-blocking mode
  */
 stream_service_t *stream_service_create_from_fd(int fd);
 

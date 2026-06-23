@@ -25,6 +25,7 @@
 #include <errno.h>
 #include <unistd.h>
 #include <sys/stat.h>
+#include <fcntl.h>
 
 typedef struct private_stream_service_t private_stream_service_t;
 
@@ -150,6 +151,22 @@ static void destroy_async_data(async_data_t *data)
 }
 
 /**
+ * Enable/disable non-blocking mode on a socket.
+ */
+static bool set_blocking(int fd, bool block)
+{
+#ifdef WIN32
+	u_long on = block ? 0 : 1;
+	return ioctlsocket(fd, FIONBIO, &on) == 0;
+#else
+	int flags = fcntl(fd, F_GETFL);
+	return flags != -1 &&
+		   fcntl(fd, F_SETFL, block ? (flags & ~O_NONBLOCK)
+									: (flags |  O_NONBLOCK)) != -1;
+#endif
+}
+
+/**
  * Reduce running counter
  */
 CALLBACK(reduce_running, void,
@@ -179,6 +196,14 @@ static job_requeue_t accept_async(async_data_t *data)
 	}
 	this->running++;
 	this->mutex->unlock(this->mutex);
+
+	/* accepted socket may inherit non-blocking mode from listening socket
+	 * depending on the implementation, so we normalize this to blocking mode */
+	if (!set_blocking(data->fd, TRUE))
+	{
+		reduce_running(data);
+		return JOB_REQUEUE_NONE;
+	}
 
 	stream = stream_create_from_fd(data->fd);
 	if (stream)
@@ -295,6 +320,12 @@ METHOD(stream_service_t, destroy, void,
 stream_service_t *stream_service_create_from_fd(int fd)
 {
 	private_stream_service_t *this;
+
+	if (!set_blocking(fd, FALSE))
+	{
+		close(fd);
+		return NULL;
+	}
 
 	INIT(this,
 		.public = {
