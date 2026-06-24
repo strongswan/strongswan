@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Tobias Brunner
+ * Copyright (C) 2013-2026 Tobias Brunner
  * Copyright (C) 2007 Martin Willi
  *
  * Copyright (C) secunet Security Networks AG
@@ -27,73 +27,168 @@
 typedef struct private_sqlite_database_t private_sqlite_database_t;
 
 /**
- * private data of sqlite_database
+ * Private data of sqlite_database
  */
 struct private_sqlite_database_t {
 
 	/**
-	 * public functions
+	 * Public interface
 	 */
 	sqlite_database_t public;
 
 	/**
-	 * sqlite database connection
+	 * Path to the database file
 	 */
-	sqlite3 *db;
+	char *file;
 
 	/**
-	 * thread-specific transaction, as transaction_t
+	 * Connection pool, contains conn_t
 	 */
-	thread_value_t *transaction;
+	linked_list_t *pool;
 
 	/**
-	 * mutex used to lock execute(), if necessary
+	 * Mutex used to lock connection pool
 	 */
 	mutex_t *mutex;
+
+	/**
+	 * Thread-specific connection, as conn_t
+	 */
+	thread_value_t *conn;
 };
 
 /**
- * Database transaction
+ * Connection entry
  */
 typedef struct {
 
 	/**
-	 * Refcounter if transaction() is called multiple times
+	 * SQLite database connection
+	 */
+	sqlite3 *db;
+
+	/**
+	 * Refcounter if queries are recursive or transaction() is called
+	 * multiple times
 	 */
 	refcount_t refs;
 
 	/**
-	 * TRUE if transaction was rolled back
+	 * Transaction state on the connection
 	 */
-	bool rollback;
+	enum {
+		/* no transaction is currently active */
+		TRANSACTION_NONE,
+		/* a transaction is currently active */
+		TRANSACTION_ACTIVE,
+		/* rollback was called for at least one nested transaction */
+		TRANSACTION_ROLLBACK,
+	} transaction;
 
-} transaction_t;
+} conn_t;
 
 /**
- * Check if the SQLite library is thread safe
+ * Release a database connection
  */
-static bool is_threadsafe()
+static void conn_release(private_sqlite_database_t *this, conn_t *conn)
 {
-#if SQLITE_VERSION_NUMBER >= 3005000
-	return sqlite3_threadsafe() > 0;
-#endif
-	/* sqlite connections prior to 3.5 may be used by a single thread only */
-	return FALSE;
+	if (ref_put(&conn->refs))
+	{
+		this->conn->set(this->conn, NULL);
+	}
 }
 
 /**
- * Create and run a sqlite stmt using a sql string and args
+ * Destroy a database connection
  */
-static sqlite3_stmt* run(private_sqlite_database_t *this, char *sql,
-						 va_list *args)
+static void conn_destroy(conn_t *this)
+{
+	if (sqlite3_close(this->db) == SQLITE_BUSY)
+	{
+		DBG1(DBG_LIB, "closing SQLite connection failed: database busy");
+	}
+	free(this);
+}
+
+/**
+ * Busy handler implementation
+ */
+CALLBACK(busy_handler, int,
+	private_sqlite_database_t *this, int count)
+{
+	/* add a backoff time, quadratically increasing with every try */
+	usleep(count * count * 1000);
+	/* always retry */
+	return 1;
+}
+
+/**
+ * Acquire/Reuse a database connection
+ */
+static conn_t *conn_get(private_sqlite_database_t *this)
+{
+	conn_t *current, *found = NULL;
+	enumerator_t *enumerator;
+
+	current = this->conn->get(this->conn);
+	if (current)
+	{
+		ref_get(&current->refs);
+		return current;
+	}
+
+	this->mutex->lock(this->mutex);
+	enumerator = this->pool->create_enumerator(this->pool);
+	while (enumerator->enumerate(enumerator, &current))
+	{
+		if (!ref_cur(&current->refs))
+		{
+			found = current;
+			ref_get(&found->refs);
+			break;
+		}
+	}
+	enumerator->destroy(enumerator);
+	this->mutex->unlock(this->mutex);
+
+	if (!found)
+	{
+		INIT(found,
+			.refs = 1,
+		);
+
+		if (sqlite3_open(this->file, &found->db) != SQLITE_OK)
+		{
+			DBG1(DBG_LIB, "opening SQLite database '%s' failed: %s",
+				 this->file, sqlite3_errmsg(found->db));
+			conn_destroy(found);
+			return NULL;
+		}
+		sqlite3_busy_handler(found->db, busy_handler, this);
+
+		this->mutex->lock(this->mutex);
+		this->pool->insert_last(this->pool, found);
+		DBG2(DBG_LIB, "increased SQLite connection pool size to %d",
+			 this->pool->get_count(this->pool));
+		this->mutex->unlock(this->mutex);
+	}
+	this->conn->set(this->conn, found);
+	return found;
+}
+
+/**
+ * Create and run an SQLite prepared statement using the given SQL string and
+ * arguments
+ */
+static sqlite3_stmt* run(sqlite3 *db, char *sql, va_list *args)
 {
 	sqlite3_stmt *stmt = NULL;
 	int params, i, res = SQLITE_OK;
 
 #ifdef HAVE_SQLITE3_PREPARE_V2
-	if (sqlite3_prepare_v2(this->db, sql, -1, &stmt, NULL) == SQLITE_OK)
+	if (sqlite3_prepare_v2(db, sql, -1, &stmt, NULL) == SQLITE_OK)
 #else
-	if (sqlite3_prepare(this->db, sql, -1, &stmt, NULL) == SQLITE_OK)
+	if (sqlite3_prepare(db, sql, -1, &stmt, NULL) == SQLITE_OK)
 #endif
 	{
 		params = sqlite3_bind_parameter_count(stmt);
@@ -150,12 +245,12 @@ static sqlite3_stmt* run(private_sqlite_database_t *this, char *sql,
 	else
 	{
 		DBG1(DBG_LIB, "preparing sqlite statement failed: %s",
-			 sqlite3_errmsg(this->db));
+			 sqlite3_errmsg(db));
 	}
 	if (res != SQLITE_OK)
 	{
 		DBG1(DBG_LIB, "binding sqlite statement failed: %s",
-			 sqlite3_errmsg(this->db));
+			 sqlite3_errmsg(db));
 		sqlite3_finalize(stmt);
 		return NULL;
 	}
@@ -163,15 +258,17 @@ static sqlite3_stmt* run(private_sqlite_database_t *this, char *sql,
 }
 
 typedef struct {
-	/** implements enumerator_t */
+	/** Public interface */
 	enumerator_t public;
-	/** associated sqlite statement */
+	/** Assigned database connection */
+	conn_t *conn;
+	/** Associated SQLite statement */
 	sqlite3_stmt *stmt;
-	/** number of result columns */
+	/** Number of result columns */
 	int count;
-	/** column types */
+	/** Column types */
 	db_type_t *columns;
-	/** back reference to parent */
+	/** Back-reference to parent */
 	private_sqlite_database_t *database;
 } sqlite_enumerator_t;
 
@@ -179,10 +276,7 @@ METHOD(enumerator_t, sqlite_enumerator_destroy, void,
 	sqlite_enumerator_t *this)
 {
 	sqlite3_finalize(this->stmt);
-	if (!is_threadsafe())
-	{
-		this->database->mutex->unlock(this->database->mutex);
-	}
+	conn_release(this->database, this->conn);
 	free(this->columns);
 	free(this);
 }
@@ -197,8 +291,8 @@ METHOD(enumerator_t, sqlite_enumerator_enumerate, bool,
 		case SQLITE_ROW:
 			break;
 		default:
-			DBG1(DBG_LIB, "stepping sqlite statement failed: %s",
-				 sqlite3_errmsg(this->database->db));
+			DBG1(DBG_LIB, "stepping SQLite statement failed: %s",
+				 sqlite3_errmsg(this->conn->db));
 			/* fall */
 		case SQLITE_DONE:
 			return FALSE;
@@ -253,15 +347,17 @@ METHOD(database_t, query, enumerator_t*,
 	sqlite3_stmt *stmt;
 	va_list args;
 	sqlite_enumerator_t *enumerator = NULL;
+	conn_t *conn;
 	int i;
 
-	if (!is_threadsafe())
+	conn = conn_get(this);
+	if (!conn)
 	{
-		this->mutex->lock(this->mutex);
+		return NULL;
 	}
 
 	va_start(args, sql);
-	stmt = run(this, sql, &args);
+	stmt = run(conn->db, sql, &args);
 	if (stmt)
 	{
 		INIT(enumerator,
@@ -270,6 +366,7 @@ METHOD(database_t, query, enumerator_t*,
 				.venumerate = _sqlite_enumerator_enumerate,
 				.destroy = _sqlite_enumerator_destroy,
 			},
+			.conn = conn,
 			.stmt = stmt,
 			.count = sqlite3_column_count(stmt),
 			.database = this,
@@ -280,6 +377,10 @@ METHOD(database_t, query, enumerator_t*,
 			enumerator->columns[i] = va_arg(args, db_type_t);
 		}
 	}
+	else
+	{
+		conn_release(this, conn);
+	}
 	va_end(args);
 	return (enumerator_t*)enumerator;
 }
@@ -288,13 +389,18 @@ METHOD(database_t, execute, int,
 	private_sqlite_database_t *this, int *rowid, char *sql, ...)
 {
 	sqlite3_stmt *stmt;
+	conn_t *conn;
 	int affected = -1;
 	va_list args;
 
-	/* we need a lock to get our rowid/changes correctly */
-	this->mutex->lock(this->mutex);
+	conn = conn_get(this);
+	if (!conn)
+	{
+		return -1;
+	}
+
 	va_start(args, sql);
-	stmt = run(this, sql, &args);
+	stmt = run(conn->db, sql, &args);
 	va_end(args);
 	if (stmt)
 	{
@@ -302,42 +408,43 @@ METHOD(database_t, execute, int,
 		{
 			if (rowid)
 			{
-				*rowid = sqlite3_last_insert_rowid(this->db);
+				*rowid = sqlite3_last_insert_rowid(conn->db);
 			}
-			affected = sqlite3_changes(this->db);
+			affected = sqlite3_changes(conn->db);
 		}
 		else
 		{
-			DBG1(DBG_LIB, "sqlite execute failed: %s",
-				 sqlite3_errmsg(this->db));
+			DBG1(DBG_LIB, "SQLite execute failed: %s",
+				 sqlite3_errmsg(conn->db));
 		}
 		sqlite3_finalize(stmt);
 	}
-	this->mutex->unlock(this->mutex);
+	conn_release(this, conn);
 	return affected;
 }
 
 METHOD(database_t, transaction, bool,
 	private_sqlite_database_t *this, bool serializable)
 {
-	transaction_t *trans;
+	conn_t *conn;
 	char *cmd = serializable ? "BEGIN EXCLUSIVE TRANSACTION"
 							 : "BEGIN TRANSACTION";
 
-	trans = this->transaction->get(this->transaction);
-	if (trans)
-	{
-		ref_get(&trans->refs);
-		return TRUE;
-	}
-	if (execute(this, NULL, cmd) == -1)
+	conn = conn_get(this);
+	if (!conn)
 	{
 		return FALSE;
 	}
-	INIT(trans,
-		.refs = 1,
-	);
-	this->transaction->set(this->transaction, trans);
+	if (conn->transaction == TRANSACTION_NONE)
+	{
+		if (execute(this, NULL, cmd) == -1)
+		{
+			conn_release(this, conn);
+			return FALSE;
+		}
+		conn->transaction = TRANSACTION_ACTIVE;
+	}
+	/* we don't release the connection until the transaction is done */
 	return TRUE;
 }
 
@@ -348,33 +455,41 @@ METHOD(database_t, transaction, bool,
 static bool finalize_transaction(private_sqlite_database_t *this,
 								 bool rollback)
 {
-	transaction_t *trans;
+	conn_t *conn;
 	char *command = "COMMIT TRANSACTION";
 	bool success;
 
-	trans = this->transaction->get(this->transaction);
-	if (!trans)
+	conn = conn_get(this);
+	if (!conn || conn->transaction == TRANSACTION_NONE)
 	{
 		DBG1(DBG_LIB, "no database transaction found");
+		if (conn)
+		{
+			conn_release(this, conn);
+		}
 		return FALSE;
 	}
 
-	if (ref_put(&trans->refs))
+	if (rollback)
 	{
-		if (trans->rollback)
+		conn->transaction = TRANSACTION_ROLLBACK;
+	}
+
+	/* release the additional reference of this transaction */
+	ignore_result(ref_put(&conn->refs));
+	if (ref_cur(&conn->refs) == 1)
+	{
+		if (conn->transaction == TRANSACTION_ROLLBACK)
 		{
 			command = "ROLLBACK TRANSACTION";
 		}
 		success = execute(this, NULL, command) != -1;
 
-		this->transaction->set(this->transaction, NULL);
-		free(trans);
+		conn->transaction = TRANSACTION_NONE;
+		conn_release(this, conn);
 		return success;
 	}
-	else
-	{	/* set flag, can't be unset */
-		trans->rollback |= rollback;
-	}
+	conn_release(this, conn);
 	return TRUE;
 }
 
@@ -396,26 +511,13 @@ METHOD(database_t, get_driver, db_driver_t,
 	return DB_SQLITE;
 }
 
-/**
- * Busy handler implementation
- */
-static int busy_handler(private_sqlite_database_t *this, int count)
-{
-	/* add a backoff time, quadratically increasing with every try */
-	usleep(count * count * 1000);
-	/* always retry */
-	return 1;
-}
-
 METHOD(database_t, destroy, void,
 	private_sqlite_database_t *this)
 {
-	if (sqlite3_close(this->db) == SQLITE_BUSY)
-	{
-		DBG1(DBG_LIB, "sqlite close failed because database is busy");
-	}
-	this->transaction->destroy(this->transaction);
+	this->pool->destroy_function(this->pool, (void*)conn_destroy);
+	this->conn->destroy(this->conn);
 	this->mutex->destroy(this->mutex);
+	free(this->file);
 	free(this);
 }
 
@@ -424,12 +526,18 @@ METHOD(database_t, destroy, void,
  */
 sqlite_database_t *sqlite_database_create(char *uri)
 {
-	char *file;
 	private_sqlite_database_t *this;
+	conn_t *conn;
+	char *file;
 
-	/**
-	 * parse sqlite:///path/to/file.db uri
-	 */
+	if (sqlite3_threadsafe() == 0)
+	{
+		DBG1(DBG_LIB, "SQLite is compiled in single-thread mode, unable to use "
+			 "connection pooling");
+		return NULL;
+	}
+
+	/* parse sqlite:///path/to/file.db uri */
 	if (!strpfx(uri, "sqlite://"))
 	{
 		return NULL;
@@ -448,19 +556,18 @@ sqlite_database_t *sqlite_database_create(char *uri)
 				.destroy = _destroy,
 			},
 		},
-		.mutex = mutex_create(MUTEX_TYPE_RECURSIVE),
-		.transaction = thread_value_create(NULL),
+		.pool = linked_list_create(),
+		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
+		.conn = thread_value_create(NULL),
+		.file = strdup(file),
 	);
 
-	if (sqlite3_open(file, &this->db) != SQLITE_OK)
+	conn = conn_get(this);
+	if (!conn)
 	{
-		DBG1(DBG_LIB, "opening SQLite database '%s' failed: %s",
-			 file, sqlite3_errmsg(this->db));
 		destroy(this);
 		return NULL;
 	}
-
-	sqlite3_busy_handler(this->db, (void*)busy_handler, this);
-
+	conn_release(this, conn);
 	return &this->public;
 }
