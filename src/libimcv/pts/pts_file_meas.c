@@ -354,7 +354,6 @@ pts_file_meas_t *pts_file_meas_create_from_path(uint16_t request_id,
 	private_pts_file_meas_t *this;
 	hash_algorithm_t hash_alg;
 	hasher_t *hasher;
-	u_char hash[HASH_SIZE_SHA384];
 	chunk_t measurement;
 	char* filename;
 	bool success = TRUE;
@@ -367,7 +366,7 @@ pts_file_meas_t *pts_file_meas_create_from_path(uint16_t request_id,
 		DBG1(DBG_PTS, "hasher %N not available", hash_algorithm_names, hash_alg);
 		return NULL;
 	}
-	measurement = chunk_create(hash, hasher->get_hash_size(hasher));
+	measurement = chunk_alloca(hasher->get_hash_size(hasher));
 	this = (private_pts_file_meas_t*)pts_file_meas_create(request_id);
 
 	if (is_dir)
@@ -389,7 +388,7 @@ pts_file_meas_t *pts_file_meas_create_from_path(uint16_t request_id,
 			/* measure regular files only */
 			if (S_ISREG(st.st_mode) && *rel_name != '.')
 			{
-				if (!hash_file(hasher, abs_name, hash))
+				if (!hash_file(hasher, abs_name, measurement.ptr))
 				{
 					continue;
 				}
@@ -402,7 +401,7 @@ pts_file_meas_t *pts_file_meas_create_from_path(uint16_t request_id,
 	}
 	else
 	{
-		if (!hash_file(hasher, pathname, hash))
+		if (!hash_file(hasher, pathname, measurement.ptr))
 		{
 			success = FALSE;
 			goto end;
