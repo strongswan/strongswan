@@ -319,11 +319,13 @@ static void entry_destroy(private_kernel_wfp_ipsec_t *this, entry_t *entry)
 	{
 		IPsecSaContextDeleteById0(this->handle, entry->sa_id);
 	}
+	/* tunnel-mode policy filters reference the provider context, so remove
+	 * them before the context to avoid leaving it dangling in WFP */
+	cleanup_policies(this, entry);
 	if (entry->provider)
 	{
 		FwpmProviderContextDeleteById0(this->handle, entry->provider);
 	}
-	cleanup_policies(this, entry);
 	array_destroy_function(entry->sps, (void*)sp_entry_destroy, NULL);
 	entry->local->destroy(entry->local);
 	entry->remote->destroy(entry->remote);
