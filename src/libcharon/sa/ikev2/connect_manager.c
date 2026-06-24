@@ -1398,6 +1398,14 @@ METHOD(connect_manager_t, process_check, void,
 		this->mutex->unlock(this->mutex);
 		return;
 	}
+	if (checklist->state == CHECK_NONE)
+	{
+		DBG1(DBG_IKE, "checklist with id '%#B' not ready yet",
+			 &check->connect_id);
+		check_destroy(check);
+		this->mutex->unlock(this->mutex);
+		return;
+	}
 
 	chunk_t sig = build_signature(this, checklist, check, FALSE);
 	if (!chunk_equals(sig, check->auth))
