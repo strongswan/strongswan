@@ -1497,10 +1497,9 @@ METHOD(tls_crypto_t, get_signature_algorithms, void,
 }
 
 /**
- * Get the signature parameters from a TLS signature scheme
+ * Get the signature config entry from a TLS signature scheme
  */
-static signature_params_t *params_for_scheme(tls_signature_scheme_t sig,
-											 bool sign)
+static scheme_algs_t *config_for_scheme(tls_signature_scheme_t sig, bool sign)
 {
 	int i;
 
@@ -1516,10 +1515,23 @@ static signature_params_t *params_for_scheme(tls_signature_scheme_t sig,
 		}
 		if (schemes[i].sig == sig)
 		{
-			return &schemes[i].params;
+			return &schemes[i];
 		}
 	}
 	return NULL;
+}
+
+/**
+ * Check whether the given signature scheme is valid for the negotiated  version
+ * and the local config.
+ */
+static bool is_scheme_valid(private_tls_crypto_t *this, scheme_algs_t *scheme)
+{
+	tls_version_t version;
+
+	version = this->tls->get_version_max(this->tls);
+	return scheme->min_version <= version && scheme->max_version >= version &&
+		   filter_signature_scheme_config(scheme->sig);
 }
 
 /**
@@ -1787,7 +1799,7 @@ METHOD(tls_crypto_t, sign, bool,
 	{
 		/* fallback to SHA1/RSA and SHA1/ECDSA */
 		const chunk_t hashsig_def = chunk_from_chars(0x02, 0x01, 0x02, 0x03);
-		signature_params_t *params;
+		scheme_algs_t *config;
 		key_type_t type;
 		uint16_t scheme = 0, hashsig_scheme;
 		bio_reader_t *reader;
@@ -1861,17 +1873,19 @@ METHOD(tls_crypto_t, sign, bool,
 		{
 			if (reader->read_uint16(reader, &hashsig_scheme))
 			{
-				params = params_for_scheme(hashsig_scheme, TRUE);
+				config = config_for_scheme(hashsig_scheme, TRUE);
 
 				/**
 				 * All key types except RSA have a single fixed signature scheme
 				 * RSA signature schemes are tried until sign() is successful
 				 */
-				if (params && (scheme == hashsig_scheme ||
-				   (!scheme &&
-				    type == key_type_from_signature_scheme(params->scheme))))
+				if (config && is_scheme_valid(this, config) &&
+					(scheme == hashsig_scheme ||
+					 (!scheme &&
+				      type == key_type_from_signature_scheme(config->params.scheme))))
 				{
-				    if (key->sign(key, params->scheme, params->params, data, &sig))
+				    if (key->sign(key, config->params.scheme,
+								  config->params.params, data, &sig))
 					{
 						done = TRUE;
 						scheme = hashsig_scheme;
@@ -1949,7 +1963,7 @@ METHOD(tls_crypto_t, verify, bool,
 {
 	if (this->tls->get_version_max(this->tls) >= TLS_1_2)
 	{
-		signature_params_t *params;
+		scheme_algs_t *config;
 		uint16_t scheme;
 		chunk_t sig;
 
@@ -1959,11 +1973,17 @@ METHOD(tls_crypto_t, verify, bool,
 			DBG1(DBG_TLS, "received invalid signature");
 			return FALSE;
 		}
-		params = params_for_scheme(scheme, FALSE);
-		if (!params)
+		config = config_for_scheme(scheme, FALSE);
+		if (!config)
 		{
-			DBG1(DBG_TLS, "signature algorithms %N not supported",
+			DBG1(DBG_TLS, "signature algorithm %N not supported",
 				 tls_signature_scheme_names, scheme);
+			return FALSE;
+		}
+		if (!is_scheme_valid(this, config))
+		{
+			DBG1(DBG_TLS, "signature algorithm %N not valid for version or "
+				 "config", tls_signature_scheme_names, scheme);
 			return FALSE;
 		}
 		if (this->tls->get_version_max(this->tls) >= TLS_1_3)
@@ -1985,7 +2005,8 @@ METHOD(tls_crypto_t, verify, bool,
 				data = chunk_cata("cm", tls13_sig_data_server, transcript_hash);
 			}
 		}
-		if (!key->verify(key, params->scheme, params->params, data, sig))
+		if (!key->verify(key, config->params.scheme, config->params.params,
+						 data, sig))
 		{
 			DBG1(DBG_TLS, "signature verification with %N failed",
 				 tls_signature_scheme_names, scheme);
