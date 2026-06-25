@@ -64,7 +64,7 @@ static bool ts2in(traffic_selector_t *ts,
 	{
 		memcpy(&addr->s_addr, net->get_address(net).ptr, 4);
 		net->destroy(net);
-		mask->s_addr = htonl(0xffffffffU << (32 - bits));
+		mask->s_addr = bits ? htonl(0xffffffffU << (32 - bits)) : 0;
 		return TRUE;
 	}
 	return FALSE;
