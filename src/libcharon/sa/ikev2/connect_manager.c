@@ -1262,13 +1262,12 @@ static void process_response(private_connect_manager_t *this, check_t *check,
 		linked_list_t *local_endpoints = checklist->is_initiator ?
 			checklist->initiator.endpoints : checklist->responder.endpoints;
 
+		host_t *host = check->endpoint->get_host(check->endpoint);
 		endpoint_notify_t *local_endpoint;
-		if (!endpoints_contain(local_endpoints,
-							   check->endpoint->get_host(check->endpoint),
-							   &local_endpoint))
+		if (host && !endpoints_contain(local_endpoints, host, &local_endpoint))
 		{
 			local_endpoint = endpoint_notify_create_from_host(PEER_REFLEXIVE,
-					check->endpoint->get_host(check->endpoint), pair->local);
+															  host, pair->local);
 			local_endpoint->set_priority(local_endpoint,
 								check->endpoint->get_priority(check->endpoint));
 			local_endpoints->insert_last(local_endpoints, local_endpoint);

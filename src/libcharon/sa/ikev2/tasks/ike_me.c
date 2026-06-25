@@ -477,8 +477,12 @@ METHOD(task_t, process_i, status_t,
 			{	/* FIXME: should we accept this endpoint even if we did not send
 				 * a request? */
 				host_t *endpoint = reflexive->get_host(reflexive);
-				endpoint = endpoint->clone(endpoint);
-				this->ike_sa->set_server_reflexive_host(this->ike_sa, endpoint);
+				if (endpoint)
+				{
+					endpoint = endpoint->clone(endpoint);
+					this->ike_sa->set_server_reflexive_host(this->ike_sa,
+															endpoint);
+				}
 			}
 			break;
 		}
