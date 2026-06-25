@@ -2712,6 +2712,13 @@ METHOD(task_t, process_i, status_t,
 
 	process_payloads(this, message);
 
+	if (!this->tsi || !this->tsr)
+	{
+		DBG1(DBG_IKE, "TS payloads missing in message");
+		handle_child_sa_failure(this, message);
+		return delete_failed_sa(this);
+	}
+
 	if (!select_proposal(this, no_ke))
 	{
 		handle_child_sa_failure(this, message);
