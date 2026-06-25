@@ -174,7 +174,7 @@ METHOD(tnc_pdp_connections_t, add, void,
 	ike_sa_id->destroy(ike_sa_id);
 	ike_sa->set_other_id(ike_sa, peer);
 
-	this->lock->read_lock(this->lock);
+	this->lock->write_lock(this->lock);
 	enumerator = this->list->create_enumerator(this->list);
 	while (enumerator->enumerate(enumerator, &entry))
 	{
@@ -191,7 +191,6 @@ METHOD(tnc_pdp_connections_t, add, void,
 		}
 	}
 	enumerator->destroy(enumerator);
-	this->lock->unlock(this->lock);
 
 	if (!found)
 	{
@@ -202,10 +201,9 @@ METHOD(tnc_pdp_connections_t, add, void,
 			.ike_sa = ike_sa,
 			.created = time_monotonic(NULL),
 		);
-		this->lock->write_lock(this->lock);
 		this->list->insert_last(this->list, entry);
-		this->lock->unlock(this->lock);
 	}
+	this->lock->unlock(this->lock);
 
 	/* schedule timeout checking */
 	lib->scheduler->schedule_job_ms(lib->scheduler,
