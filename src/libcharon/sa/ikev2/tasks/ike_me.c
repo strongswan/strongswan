@@ -701,6 +701,7 @@ METHOD(task_t, build_r_ms, status_t,
 									chunk_empty);
 				break;
 			}
+			peer_sa->destroy(peer_sa);
 
 			job_t *job = (job_t*)mediation_job_create(this->peer_id,
 					this->ike_sa->get_other_id(this->ike_sa), this->connect_id,

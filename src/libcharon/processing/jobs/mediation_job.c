@@ -83,12 +83,14 @@ METHOD(job_t, execute, job_requeue_t,
 {
 	ike_sa_id_t *target_sa_id;
 
-	target_sa_id = charon->mediation_manager->check(charon->mediation_manager, this->target);
+	target_sa_id = charon->mediation_manager->check(charon->mediation_manager,
+													this->target);
 
 	if (target_sa_id)
 	{
 		ike_sa_t *target_sa = charon->ike_sa_manager->checkout(charon->ike_sa_manager,
 											  target_sa_id);
+		target_sa_id->destroy(target_sa_id);
 		if (target_sa)
 		{
 			if (this->callback)

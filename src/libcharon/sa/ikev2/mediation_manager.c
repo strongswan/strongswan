@@ -259,7 +259,7 @@ METHOD(mediation_manager_t, check, ike_sa_id_t*,
 		return NULL;
 	}
 
-	ike_sa_id = peer->ike_sa_id;
+	ike_sa_id = peer->ike_sa_id ? peer->ike_sa_id->clone(peer->ike_sa_id) : NULL;
 
 	this->mutex->unlock(this->mutex);
 
@@ -292,7 +292,7 @@ METHOD(mediation_manager_t, check_and_register, ike_sa_id_t*,
 		return NULL;
 	}
 
-	ike_sa_id = peer->ike_sa_id;
+	ike_sa_id = peer->ike_sa_id->clone(peer->ike_sa_id);
 
 	this->mutex->unlock(this->mutex);
 

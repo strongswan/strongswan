@@ -54,9 +54,7 @@ struct mediation_manager_t {
 	 * Checks if a specific peer is online.
 	 *
 	 * @param peer_id			the peer's ID
-	 * @returns
-	 *							- IKE_SA ID of the peer's SA.
-	 *							- NULL, if the peer is not online.
+	 * @returns					ID of the peer's SA (cloned), NULL if offline
 	 */
 	ike_sa_id_t* (*check) (mediation_manager_t* this,
 						   identification_t *peer_id);
@@ -67,9 +65,7 @@ struct mediation_manager_t {
 	 *
 	 * @param peer_id			the peer's ID
 	 * @param requester			the requesters ID
-	 * @returns
-	 *							- IKE_SA ID of the peer's SA.
-	 *							- NULL, if the peer is not online.
+	 * @returns					ID of the peer's SA (cloned), NULL if offline
 	 */
 	ike_sa_id_t* (*check_and_register) (mediation_manager_t* this,
 										identification_t *peer_id,
