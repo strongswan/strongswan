@@ -126,7 +126,8 @@ METHOD(task_t, process_r, status_t,
 					}
 					else
 					{
-						DBG1(DBG_IKE, "received %N notify, invalid address");
+						DBG1(DBG_IKE, "received %N notify, invalid address",
+							 notify_type_names, type);
 					}
 				}
 				else if (type < 16384)
