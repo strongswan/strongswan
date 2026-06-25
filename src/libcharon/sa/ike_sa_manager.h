@@ -55,7 +55,8 @@ struct ike_sa_manager_t {
 	 *
 	 * @param version			IKE version of this SA
 	 * @param initiator			TRUE for initiator, FALSE otherwise
-	 * @returns 				created IKE_SA (not registered/checked out)
+	 * @return					created IKE_SA (not registered/checked out),
+	 *							NULL if SPI allocation failed
 	 */
 	ike_sa_t *(*create_new)(ike_sa_manager_t* this, ike_version_t version,
 							bool initiator);
@@ -79,8 +80,8 @@ struct ike_sa_manager_t {
 	/**
 	 * Checkout an existing IKE_SA.
 	 *
-	 * @param ike_sa_id			the SA identifier, will be updated
-	 * @returns
+	 * @param ike_sa_id			the SA identifier
+	 * @return
 	 * 							- checked out IKE_SA if found
 	 * 							- NULL, if specified IKE_SA is not found.
 	 */
@@ -115,8 +116,8 @@ struct ike_sa_manager_t {
 	 * @note For initial IKE messages, track_init() has to be called before
 	 * calling this.
 	 *
-	 * @param ike_sa_id			the SA identifier, will be updated
-	 * @returns
+	 * @param message			message for which to checkout an SA
+	 * @return
 	 * 							- checked out/created IKE_SA
 	 * 							- NULL to not process message further
 	 */
@@ -163,7 +164,7 @@ struct ike_sa_manager_t {
 	 * @param ike_sa			ike_sa to check
 	 * @param force_replace		replace existing SAs, regardless of unique policy
 	 * @return					TRUE, if the given IKE_SA has duplicates and
-	 * 							should be deleted
+	 * 							should be canceled/deleted
 	 */
 	bool (*check_uniqueness)(ike_sa_manager_t *this, ike_sa_t *ike_sa,
 							 bool force_replace);
@@ -180,7 +181,7 @@ struct ike_sa_manager_t {
 						identification_t *other, int family);
 
 	/**
-	 * Check out an IKE_SA a unique ID.
+	 * Check out an IKE_SA by a unique ID.
 	 *
 	 * Every IKE_SA is uniquely identified by a numerical ID. This checkout
 	 * function uses the unique ID of the IKE_SA to check it out.
@@ -237,8 +238,7 @@ struct ike_sa_manager_t {
 	 *
 	 * If the IKE_SA is not registered in the manager, a new entry is created.
 	 *
-	 * @param ike_sa_id			the SA identifier, will be updated
-	 * @param ike_sa			checked out SA
+	 * @param ike_sa			IKE_SA to check in
 	 */
 	void (*checkin) (ike_sa_manager_t* this, ike_sa_t *ike_sa);
 
@@ -264,7 +264,7 @@ struct ike_sa_manager_t {
 	u_int (*get_count)(ike_sa_manager_t *this);
 
 	/**
-	 * Get the number of IKE_SAs which are in the connecting state.
+	 * Get the number of half-open IKE_SAs.
 	 *
 	 * To prevent the server from resource exhaustion, cookies and other
 	 * mechanisms are used. The number of half open IKE_SAs is a good
@@ -289,11 +289,10 @@ struct ike_sa_manager_t {
 					   void *data);
 
 	/**
-	 * Delete all existing IKE_SAs and destroy them immediately.
+	 * Delete all existing IKE_SAs and destroy them.
 	 *
 	 * Threads will be driven out, so all SAs can be deleted cleanly.
-	 * To a flush(), an immediate call to destroy() is mandatory; no other
-	 * method may be used.
+	 * After flush(), a call to destroy() is mandatory.
 	 */
 	void (*flush)(ike_sa_manager_t *this);
 
@@ -308,7 +307,7 @@ struct ike_sa_manager_t {
 /**
  * Create the IKE_SA manager.
  *
- * @returns 	ike_sa_manager_t object, NULL if initialization fails
+ * @return 	ike_sa_manager_t object, NULL if initialization fails
  */
 ike_sa_manager_t *ike_sa_manager_create(void);
 
