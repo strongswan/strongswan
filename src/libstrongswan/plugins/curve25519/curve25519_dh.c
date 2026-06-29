@@ -147,6 +147,7 @@ METHOD(key_exchange_t, destroy, void,
 	private_curve25519_dh_t *this)
 {
 	this->drv->destroy(this->drv);
+	memwipe(this->shared, sizeof(this->shared));
 	free(this);
 }
 
