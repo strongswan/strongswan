@@ -781,8 +781,8 @@ METHOD(keymat_v2_t, get_psk_sig, bool,
 
 failure:
 	chunk_clear(&skp_ppk);
+	chunk_clear(&key);
 	chunk_free(&octets);
-	chunk_free(&key);
 	return success;
 }
 
