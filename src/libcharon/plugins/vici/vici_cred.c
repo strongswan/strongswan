@@ -531,6 +531,7 @@ CALLBACK(clear_creds, vici_message_t*,
 	private_vici_cred_t *this, char *name, u_int id, vici_message_t *message)
 {
 	this->creds->clear(this->creds);
+	this->pins->clear(this->pins);
 	this->authority->clear_ca_certs(this->authority);
 	lib->credmgr->flush_cache(lib->credmgr, CERT_ANY);
 
