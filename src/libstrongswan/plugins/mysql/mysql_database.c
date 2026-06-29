@@ -754,6 +754,7 @@ METHOD(database_t, destroy, void,
 	this->mutex->destroy(this->mutex);
 	free(this->host);
 	free(this->username);
+	memwipe(this->password, this->password ? strlen(this->password) : 0);
 	free(this->password);
 	free(this->database);
 	free(this);
@@ -761,12 +762,13 @@ METHOD(database_t, destroy, void,
 
 static bool parse_uri(private_mysql_database_t *this, char *uri)
 {
+	const int scheme_len = strlen("mysql://");
 	char *username, *password, *host, *port = "0", *database, *pos;
 
 	/**
 	 * parse mysql://username:pass@host:port/database uri
 	 */
-	username = strdup(uri + 8);
+	username = strdup(uri + scheme_len);
 	pos = strchr(username, ':');
 	if (pos)
 	{
@@ -798,13 +800,26 @@ static bool parse_uri(private_mysql_database_t *this, char *uri)
 				this->password = strdup(password);
 				this->database = strdup(database);
 				this->port = atoi(port);
+				memwipe(username, strlen(uri) - scheme_len);
 				free(username);
 				return TRUE;
 			}
+			DBG1(DBG_LIB, "parsing MySQL database uri 'mysql://%s:***@%s' "
+				 "failed: missing '/database' part", username, host);
+		}
+		else
+		{
+			DBG1(DBG_LIB, "parsing MySQL database uri 'mysql://%s:***' "
+				 "failed: missing '@host[:port]/database' part", username);
 		}
 	}
+	else
+	{
+		DBG1(DBG_LIB, "parsing MySQL database uri of the form "
+			 "'mysql://username:[password]@host[:port]/database' failed");
+	}
+	memwipe(username, strlen(uri) - scheme_len);
 	free(username);
-	DBG1(DBG_LIB, "parsing MySQL database uri '%s' failed", uri);
 	return FALSE;
 }
 
