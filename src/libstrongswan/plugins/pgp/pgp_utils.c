@@ -175,7 +175,7 @@ bool pgp_read_packet(chunk_t *blob, chunk_t *data, pgp_packet_tag_t *tag)
 	*blob = chunk_skip(*blob, len);
 	*tag = t;
 	DBG2(DBG_ASN, "L1 - PGP %N (%u bytes)", pgp_packet_tag_names, t, len);
-	DBG3(DBG_ASN, "%B", data);
+	DBG4(DBG_ASN, "%B", data);
 	return TRUE;
 }
 
