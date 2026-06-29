@@ -304,7 +304,7 @@ METHOD(eap_aka_3gpp2_functions_t, f1, bool,
 {
 	if (f1x(this->prf, F1, k, rand, sqn, amf, mac))
 	{
-		DBG3(DBG_IKE, "MAC %b", mac, AKA_MAC_LEN);
+		DBG4(DBG_IKE, "MAC %b", mac, AKA_MAC_LEN);
 		return TRUE;
 	}
 	return FALSE;
@@ -320,7 +320,7 @@ METHOD(eap_aka_3gpp2_functions_t, f1star, bool,
 {
 	if (f1x(this->prf, F1STAR, k, rand, sqn, amf, macs))
 	{
-		DBG3(DBG_IKE, "MACS %b", macs, AKA_MAC_LEN);
+		DBG4(DBG_IKE, "MACS %b", macs, AKA_MAC_LEN);
 		return TRUE;
 	}
 	return FALSE;
@@ -335,7 +335,7 @@ METHOD(eap_aka_3gpp2_functions_t, f2, bool,
 {
 	if (fx(this->prf, F2, k, rand, res))
 	{
-		DBG3(DBG_IKE, "RES %b", res, AKA_RES_MAX);
+		DBG4(DBG_IKE, "RES %b", res, AKA_RES_MAX);
 		return TRUE;
 	}
 	return FALSE;
@@ -350,7 +350,7 @@ METHOD(eap_aka_3gpp2_functions_t, f3, bool,
 {
 	if (fx(this->prf, F3, k, rand, ck))
 	{
-		DBG3(DBG_IKE, "CK %b", ck, AKA_CK_LEN);
+		DBG4(DBG_IKE, "CK %b", ck, AKA_CK_LEN);
 		return TRUE;
 	}
 	return FALSE;
@@ -365,7 +365,7 @@ METHOD(eap_aka_3gpp2_functions_t, f4, bool,
 {
 	if (fx(this->prf, F4, k, rand, ik))
 	{
-		DBG3(DBG_IKE, "IK %b", ik, AKA_IK_LEN);
+		DBG4(DBG_IKE, "IK %b", ik, AKA_IK_LEN);
 		return TRUE;
 	}
 	return FALSE;
@@ -380,7 +380,7 @@ METHOD(eap_aka_3gpp2_functions_t, f5, bool,
 {
 	if (f5x(this->prf, F5, k, rand, ak))
 	{
-		DBG3(DBG_IKE, "AK %b", ak, AKA_AK_LEN);
+		DBG4(DBG_IKE, "AK %b", ak, AKA_AK_LEN);
 		return TRUE;
 	}
 	return FALSE;
@@ -395,7 +395,7 @@ METHOD(eap_aka_3gpp2_functions_t, f5star, bool,
 {
 	if (f5x(this->prf, F5STAR, k, rand, aks))
 	{
-		DBG3(DBG_IKE, "AKS %b", aks, AKA_AK_LEN);
+		DBG4(DBG_IKE, "AKS %b", aks, AKA_AK_LEN);
 		return TRUE;
 	}
 	return FALSE;

@@ -68,7 +68,7 @@ METHOD(simaka_card_t, get_quintuplet, status_t,
 
 	/* AUTN = SQN xor AK | AMF | MAC */
 	DBG3(DBG_IKE, "received autn %b", autn, AKA_AUTN_LEN);
-	DBG3(DBG_IKE, "using K %b", k, AKA_K_LEN);
+	DBG4(DBG_IKE, "using K %b", k, AKA_K_LEN);
 	DBG3(DBG_IKE, "using rand %b", rand, AKA_RAND_LEN);
 	memcpy(sqn, autn, AKA_SQN_LEN);
 	amf = autn + AKA_SQN_LEN;
@@ -79,7 +79,7 @@ METHOD(simaka_card_t, get_quintuplet, status_t,
 	{
 		return FAILED;
 	}
-	DBG3(DBG_IKE, "using ak %b", ak, AKA_AK_LEN);
+	DBG4(DBG_IKE, "using ak %b", ak, AKA_AK_LEN);
 	memxor(sqn, ak, AKA_SQN_LEN);
 	DBG3(DBG_IKE, "using sqn %b", sqn, AKA_SQN_LEN);
 

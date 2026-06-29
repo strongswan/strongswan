@@ -107,7 +107,7 @@ METHOD(simaka_provider_t, get_quintuplet, bool,
 	}
 
 	DBG3(DBG_IKE, "generated rand %b", rand, AKA_RAND_LEN);
-	DBG3(DBG_IKE, "using K %b", k, AKA_K_LEN);
+	DBG4(DBG_IKE, "using K %b", k, AKA_K_LEN);
 
 	/* MAC, AK, XRES as expected from client */
 	if (!this->f->f1(this->f, k, rand, this->sqn, amf_def, mac) ||
