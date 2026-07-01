@@ -27,12 +27,14 @@
 
 #include <library.h>
 #include <utils/debug.h>
+#include <utils/process.h>
 
 #define EXIT_NO_UPDATES		80
 #define TMP_DEB_FILE		"/tmp/sec-updater.deb"
 #define TMP_TAG_FILE		"/tmp/sec-updater.tag"
 #define SWID_GEN_CMD		"/usr/local/bin/swid_generator"
 #define TNC_MANAGE_CMD		"/var/www/tnc/manage.py"
+#define DPKG_CMD			"/usr/bin/dpkg"
 
 typedef enum sec_update_state_t sec_update_state_t;
 
@@ -126,6 +128,47 @@ Usage:\n\
  }
 
 /**
+ * Check two Debian package versions without using a shell.  Returns 1 if
+ * base < to_check, 0 if not, and -1 if executing the command failed.
+ */
+static int is_version_newer(char *base, char *to_check)
+{
+	process_t *process;
+	char *argv[] = {
+		DPKG_CMD,
+		"--compare-versions",
+		base,
+		"lt",
+		to_check,
+		NULL,
+	};
+	int retval;
+
+	process = process_start(argv, NULL, NULL, NULL, NULL, TRUE);
+	if (!process)
+	{
+		DBG1(DBG_IMV, "starting %s failed", DPKG_CMD);
+		return -1;
+	}
+	if (!process->wait(process, &retval))
+	{
+		DBG1(DBG_IMV, "waiting for %s failed", DPKG_CMD);
+		return -1;
+	}
+	switch (retval)
+	{
+		case EXIT_SUCCESS:
+			return 1;
+		case EXIT_FAILURE:
+			return 0;
+		default:
+			DBG1(DBG_IMV, "%s --compare-versions failed with status %d",
+				 DPKG_CMD, retval);
+			return -1;
+	}
+}
+
+/**
  * Update the package database
  */
 static bool update_database(database_t *db, char *package, char *version,
@@ -172,7 +215,6 @@ static bool update_database(database_t *db, char *package, char *version,
 
 	while (e->enumerate(e, &vid, &release, &sec_flag))
 	{
-		char command[BUF_LEN];
 		char found_char DBG_UNUSED = ' ';
 		bool update_version = FALSE;
 
@@ -183,9 +225,15 @@ static bool update_database(database_t *db, char *package, char *version,
 		}
 		else if (security)
 		{
-			 snprintf(command, BUF_LEN, "dpkg --compare-versions %s lt %s",
-										 release, version);
-			if (system(command) == 0)
+			int comparison;
+
+			comparison = is_version_newer(release, version);
+			if (comparison < 0)
+			{
+				e->destroy(e);
+				return FALSE;
+			}
+			if (comparison)
 			{
 				found_char = '!';
 				if (!sec_flag)
