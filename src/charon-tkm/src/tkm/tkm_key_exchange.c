@@ -88,7 +88,7 @@ METHOD(key_exchange_t, set_public_key, bool,
 	blob_id_type pubvalue_id;
 	bool ret = FALSE;
 
-	if (!key_exchange_verify_pubkey(this->method, value))
+	if (!key_exchange_check_pubkey_len(this->method, value))
 	{
 		return FALSE;
 	}

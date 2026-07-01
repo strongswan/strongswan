@@ -105,7 +105,7 @@ METHOD(key_exchange_t, set_public_key, bool,
 {
 	chunk_t uncomp;
 
-	if (!key_exchange_verify_pubkey(this->group, value))
+	if (!key_exchange_check_pubkey_len(this->group, value))
 	{
 		return FALSE;
 	}

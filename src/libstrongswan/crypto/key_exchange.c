@@ -634,7 +634,7 @@ bool key_exchange_is_kem(key_exchange_method_t ke)
 /*
  * Described in header
  */
-bool key_exchange_verify_pubkey(key_exchange_method_t ke, chunk_t value)
+bool key_exchange_check_pubkey_len(key_exchange_method_t ke, chunk_t value)
 {
 	diffie_hellman_params_t *params;
 	bool valid = FALSE;

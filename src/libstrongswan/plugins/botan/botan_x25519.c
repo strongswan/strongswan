@@ -63,7 +63,7 @@ struct private_diffie_hellman_t {
 METHOD(key_exchange_t, set_public_key, bool,
 	private_diffie_hellman_t *this, chunk_t value)
 {
-	if (!key_exchange_verify_pubkey(CURVE_25519, value))
+	if (!key_exchange_check_pubkey_len(CURVE_25519, value))
 	{
 		return FALSE;
 	}

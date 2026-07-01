@@ -247,13 +247,13 @@ bool key_exchange_is_ecdh(key_exchange_method_t ke);
 bool key_exchange_is_kem(key_exchange_method_t ke);
 
 /**
- * Check if a public key is valid for given key exchange method.
+ * Check if a public key's length is valid for the given key exchange method.
  *
  * @param ke			key exchange method
  * @param value			public key to check
- * @return				TRUE if value looks valid
+ * @return				TRUE if value's length is valid
  */
-bool key_exchange_verify_pubkey(key_exchange_method_t ke, chunk_t value);
+bool key_exchange_check_pubkey_len(key_exchange_method_t ke, chunk_t value);
 
 /**
  * Return the first shared secret plus the concatenated additional shared

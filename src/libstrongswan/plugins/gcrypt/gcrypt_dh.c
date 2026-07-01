@@ -80,7 +80,7 @@ METHOD(key_exchange_t, set_public_key, bool,
 	gcry_mpi_t p_min_1;
 	gcry_error_t err;
 
-	if (!key_exchange_verify_pubkey(this->group, value))
+	if (!key_exchange_check_pubkey_len(this->group, value))
 	{
 		return FALSE;
 	}

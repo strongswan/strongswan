@@ -154,7 +154,7 @@ METHOD(key_exchange_t, get_shared_secret, bool,
 METHOD(key_exchange_t, set_public_key, bool,
 	private_openssl_diffie_hellman_t *this, chunk_t value)
 {
-	if (!key_exchange_verify_pubkey(this->group, value))
+	if (!key_exchange_check_pubkey_len(this->group, value))
 	{
 		return FALSE;
 	}

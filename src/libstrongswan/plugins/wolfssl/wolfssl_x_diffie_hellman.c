@@ -117,7 +117,7 @@ METHOD(key_exchange_t, get_shared_secret_25519, bool,
 METHOD(key_exchange_t, set_public_key_25519, bool,
 	private_diffie_hellman_t *this, chunk_t value)
 {
-	if (!key_exchange_verify_pubkey(this->group, value))
+	if (!key_exchange_check_pubkey_len(this->group, value))
 	{
 		return FALSE;
 	}
@@ -207,7 +207,7 @@ METHOD(key_exchange_t, get_shared_secret_448, bool,
 METHOD(key_exchange_t, set_public_key_448, bool,
 	private_diffie_hellman_t *this, chunk_t value)
 {
-	if (!key_exchange_verify_pubkey(this->group, value))
+	if (!key_exchange_check_pubkey_len(this->group, value))
 	{
 		return FALSE;
 	}

@@ -89,7 +89,7 @@ METHOD(key_exchange_t, set_public_key, bool,
 {
 	mpz_t p_min_1;
 
-	if (!key_exchange_verify_pubkey(this->group, value))
+	if (!key_exchange_check_pubkey_len(this->group, value))
 	{
 		return FALSE;
 	}
