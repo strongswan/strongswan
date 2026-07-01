@@ -126,8 +126,6 @@ bool botan_verify_signature(botan_pubkey_t key, const char* scheme,
  * Do the Diffie-Hellman key derivation using the given private key and public
  * value.
  *
- * Note that the public value is not verified in this function.
- *
  * @param key		DH private key
  * @param pub		other's public value
  * @param secret	the derived secret (allocated on success)
