@@ -113,6 +113,22 @@ METHOD(resolver_response_t, destroy, void,
 	free(this);
 }
 
+/**
+ * Check if the given RR's owner matches either the queried name or the resolved
+ * canonical name of the verified answer.
+ */
+static bool rr_owner_matches(const ldns_rr *rr, const ldns_rdf *qname,
+							 const ldns_rdf *canonname)
+{
+	const ldns_rdf *owner = ldns_rr_owner(rr);
+
+	if (ldns_dname_compare(owner, qname) != 0)
+	{
+		return canonname && ldns_dname_compare(owner, canonname) == 0;
+	}
+	return TRUE;
+}
+
 /*
  * Described in header.
  */
@@ -168,7 +184,7 @@ unbound_response_t *unbound_response_create_frm_libub_response(
 		ldns_rr_list *orig_rr_list = NULL;
 		size_t orig_rr_count;
 		ldns_rr *orig_rr = NULL;
-		ldns_rdf *orig_rdf = NULL;
+		ldns_rdf *orig_rdf = NULL, *qname, *canonname = NULL;
 		ldns_status status;
 		linked_list_t *rr_list = NULL, *rrsig_list = NULL;
 		unbound_rr_t *rr = NULL;
@@ -193,9 +209,22 @@ unbound_response_t *unbound_response_create_frm_libub_response(
 		orig_rr_list = ldns_pkt_answer(dns_pkt);
 		orig_rr_count = ldns_rr_list_rr_count(orig_rr_list);
 
+		qname = ldns_dname_new_frm_str(libub_response->qname);
+		if (libub_response->canonname &&
+			!strcaseeq(libub_response->qname, libub_response->canonname))
+		{
+			canonname = ldns_dname_new_frm_str(libub_response->canonname);
+		}
+
 		for (i = 0; i < orig_rr_count; i++)
 		{
 			orig_rr = ldns_rr_list_rr(orig_rr_list, i);
+
+			if (!rr_owner_matches(orig_rr, qname, canonname))
+			{
+				/* RR owner doesn't match queried or resolved canonical name */
+				continue;
+			}
 
 			if (ldns_rr_get_type(orig_rr) == libub_response->qtype &&
 				ldns_rr_get_class(orig_rr) == libub_response->qclass)
@@ -253,6 +282,8 @@ unbound_response_t *unbound_response_create_frm_libub_response(
 		 */
 		this->rr_set = rr_set_create(rr_list, rrsig_list);
 
+		ldns_rdf_deep_free(canonname);
+		ldns_rdf_deep_free(qname);
 		ldns_pkt_free(dns_pkt);
 	}
 	return &this->public;
