@@ -1027,7 +1027,7 @@ if test x$gmp = xtrue; then
 fi
 
 if test x$ldap = xtrue; then
-	AC_CHECK_LIB([ldap],[ldap_init],[LIBS="$LIBS"],[AC_MSG_ERROR([LDAP library ldap not found])],[])
+	AC_CHECK_LIB([ldap],[ldap_initialize],[LIBS="$LIBS"],[AC_MSG_ERROR([LDAP library ldap not found])],[])
 	AC_CHECK_LIB([lber],[ber_free],[LIBS="$LIBS"],[AC_MSG_ERROR([LDAP library lber not found])],[])
 	AC_CHECK_HEADER([ldap.h],,[AC_MSG_ERROR([LDAP header ldap.h not found!])])
 fi

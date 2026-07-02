@@ -15,12 +15,9 @@
  * for more details.
  */
 
-#ifndef LDAP_DEPRECATED
-#define LDAP_DEPRECATED	1
-#endif /* LDAP_DEPRECATED */
-#include <ldap.h>
+#define _GNU_SOURCE /* for asprintf() */
 
-#include <errno.h>
+#include <ldap.h>
 
 #include <library.h>
 #include <utils/debug.h>
@@ -53,6 +50,7 @@ static bool parse(LDAP *ldap, LDAPMessage *result, chunk_t *response)
 {
 	LDAPMessage *entry = ldap_first_entry(ldap, result);
 	bool success = FALSE;
+	int res = 0;
 
 	if (entry)
 	{
@@ -80,15 +78,17 @@ static bool parse(LDAP *ldap, LDAPMessage *result, chunk_t *response)
 			}
 			else
 			{
+				ldap_get_option(ldap, LDAP_OPT_RESULT_CODE, &res);
 				DBG1(DBG_LIB, "getting LDAP values failed: %s",
-					 ldap_err2string(ldap_result2error(ldap, entry, 0)));
+					 ldap_err2string(res));
 			}
 			ldap_memfree(attr);
 		}
 		else
 		{
+			ldap_get_option(ldap, LDAP_OPT_RESULT_CODE, &res);
 			DBG1(DBG_LIB, "finding LDAP attributes failed: %s",
-				 ldap_err2string(ldap_result2error(ldap, entry, 0)));
+				 ldap_err2string(res));
 		}
 		ber_free(ber, 0);
 	}
@@ -99,18 +99,72 @@ static bool parse(LDAP *ldap, LDAPMessage *result, chunk_t *response)
 	return success;
 }
 
+/**
+ * Set an LDAP option and report the error if necessary
+ */
+static bool set_ldap_option(LDAP *ldap, int option, const void *value,
+							const char *name)
+{
+	int res;
+
+	res = ldap_set_option(ldap, option, value);
+	if (res != LDAP_OPT_SUCCESS)
+	{
+		DBG1(DBG_LIB, "setting LDAP option '%s' failed: %s", name,
+			 ldap_err2string(res));
+		return FALSE;
+	}
+	return TRUE;
+}
+
+/**
+ * Generate an URL accepted by ldap_initialize(), only consisting of scheme,
+ * host and port.
+ */
+static char *build_ldap_url(LDAPURLDesc *lurl)
+{
+	char *url = NULL;
+	bool ipv6;
+
+	if (!lurl->lud_host || !*lurl->lud_host)
+	{
+		DBG1(DBG_LIB, "LDAP URL without host not supported");
+		return NULL;
+	}
+
+	ipv6 = strchr(lurl->lud_host, ':') != NULL;
+	if (lurl->lud_port)
+	{
+		if (asprintf(&url, ipv6 ? "%s://[%s]:%d" : "%s://%s:%d",
+					 lurl->lud_scheme, lurl->lud_host, lurl->lud_port) < 0)
+		{
+			return NULL;
+		}
+	}
+	else
+	{
+		if (asprintf(&url, ipv6 ? "%s://[%s]" : "%s://%s", lurl->lud_scheme,
+					 lurl->lud_host) < 0)
+		{
+			return NULL;
+		}
+	}
+	return url;
+}
 
 METHOD(fetcher_t, fetch, status_t,
 	private_ldap_fetcher_t *this, char *url, void *userdata)
 {
-	LDAP *ldap;
+	LDAP *ldap = NULL;
 	LDAPURLDesc *lurl;
+	char *ldap_url;
 	LDAPMessage *msg;
-	int res;
-	int ldap_version = LDAP_VERSION3;
-	struct timeval timeout;
-	status_t status = FAILED;
 	chunk_t *result = userdata;
+	struct timeval timeout;
+	int ldap_version = LDAP_VERSION3;
+	int res;
+	struct berval cred = {0, ""};
+	status_t status = FAILED;
 
 	if (!strpfx(url, "ldap"))
 	{
@@ -120,29 +174,65 @@ METHOD(fetcher_t, fetch, status_t,
 	{
 		return NOT_SUPPORTED;
 	}
-	ldap = ldap_init(lurl->lud_host, lurl->lud_port);
-	if (ldap == NULL)
+	if (!streq(lurl->lud_scheme, "ldap") && !streq(lurl->lud_scheme, "ldaps"))
 	{
-		DBG1(DBG_LIB, "LDAP initialization failed: %s", strerror(errno));
+		ldap_free_urldesc(lurl);
+		return NOT_SUPPORTED;
+	}
+	/* ldap_initialize() only expects "scheme://host:port", so we have to
+	 * generate an appropriate string */
+	ldap_url = build_ldap_url(lurl);
+	if (!ldap_url)
+	{
 		ldap_free_urldesc(lurl);
 		return FAILED;
+	}
+	res = ldap_initialize(&ldap, ldap_url);
+	free(ldap_url);
+	if (res != LDAP_SUCCESS)
+	{
+		DBG1(DBG_LIB, "LDAP initialization failed: %s", ldap_err2string(res));
+		ldap_free_urldesc(lurl);
+		return FAILED;
+	}
+
+	if (streq(lurl->lud_scheme, "ldaps"))
+	{
+		int require_cert = LDAP_OPT_X_TLS_DEMAND;
+
+		if (!set_ldap_option(ldap, LDAP_OPT_X_TLS_REQUIRE_CERT, &require_cert,
+							 "TLS require cert") ||
+			!set_ldap_option(ldap, LDAP_OPT_X_TLS_NEWCTX, LDAP_OPT_ON,
+							 "TLS context"))
+		{
+			ldap_unbind_ext_s(ldap, NULL, NULL);
+			ldap_free_urldesc(lurl);
+			return FAILED;
+		}
 	}
 
 	timeout.tv_sec = this->timeout;
 	timeout.tv_usec = 0;
 
-	ldap_set_option(ldap, LDAP_OPT_PROTOCOL_VERSION, &ldap_version);
-	ldap_set_option(ldap, LDAP_OPT_NETWORK_TIMEOUT, &timeout);
-	ldap_set_option(ldap, LDAP_OPT_TIMEOUT, &timeout);
+	if (!set_ldap_option(ldap, LDAP_OPT_PROTOCOL_VERSION, &ldap_version,
+						 "protocol version") ||
+		!set_ldap_option(ldap, LDAP_OPT_NETWORK_TIMEOUT, &timeout,
+						 "network timeout") ||
+		!set_ldap_option(ldap, LDAP_OPT_TIMEOUT, &timeout, "timeout"))
+	{
+		ldap_unbind_ext_s(ldap, NULL, NULL);
+		ldap_free_urldesc(lurl);
+		return FAILED;
+	}
 
 	DBG2(DBG_LIB, "sending LDAP request to '%s'...", url);
 
-	res = ldap_simple_bind_s(ldap, NULL, NULL);
+	res = ldap_sasl_bind_s(ldap, NULL, LDAP_SASL_SIMPLE, &cred, NULL, NULL, NULL);
 	if (res == LDAP_SUCCESS)
 	{
-		res = ldap_search_st(ldap, lurl->lud_dn, lurl->lud_scope,
-							 lurl->lud_filter, lurl->lud_attrs,
-							 0, &timeout, &msg);
+		res = ldap_search_ext_s(ldap, lurl->lud_dn, lurl->lud_scope,
+								lurl->lud_filter, lurl->lud_attrs,
+								0, NULL, NULL, &timeout, LDAP_NO_LIMIT, &msg);
 
 		if (res == LDAP_SUCCESS)
 		{
@@ -162,7 +252,7 @@ METHOD(fetcher_t, fetch, status_t,
 		DBG1(DBG_LIB, "LDAP bind to '%s' failed: %s", url,
 			 ldap_err2string(res));
 	}
-	ldap_unbind_s(ldap);
+	ldap_unbind_ext_s(ldap, NULL, NULL);
 	ldap_free_urldesc(lurl);
 	return status;
 }
@@ -213,4 +303,3 @@ ldap_fetcher_t *ldap_fetcher_create()
 
 	return &this->public;
 }
-

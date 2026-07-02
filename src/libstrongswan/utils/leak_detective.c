@@ -565,6 +565,7 @@ static char *whitelist[] = {
 	"Curl_client_write",
 	/* libldap */
 	"ldap_int_initialize",
+	"ldap_pvt_tls_set_option",
 	/* ClearSilver */
 	"nerr_init",
 	/* libgcrypt */
