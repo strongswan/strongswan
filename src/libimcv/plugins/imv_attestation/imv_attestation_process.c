@@ -319,6 +319,7 @@ bool imv_attestation_process(pa_tnc_attr_t *attr, imv_msg_t *out_msg,
 						enumerator_t *e;
 						char *filename;
 						chunk_t measurement;
+						bool added = TRUE;
 						int vid;
 
 						if (!pts_db->get_product_version(pts_db,
@@ -335,13 +336,14 @@ bool imv_attestation_process(pa_tnc_attr_t *attr, imv_msg_t *out_msg,
 										measurement, filename, is_dir, arg_int))
 							{
 								eval = TNC_IMV_EVALUATION_RESULT_ERROR;
-								e->destroy(e);
+								added = FALSE;
 								break;
 							}
 						}
 						e->destroy(e);
 						snprintf(result_str, BUF_LEN, "%s reference measurement "
-								"successful", is_dir ? "directory" : "file");
+								 "%s", is_dir ? "directory" : "file",
+								 added ? "successful" : "failed");
 						break;
 					}
 					default:
