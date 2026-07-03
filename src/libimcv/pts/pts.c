@@ -327,8 +327,19 @@ METHOD(pts_t, extract_symlinks, pts_symlinks_t*,
 	struct stat st;
 	DIR *dir;
 
+	path_len = strnlen(pathname.ptr, pathname.len);
+	if (!path_len)
+	{
+		DBG1(DBG_PTS, "empty directory path");
+		return NULL;
+	}
+	if (path_len >= sizeof(path)-1)
+	{
+		DBG1(DBG_PTS, "directory path is too long");
+		return NULL;
+	}
 	/* open directory and prepare pathnames */
-	snprintf(path, BUF_LEN-1, "%.*s", (int)pathname.len, pathname.ptr);
+	snprintf(path, BUF_LEN-1, "%.*s", (int)path_len, pathname.ptr);
 	dir = opendir(path);
 	if (!dir)
 	{
@@ -336,14 +347,9 @@ METHOD(pts_t, extract_symlinks, pts_symlinks_t*,
 					   strerror(errno));
 		return NULL;
 	}
-	if (pathname.len == 1 && path[0] == '/')
+	if (path_len > 1 || path[0] != '/')
 	{
-		path_len = 1;
-	}
-	else
-	{
-		path[pathname.len] = '/';
-		path_len = pathname.len + 1;
+		path[path_len++] = '/';
 	}
 	real_path[0] = '/';
 
@@ -353,7 +359,6 @@ METHOD(pts_t, extract_symlinks, pts_symlinks_t*,
 
 	while (TRUE)
 	{
-
 		entry = readdir(dir);
 		if (!entry)
 		{
