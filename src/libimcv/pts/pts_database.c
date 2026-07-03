@@ -186,6 +186,14 @@ METHOD(pts_database_t, add_file_measurement, bool,
 	int hash_id, fid;
 	bool success = TRUE;
 
+	if (measurement.len > HASH_SIZE_SHA512 ||
+		measurement.len != pts_meas_algo_hash_size(algo))
+	{
+		DBG1(DBG_PTS, "invalid %N file measurement length %zu for '%s'",
+			 pts_meas_algorithm_names, algo, measurement.len, filename);
+		return FALSE;
+	}
+
 	if (is_dir)
 	{
 		/* does filename entry already exist? */
