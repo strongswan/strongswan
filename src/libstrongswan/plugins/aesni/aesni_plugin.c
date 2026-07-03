@@ -96,7 +96,8 @@ METHOD(plugin_t, get_features, int,
 	};
 
 	*features = f;
-	if (cpu_feature_available(CPU_FEATURE_AESNI | CPU_FEATURE_PCLMULQDQ))
+	if (cpu_feature_available(CPU_FEATURE_AESNI | CPU_FEATURE_PCLMULQDQ |
+							  CPU_FEATURE_SSSE3))
 	{
 		return countof(f);
 	}
