@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2026 Tobias Brunner
  * Copyright (C) 2014 Martin Willi
  *
  * Copyright (C) secunet Security Networks AG
@@ -65,23 +66,26 @@ static char keydata[] = {
   0x49,0xe8,
 };
 
+#define NUM_POLICIES 2
+
 /**
- * Issue a certificate fr given policy, including extended flags
+ * Issue a certificate for given policies, including extended flags
  */
-static certificate_t* create_cert_ext(certificate_t *ca, char *subject,
-									  char *oid, x509_flag_t flags,
-									  char *map_s, char *map_i,
-									  u_int require_explicit,
-									  u_int inhibit_mapping,
-									  u_int inhibit_any)
+static certificate_t *create_cert_pol_ext(certificate_t *ca, char *subject,
+										  char *oids[NUM_POLICIES],
+										  x509_flag_t flags, char *map_s,
+										  char *map_i, u_int require_explicit,
+										  u_int inhibit_mapping,
+										  u_int inhibit_any)
 {
 	private_key_t *privkey;
 	public_key_t *pubkey;
 	certificate_t *cert;
 	identification_t *id;
 	linked_list_t *policies, *maps;
-	x509_cert_policy_t policy = {};
+	x509_cert_policy_t policy[NUM_POLICIES] = {};
 	x509_policy_mapping_t map = {};
+	int i;
 
 	privkey = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, KEY_RSA,
 								 BUILD_BLOB_ASN1_DER, chunk_from_thing(keydata),
@@ -90,11 +94,14 @@ static certificate_t* create_cert_ext(certificate_t *ca, char *subject,
 	pubkey = privkey->get_public_key(privkey);
 	ck_assert(pubkey);
 	policies = linked_list_create();
-	if (oid)
+	for (i = 0; i < 2; i++)
 	{
-		policy.oid = asn1_oid_from_string(oid);
-		ck_assert(policy.oid.ptr);
-		policies->insert_last(policies, &policy);
+		if (oids[i] && *oids[i])
+		{
+			policy[i].oid = asn1_oid_from_string(oids[i]);
+			ck_assert(policy[i].oid.ptr);
+			policies->insert_last(policies, &policy[i]);
+		}
 	}
 	maps = linked_list_create();
 	if (map_s && map_i)
@@ -124,7 +131,8 @@ static certificate_t* create_cert_ext(certificate_t *ca, char *subject,
 	maps->destroy(maps);
 	privkey->destroy(privkey);
 	pubkey->destroy(pubkey);
-	free(policy.oid.ptr);
+	free(policy[0].oid.ptr);
+	free(policy[1].oid.ptr);
 	free(map.subject.ptr);
 	free(map.issuer.ptr);
 
@@ -132,15 +140,45 @@ static certificate_t* create_cert_ext(certificate_t *ca, char *subject,
 }
 
 /**
+ * Issue a certificate for given policy, including extended flags
+ */
+static certificate_t *create_cert_ext(certificate_t *ca, char *subject,
+									  char *oid, x509_flag_t flags,
+									  char *map_s, char *map_i,
+									  u_int require_explicit,
+									  u_int inhibit_mapping,
+									  u_int inhibit_any)
+{
+	char *oids[2] = {oid, NULL};
+
+	return create_cert_pol_ext(ca, subject, oids, flags, map_s, map_i,
+							   require_explicit, inhibit_mapping, inhibit_any);
+}
+
+/**
  * Issue a certificate with given certificate policy and flags
  */
-static certificate_t* create_cert(certificate_t *ca, char *subject,
+static certificate_t *create_cert(certificate_t *ca, char *subject,
 								  char *oid, x509_flag_t flags,
 								  char *map_s, char *map_i)
 {
 	return create_cert_ext(ca, subject, oid, flags, map_s, map_i,
 						   X509_NO_CONSTRAINT, X509_NO_CONSTRAINT,
 						   X509_NO_CONSTRAINT);
+}
+
+/**
+ * Issue a certificate with given certificate policies and flags
+ */
+static certificate_t *create_cert2(certificate_t *ca, char *subject,
+								   char *oid1, char *oid2, x509_flag_t flags,
+								   char *map_s, char *map_i)
+{
+	char *oids[2] = {oid1, oid2};
+
+	return create_cert_pol_ext(ca, subject, oids, flags, map_s, map_i,
+							   X509_NO_CONSTRAINT, X509_NO_CONSTRAINT,
+							   X509_NO_CONSTRAINT);
 }
 
 /**
@@ -202,6 +240,7 @@ static mem_cred_t *creds;
 static char *anyPolicy = "2.5.29.32.0";
 static char *extended = "2.23.140.1.1";
 static char *baseline = "2.23.140.1.2";
+static char *dummy = "1.2.3.4";
 
 START_SETUP(setup)
 {
@@ -230,6 +269,41 @@ START_TEST(test_valid_fixed)
 	creds->add_cert(creds, FALSE, im);
 	creds->add_cert(creds, FALSE, sj);
 
+	ck_assert(check_oid(sj->get_subject(sj), baseline));
+}
+END_TEST
+
+START_TEST(test_valid_fixed_multi)
+{
+	certificate_t *ca, *im, *sj;
+
+	ca = create_cert2(NULL, "CN=CA", baseline, extended, X509_CA, NULL, NULL);
+	im = create_cert2(ca, "CN=IM", baseline, extended, X509_CA, NULL, NULL);
+	sj = create_cert2(im, "CN=SJ", baseline, extended, 0, NULL, NULL);
+
+	creds->add_cert(creds, TRUE, ca);
+	creds->add_cert(creds, FALSE, im);
+	creds->add_cert(creds, FALSE, sj);
+
+	ck_assert(check_oid(sj->get_subject(sj), baseline));
+	ck_assert(check_oid(sj->get_subject(sj), extended));
+}
+END_TEST
+
+START_TEST(test_valid_root_no_policy)
+{
+	certificate_t *ca, *im, *sj;
+
+	ca = create_cert(NULL, "CN=CA", NULL, X509_CA, NULL, NULL);
+	im = create_cert(ca, "CN=IM", baseline, X509_CA, NULL, NULL);
+	sj = create_cert(im, "CN=SJ", baseline, 0, NULL, NULL);
+
+	creds->add_cert(creds, TRUE, ca);
+	creds->add_cert(creds, FALSE, im);
+	creds->add_cert(creds, FALSE, sj);
+
+	/* a self-signed root without policies is not considered when validating
+	 * policies in the subject */
 	ck_assert(check_oid(sj->get_subject(sj), baseline));
 }
 END_TEST
@@ -263,6 +337,57 @@ START_TEST(test_valid_any2)
 	creds->add_cert(creds, FALSE, sj);
 
 	ck_assert(check_oid(sj->get_subject(sj), baseline));
+}
+END_TEST
+
+START_TEST(test_valid_any_multi)
+{
+	certificate_t *ca, *im, *sj;
+
+	ca = create_cert(NULL, "CN=CA", anyPolicy, X509_CA, NULL, NULL);
+	im = create_cert(ca, "CN=IM", anyPolicy, X509_CA, NULL, NULL);
+	sj = create_cert2(im, "CN=SJ", baseline, extended, 0, NULL, NULL);
+
+	creds->add_cert(creds, TRUE, ca);
+	creds->add_cert(creds, FALSE, im);
+	creds->add_cert(creds, FALSE, sj);
+
+	ck_assert(check_oid(sj->get_subject(sj), baseline));
+	ck_assert(check_oid(sj->get_subject(sj), extended));
+}
+END_TEST
+
+START_TEST(test_valid_any_multi_im_one)
+{
+	certificate_t *ca, *im, *sj;
+
+	ca = create_cert(NULL, "CN=CA", anyPolicy, X509_CA, NULL, NULL);
+	im = create_cert2(ca, "CN=IM", baseline, extended, X509_CA, NULL, NULL);
+	sj = create_cert(im, "CN=SJ", extended, 0, NULL, NULL);
+
+	creds->add_cert(creds, TRUE, ca);
+	creds->add_cert(creds, FALSE, im);
+	creds->add_cert(creds, FALSE, sj);
+
+	ck_assert(!check_oid(sj->get_subject(sj), baseline));
+	ck_assert(check_oid(sj->get_subject(sj), extended));
+}
+END_TEST
+
+START_TEST(test_valid_any_multi_im_both)
+{
+	certificate_t *ca, *im, *sj;
+
+	ca = create_cert(NULL, "CN=CA", anyPolicy, X509_CA, NULL, NULL);
+	im = create_cert2(ca, "CN=IM", baseline, extended, X509_CA, NULL, NULL);
+	sj = create_cert2(im, "CN=SJ", baseline, extended, 0, NULL, NULL);
+
+	creds->add_cert(creds, TRUE, ca);
+	creds->add_cert(creds, FALSE, im);
+	creds->add_cert(creds, FALSE, sj);
+
+	ck_assert(check_oid(sj->get_subject(sj), baseline));
+	ck_assert(check_oid(sj->get_subject(sj), extended));
 }
 END_TEST
 
@@ -327,6 +452,57 @@ START_TEST(test_invalid_any2)
 	creds->add_cert(creds, FALSE, sj);
 
 	ck_assert(!check_oid(sj->get_subject(sj), baseline));
+}
+END_TEST
+
+START_TEST(test_invalid_multi_one)
+{
+	certificate_t *ca, *im, *sj;
+
+	ca = create_cert(NULL, "CN=CA", baseline, X509_CA, NULL, NULL);
+	im = create_cert(ca, "CN=IM", baseline, X509_CA, NULL, NULL);
+	sj = create_cert2(im, "CN=SJ", baseline, dummy, 0, NULL, NULL);
+
+	creds->add_cert(creds, TRUE, ca);
+	creds->add_cert(creds, FALSE, im);
+	creds->add_cert(creds, FALSE, sj);
+
+	ck_assert(check_oid(sj->get_subject(sj), baseline));
+	ck_assert(!check_oid(sj->get_subject(sj), dummy));
+}
+END_TEST
+
+START_TEST(test_invalid_multi_both)
+{
+	certificate_t *ca, *im, *sj;
+
+	ca = create_cert(NULL, "CN=CA", baseline, X509_CA, NULL, NULL);
+	im = create_cert(ca, "CN=IM", baseline, X509_CA, NULL, NULL);
+	sj = create_cert2(im, "CN=SJ", extended, dummy, 0, NULL, NULL);
+
+	creds->add_cert(creds, TRUE, ca);
+	creds->add_cert(creds, FALSE, im);
+	creds->add_cert(creds, FALSE, sj);
+
+	ck_assert(!check_oid(sj->get_subject(sj), extended));
+	ck_assert(!check_oid(sj->get_subject(sj), dummy));
+}
+END_TEST
+
+START_TEST(test_invalid_multi_im)
+{
+	certificate_t *ca, *im, *sj;
+
+	ca = create_cert(NULL, "CN=CA", baseline, X509_CA, NULL, NULL);
+	im = create_cert2(ca, "CN=IM", baseline, extended, X509_CA, NULL, NULL);
+	sj = create_cert(im, "CN=SJ", extended, 0, NULL, NULL);
+
+	creds->add_cert(creds, TRUE, ca);
+	creds->add_cert(creds, FALSE, im);
+	creds->add_cert(creds, FALSE, sj);
+
+	ck_assert(!check_oid(sj->get_subject(sj), baseline));
+	ck_assert(!check_oid(sj->get_subject(sj), extended));
 }
 END_TEST
 
@@ -492,9 +668,47 @@ START_TEST(test_inhibit_mapping_bad)
 	creds->add_cert(creds, FALSE, i2);
 	creds->add_cert(creds, FALSE, sj);
 
-	/* TODO: we currently reject the certificate completely, but should
-	 * actually just invalidate the policy not mapped properly */
-	ck_assert(!check_trust(sj->get_subject(sj)));
+	ck_assert(!check_oid(sj->get_subject(sj), baseline));
+}
+END_TEST
+
+START_TEST(test_inhibit_mapping_bad_im)
+{
+	certificate_t *ca, *i1, *i2, *sj;
+
+	ca = create_cert(NULL, "CN=CA", extended, X509_CA, NULL, NULL);
+	i1 = create_cert_ext(ca, "CN=IM1", extended, X509_CA, NULL, NULL,
+						 X509_NO_CONSTRAINT, 0, X509_NO_CONSTRAINT);
+	i2 = create_cert(i1, "CN=IM2", extended, X509_CA, baseline, extended);
+	sj = create_cert(i2, "CN=SJ", baseline, 0, NULL, NULL);
+
+	creds->add_cert(creds, TRUE, ca);
+	creds->add_cert(creds, FALSE, i1);
+	creds->add_cert(creds, FALSE, i2);
+	creds->add_cert(creds, FALSE, sj);
+
+	ck_assert(!check_oid(sj->get_subject(sj), baseline));
+}
+END_TEST
+
+START_TEST(test_inhibit_mapping_bad_mixed)
+{
+	certificate_t *ca, *i1, *i2, *sj;
+
+	ca = create_cert_ext(NULL, "CN=CA", extended, X509_CA, NULL, NULL,
+						 X509_NO_CONSTRAINT, 1, X509_NO_CONSTRAINT);
+	i1 = create_cert(ca, "CN=IM1", extended, X509_CA, NULL, NULL);
+	i2 = create_cert(i1, "CN=IM2", extended, X509_CA, baseline, extended);
+	sj = create_cert2(i2, "CN=SJ", baseline, extended, 0, NULL, NULL);
+
+	creds->add_cert(creds, TRUE, ca);
+	creds->add_cert(creds, FALSE, i1);
+	creds->add_cert(creds, FALSE, i2);
+	creds->add_cert(creds, FALSE, sj);
+
+	/* mapping for baseline is inhibited, but extended is directly present */
+	ck_assert(!check_oid(sj->get_subject(sj), baseline));
+	ck_assert(check_oid(sj->get_subject(sj), extended));
 }
 END_TEST
 
@@ -530,9 +744,69 @@ START_TEST(test_inhibit_any_bad)
 	creds->add_cert(creds, FALSE, i2);
 	creds->add_cert(creds, FALSE, sj);
 
-	/* TODO: we currently reject the certificate completely, but should
-	 * actually just invalidate the policy relying on inhibited anyPolicy */
-	ck_assert(!check_trust(sj->get_subject(sj)));
+	ck_assert(!check_oid(sj->get_subject(sj), baseline));
+}
+END_TEST
+
+START_TEST(test_inhibit_any_bad_im)
+{
+	certificate_t *ca, *i1, *i2, *sj;
+
+	ca = create_cert(NULL, "CN=CA", anyPolicy, X509_CA, NULL, NULL);
+	i1 = create_cert_ext(ca, "CN=IM1", anyPolicy, X509_CA, NULL, NULL,
+						 X509_NO_CONSTRAINT, X509_NO_CONSTRAINT, 0);
+	i2 = create_cert(i1, "CN=IM2", anyPolicy, X509_CA, NULL, NULL);
+	sj = create_cert(i2, "CN=SJ", baseline, 0, NULL, NULL);
+
+	creds->add_cert(creds, TRUE, ca);
+	creds->add_cert(creds, FALSE, i1);
+	creds->add_cert(creds, FALSE, i2);
+	creds->add_cert(creds, FALSE, sj);
+
+	ck_assert(!check_oid(sj->get_subject(sj), baseline));
+}
+END_TEST
+
+START_TEST(test_inhibit_any_bad_mixed)
+{
+	certificate_t *ca, *i1, *i2, *sj;
+
+	ca = create_cert_ext(NULL, "CN=CA", anyPolicy, X509_CA, NULL, NULL,
+						 X509_NO_CONSTRAINT, X509_NO_CONSTRAINT, 1);
+	i1 = create_cert(ca, "CN=IM1", anyPolicy, X509_CA, NULL, NULL);
+	i2 = create_cert2(i1, "CN=IM2", anyPolicy, extended, X509_CA, NULL, NULL);
+	sj = create_cert2(i2, "CN=SJ", baseline, extended, 0, NULL, NULL);
+
+	creds->add_cert(creds, TRUE, ca);
+	creds->add_cert(creds, FALSE, i1);
+	creds->add_cert(creds, FALSE, i2);
+	creds->add_cert(creds, FALSE, sj);
+
+	/* anyPolicy for baseline is inhibited, but extended is directly present */
+	ck_assert(check_oid(sj->get_subject(sj), extended));
+	ck_assert(!check_oid(sj->get_subject(sj), baseline));
+}
+END_TEST
+
+START_TEST(test_inhibit_any_bad_mixed_root_no_policy)
+{
+	certificate_t *ca, *i1, *i2, *sj;
+
+	ca = create_cert_ext(NULL, "CN=CA", NULL, X509_CA, NULL, NULL,
+						 X509_NO_CONSTRAINT, X509_NO_CONSTRAINT, 1);
+	i1 = create_cert(ca, "CN=IM1", anyPolicy, X509_CA, NULL, NULL);
+	i2 = create_cert2(i1, "CN=IM2", anyPolicy, extended, X509_CA, NULL, NULL);
+	sj = create_cert2(i2, "CN=SJ", baseline, extended, 0, NULL, NULL);
+
+	creds->add_cert(creds, TRUE, ca);
+	creds->add_cert(creds, FALSE, i1);
+	creds->add_cert(creds, FALSE, i2);
+	creds->add_cert(creds, FALSE, sj);
+
+	/* a root without policies is only ignored when validating the policies,
+	 * the constraints still apply */
+	ck_assert(check_oid(sj->get_subject(sj), extended));
+	ck_assert(!check_oid(sj->get_subject(sj), baseline));
 }
 END_TEST
 
@@ -541,7 +815,7 @@ START_TEST(test_require_explicit_good)
 	certificate_t *ca, *im, *sj;
 
 	ca = create_cert_ext(NULL, "CN=CA", anyPolicy, X509_CA, NULL, NULL,
-						 1, X509_NO_CONSTRAINT, X509_NO_CONSTRAINT);
+						 _i, X509_NO_CONSTRAINT, X509_NO_CONSTRAINT);
 	im = create_cert(ca, "CN=IM", baseline, X509_CA, NULL, NULL);
 	sj = create_cert(im, "CN=SJ", baseline, 0, NULL, NULL);
 
@@ -550,6 +824,26 @@ START_TEST(test_require_explicit_good)
 	creds->add_cert(creds, FALSE, sj);
 
 	ck_assert(check_oid(sj->get_subject(sj), baseline));
+}
+END_TEST
+
+START_TEST(test_require_explicit_constraint_overshoot)
+{
+	certificate_t *ca, *im, *sj;
+
+	ca = create_cert_ext(NULL, "CN=CA", baseline, X509_CA, NULL, NULL,
+						 2, X509_NO_CONSTRAINT, X509_NO_CONSTRAINT);
+	im = create_cert(ca, "CN=IM", extended, X509_CA, NULL, NULL);
+	sj = create_cert(im, "CN=SJ", extended, 0, NULL, NULL);
+
+	creds->add_cert(creds, TRUE, ca);
+	creds->add_cert(creds, FALSE, im);
+	creds->add_cert(creds, FALSE, sj);
+
+	/* because the constraint skips the next two certificates in the chain,
+	 * it won't apply to the subject, so while the policy is not valid, the
+	 * certificate it not rejected */
+	ck_assert(!check_oid(sj->get_subject(sj), extended));
 }
 END_TEST
 
@@ -568,8 +862,87 @@ START_TEST(test_require_explicit_bad)
 	creds->add_cert(creds, FALSE, i2);
 	creds->add_cert(creds, FALSE, sj);
 
-	/* TODO: we currently reject the certificate completely, but should
-	 * actually just invalidate the policy violating requireExplicit */
+	/* as seen in other tests, we generally don't reject certificates with
+	 * invalid policies, that is, unless requireExplicitPolicy applies to the
+	 * subject and none are found */
+	ck_assert(!check_trust(sj->get_subject(sj)));
+}
+END_TEST
+
+START_TEST(test_require_explicit_bad_root_no_policy)
+{
+	certificate_t *ca, *i1, *i2, *sj;
+
+	ca = create_cert_ext(NULL, "CN=CA", NULL, X509_CA, NULL, NULL,
+						 0, X509_NO_CONSTRAINT, X509_NO_CONSTRAINT);
+	i1 = create_cert(ca, "CN=IM1", extended, X509_CA, NULL, NULL);
+	i2 = create_cert(i1, "CN=IM2", extended, X509_CA, NULL, NULL);
+	sj = create_cert(i2, "CN=SJ", baseline, 0, NULL, NULL);
+
+	creds->add_cert(creds, TRUE, ca);
+	creds->add_cert(creds, FALSE, i1);
+	creds->add_cert(creds, FALSE, i2);
+	creds->add_cert(creds, FALSE, sj);
+
+	/* a root without policies is only ignored when validating the policies,
+	 * the constraints still apply */
+	ck_assert(!check_trust(sj->get_subject(sj)));
+}
+END_TEST
+
+START_TEST(test_require_explicit_bad_im)
+{
+	certificate_t *ca, *im1, *im2, *sj;
+
+	ca = create_cert(NULL, "CN=CA", baseline, X509_CA, NULL, NULL);
+	im1 = create_cert_ext(ca, "CN=IM1", baseline, X509_CA, NULL, NULL,
+						  0, X509_NO_CONSTRAINT, X509_NO_CONSTRAINT);
+	im2 = create_cert(im1, "CN=IM2", extended, X509_CA, NULL, NULL);
+	sj = create_cert(im2, "CN=SJ", extended, 0, NULL, NULL);
+
+	creds->add_cert(creds, TRUE, ca);
+	creds->add_cert(creds, FALSE, im1);
+	creds->add_cert(creds, FALSE, im2);
+	creds->add_cert(creds, FALSE, sj);
+
+	ck_assert(!check_trust(sj->get_subject(sj)));
+}
+END_TEST
+
+START_TEST(test_require_explicit_one_found)
+{
+	certificate_t *ca, *i1, *i2, *sj;
+
+	ca = create_cert_ext(NULL, "CN=CA", anyPolicy, X509_CA, NULL, NULL,
+						 1, X509_NO_CONSTRAINT, X509_NO_CONSTRAINT);
+	i1 = create_cert(ca, "CN=IM1", extended, X509_CA, NULL, NULL);
+	i2 = create_cert(i1, "CN=IM2", extended, X509_CA, NULL, NULL);
+	sj = create_cert2(i2, "CN=SJ", baseline, extended, 0, NULL, NULL);
+
+	creds->add_cert(creds, TRUE, ca);
+	creds->add_cert(creds, FALSE, i1);
+	creds->add_cert(creds, FALSE, i2);
+	creds->add_cert(creds, FALSE, sj);
+
+	/* if we find at least one valid policy, we accept the certificate */
+	ck_assert(check_oid(sj->get_subject(sj), extended));
+	ck_assert(!check_oid(sj->get_subject(sj), baseline));
+}
+END_TEST
+
+START_TEST(test_require_explicit_missing_policy)
+{
+	certificate_t *ca, *im, *sj;
+
+	ca = create_cert_ext(NULL, "CN=CA", baseline, X509_CA, NULL, NULL,
+						 _i, X509_NO_CONSTRAINT, X509_NO_CONSTRAINT);
+	im = create_cert(ca, "CN=IM", baseline, X509_CA, NULL, NULL);
+	sj = create_cert(im, "CN=SJ", NULL, 0, NULL, NULL);
+
+	creds->add_cert(creds, TRUE, ca);
+	creds->add_cert(creds, FALSE, im);
+	creds->add_cert(creds, FALSE, sj);
+
 	ck_assert(!check_trust(sj->get_subject(sj)));
 }
 END_TEST
@@ -584,8 +957,13 @@ Suite *certpolicy_suite_create()
 	tc = tcase_create("policy valid");
 	tcase_add_checked_fixture(tc, setup, teardown);
 	tcase_add_test(tc, test_valid_fixed);
+	tcase_add_test(tc, test_valid_fixed_multi);
+	tcase_add_test(tc, test_valid_root_no_policy);
 	tcase_add_test(tc, test_valid_any1);
 	tcase_add_test(tc, test_valid_any2);
+	tcase_add_test(tc, test_valid_any_multi);
+	tcase_add_test(tc, test_valid_any_multi_im_one);
+	tcase_add_test(tc, test_valid_any_multi_im_both);
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("policy invalid");
@@ -594,6 +972,9 @@ Suite *certpolicy_suite_create()
 	tcase_add_test(tc, test_invalid_wrong);
 	tcase_add_test(tc, test_invalid_any1);
 	tcase_add_test(tc, test_invalid_any2);
+	tcase_add_test(tc, test_invalid_multi_one);
+	tcase_add_test(tc, test_invalid_multi_both);
+	tcase_add_test(tc, test_invalid_multi_im);
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("policy badchain");
@@ -620,18 +1001,28 @@ Suite *certpolicy_suite_create()
 	tcase_add_checked_fixture(tc, setup, teardown);
 	tcase_add_test(tc, test_inhibit_mapping_good);
 	tcase_add_test(tc, test_inhibit_mapping_bad);
+	tcase_add_test(tc, test_inhibit_mapping_bad_im);
+	tcase_add_test(tc, test_inhibit_mapping_bad_mixed);
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("inhibit any policy");
 	tcase_add_checked_fixture(tc, setup, teardown);
 	tcase_add_test(tc, test_inhibit_any_good);
 	tcase_add_test(tc, test_inhibit_any_bad);
+	tcase_add_test(tc, test_inhibit_any_bad_im);
+	tcase_add_test(tc, test_inhibit_any_bad_mixed);
+	tcase_add_test(tc, test_inhibit_any_bad_mixed_root_no_policy);
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("require explicit policy");
 	tcase_add_checked_fixture(tc, setup, teardown);
-	tcase_add_test(tc, test_require_explicit_good);
+	tcase_add_loop_test(tc, test_require_explicit_good, 0, 2);
+	tcase_add_test(tc, test_require_explicit_constraint_overshoot);
 	tcase_add_test(tc, test_require_explicit_bad);
+	tcase_add_test(tc, test_require_explicit_bad_root_no_policy);
+	tcase_add_test(tc, test_require_explicit_bad_im);
+	tcase_add_test(tc, test_require_explicit_one_found);
+	tcase_add_loop_test(tc, test_require_explicit_missing_policy, 0, 2);
 	suite_add_tcase(s, tc);
 
 	return s;
