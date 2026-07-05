@@ -231,13 +231,7 @@ static bool exchange(private_tls_socket_t *this, bool wr, bool block)
 		if (in < 0)
 		{
 			if (errno == EAGAIN || errno == EWOULDBLOCK)
-			{
-				if (this->app.in_done == 0)
-				{
-					/* reading, nothing got yet, and call would block */
-					errno = EWOULDBLOCK;
-					this->app.in_done = -1;
-				}
+			{	/* would block, read() signals this if no data was received */
 				return TRUE;
 			}
 			return FALSE;
@@ -262,6 +256,8 @@ static bool exchange(private_tls_socket_t *this, bool wr, bool block)
 METHOD(tls_socket_t, read_, ssize_t,
 	private_tls_socket_t *this, void *buf, size_t len, bool block)
 {
+	ssize_t done;
+
 	if (this->app.cache.len)
 	{
 		size_t cache;
@@ -284,16 +280,18 @@ METHOD(tls_socket_t, read_, ssize_t,
 	this->app.in.ptr = buf;
 	this->app.in.len = len;
 	this->app.in_done = 0;
-	if (exchange(this, FALSE, block))
+	done = exchange(this, FALSE, block) ? this->app.in_done : -1;
+	/* disarm the read buffer: application data processed outside of a read
+	 * call (e.g. by a write driving a handshake) must go to the cache, not
+	 * through a stale pointer into the caller's buffer */
+	this->app.in = chunk_empty;
+	this->app.in_done = 0;
+	if (done == 0 && !this->eof)
 	{
-		if (!this->app.in_done && !this->eof)
-		{
-			errno = EWOULDBLOCK;
-			return -1;
-		}
-		return this->app.in_done;
+		errno = EWOULDBLOCK;
+		return -1;
 	}
-	return -1;
+	return done;
 }
 
 METHOD(tls_socket_t, write_, ssize_t,
