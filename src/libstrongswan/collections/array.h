@@ -113,7 +113,8 @@ void array_remove_at(array_t *array, enumerator_t *enumerator);
  * Insert an element to an array.
  *
  * If the array is pointer based (esize = 0), the pointer itself is appended.
- * Otherwise the element gets copied from the pointer.
+ * Otherwise, the element gets copied from the pointer.
+ *
  * The idx must be either within array_count() or one above to append the item.
  * Passing -1 has the same effect as passing array_count(), i.e. appends the
  * item. It is always valid to pass idx 0 to prepend the item.
