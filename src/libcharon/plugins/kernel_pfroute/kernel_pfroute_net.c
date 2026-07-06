@@ -538,11 +538,10 @@ static void addr_map_entry_add(private_kernel_pfroute_net_t *this,
 }
 
 /**
- * Remove an address map entry (the argument order is a bit strange because
- * it is also used with linked_list_t.invoke_function)
+ * Remove an address map entry
  */
-static void addr_map_entry_remove(addr_entry_t *addr, iface_entry_t *iface,
-								  private_kernel_pfroute_net_t *this)
+static void addr_map_entry_remove(private_kernel_pfroute_net_t *this,
+								  addr_entry_t *addr, iface_entry_t *iface)
 {
 	addr_map_entry_t *entry, lookup = {
 		.ip = addr->ip,
@@ -732,7 +731,7 @@ static void process_addr(private_kernel_pfroute_net_t *this,
 							DBG1(DBG_KNL, "%H disappeared from %s",
 								 host, iface->ifname);
 						}
-						addr_map_entry_remove(addr, iface, this);
+						addr_map_entry_remove(this, addr, iface);
 						addr_entry_destroy(addr);
 					}
 				}
@@ -851,7 +850,7 @@ static void repopulate_iface(private_kernel_pfroute_net_t *this,
 
 	while (addrs->remove_last(addrs, (void**)&addr) == SUCCESS)
 	{
-		addr_map_entry_remove(addr, iface, this);
+		addr_map_entry_remove(this, addr, iface);
 		addr_entry_destroy(addr);
 	}
 	addrs->destroy(addrs);
@@ -955,6 +954,7 @@ static void process_announce(private_kernel_pfroute_net_t *this,
 {
 	enumerator_t *enumerator;
 	iface_entry_t *iface;
+	addr_entry_t *addr;
 
 	if (msg->ifan_what != IFAN_DEPARTURE)
 	{
@@ -970,6 +970,12 @@ static void process_announce(private_kernel_pfroute_net_t *this,
 		{
 			DBG1(DBG_KNL, "interface %s disappeared", iface->ifname);
 			this->ifaces->remove_at(this->ifaces, enumerator);
+			while (iface->addrs->remove_last(iface->addrs,
+											 (void**)&addr) == SUCCESS)
+			{
+				addr_map_entry_remove(this, addr, iface);
+				addr_entry_destroy(addr);
+			}
 			iface_entry_destroy(iface);
 			break;
 		}
