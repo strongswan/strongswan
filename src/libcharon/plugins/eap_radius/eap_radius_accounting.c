@@ -581,6 +581,10 @@ static job_requeue_t send_interim(interim_data_t *data)
 		return JOB_REQUEUE_NONE;
 	}
 	stats = collect_stats(ike_sa, &usage);
+	message = radius_message_create(RMC_ACCOUNTING_REQUEST);
+	value = htonl(ACCT_STATUS_INTERIM_UPDATE);
+	message->add(message, RAT_ACCT_STATUS_TYPE, chunk_from_thing(value));
+	add_ike_sa_parameters(this, message, ike_sa);
 	charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
 
 	/* avoid any races by returning IKE_SA before acquiring lock */
@@ -631,13 +635,9 @@ static job_requeue_t send_interim(interim_data_t *data)
 
 		add_usage(&usage, entry->usage);
 
-		message = radius_message_create(RMC_ACCOUNTING_REQUEST);
-		value = htonl(ACCT_STATUS_INTERIM_UPDATE);
-		message->add(message, RAT_ACCT_STATUS_TYPE, chunk_from_thing(value));
 		message->add(message, RAT_ACCT_SESSION_ID,
 					 chunk_create(entry->sid, strlen(entry->sid)));
 		add_class_attributes(message, entry);
-		add_ike_sa_parameters(this, message, ike_sa);
 
 		value = htonl(usage.bytes.sent);
 		message->add(message, RAT_ACCT_OUTPUT_OCTETS, chunk_from_thing(value));
@@ -665,6 +665,11 @@ static job_requeue_t send_interim(interim_data_t *data)
 		message->add(message, RAT_ACCT_SESSION_TIME, chunk_from_thing(value));
 
 		schedule_interim(this, entry);
+	}
+	else
+	{
+		message->destroy(message);
+		message = NULL;
 	}
 	this->mutex->unlock(this->mutex);
 	array_destroy_function(stats, (void*)free, NULL);
