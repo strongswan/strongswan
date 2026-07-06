@@ -339,7 +339,7 @@ static SOCKET open_socket(private_socket_win_socket_t *this, int i)
 		.sin6_port = htons(this->ports[i]),
 	};
 	int addrlen = sizeof(addr);
-	BOOL off = FALSE;
+	BOOL off = FALSE, on = TRUE;
 	DWORD dwon = TRUE;
 	SOCKET s;
 
@@ -347,6 +347,16 @@ static SOCKET open_socket(private_socket_win_socket_t *this, int i)
 	if (s == INVALID_SOCKET)
 	{
 		DBG1(DBG_NET, "creating socket failed: %d", WSAGetLastError());
+		return INVALID_SOCKET;
+	}
+	/* prevent other local processes from sharing the bound port and misusing
+	 * the bypass rules */
+	if (setsockopt(s, SOL_SOCKET, SO_EXCLUSIVEADDRUSE,
+				   (const char*)&on, sizeof(on)) == SOCKET_ERROR)
+	{
+		DBG1(DBG_NET, "unable to set SO_EXCLUSIVEADDRUSE: %d",
+			 WSAGetLastError());
+		closesocket(s);
 		return INVALID_SOCKET;
 	}
 	/* enable IPv4 on IPv6 socket */
