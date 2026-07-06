@@ -422,9 +422,13 @@ METHOD(capabilities_t, drop, bool,
 {
 #ifndef WIN32
 #ifdef HAVE_PRCTL
-	if (has_capability(this, CAP_SETPCAP, NULL))
+	if (this->uid && has_capability(this, CAP_SETPCAP, NULL))
 	{
 		prctl(PR_SET_KEEPCAPS, 1, 0, 0, 0);
+#ifndef CAPABILITIES
+		DBG0(DBG_LIB, "no capability backend compiled in, privilege drop will "
+			 "preserve root-derived permitted capabilities");
+#endif
 	}
 #endif
 

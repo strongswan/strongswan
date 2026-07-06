@@ -1297,6 +1297,12 @@ if test x$capabilities = xlibcap; then
 	AC_DEFINE([CAPABILITIES_LIBCAP], [], [have libpcap library])
 fi
 
+if test x$capabilities = xno -a x$ac_cv_func_prctl = xyes -a "x$ipsecuser" != xroot; then
+	AC_MSG_WARN(m4_normalize([
+		no capability backend selected, the daemon will be unable to restrict
+		root-derived capabilities when changing to an unprivileged user]))
+fi
+
 if test x$selinux = xtrue; then
 	PKG_CHECK_MODULES(selinux, [libselinux])
 	AC_SUBST(selinux_CFLAGS)
