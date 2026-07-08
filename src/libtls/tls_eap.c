@@ -78,6 +78,11 @@ struct private_tls_eap_t {
 	bool first_fragment;
 
 	/**
+	 * Can we accept acknowledgements as server?
+	 */
+	bool conversation_started;
+
+	/**
 	 * Maximum size of an outgoing EAP-TLS fragment
 	 */
 	size_t frag_size;
@@ -380,6 +385,12 @@ METHOD(tls_eap_t, process, status_t,
 		 * connection, which is interpreted here as an ACK packet */
 		if (in.len == sizeof(eap_tls_packet_t))
 		{
+			if (this->is_server && !this->conversation_started)
+			{
+				DBG1(DBG_TLS, "received %N acknowledgment packet before EAP "
+					 "conversation started", eap_type_names, this->type);
+				return FAILED;
+			}
 			DBG2(DBG_TLS, "received %N acknowledgment packet",
 				 eap_type_names, this->type);
 			status = build_pkt(this, out);
@@ -393,6 +404,10 @@ METHOD(tls_eap_t, process, status_t,
 		switch (status)
 		{
 			case NEED_MORE:
+				if (this->is_server)
+				{
+					this->conversation_started = TRUE;
+				}
 				break;
 			case SUCCESS:
 				return this->tls->is_complete(this->tls) ? SUCCESS : FAILED;
