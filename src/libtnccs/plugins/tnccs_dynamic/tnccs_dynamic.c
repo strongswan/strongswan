@@ -124,7 +124,7 @@ METHOD(tls_t, process, status_t,
 							this->peer_ip, this->transport,	this->callback);
 		if (!tnccs)
 		{
-			DBG1(DBG_TNC, "N% protocol not supported", tnccs_type_names, type);
+			DBG1(DBG_TNC, "%N protocol not supported", tnccs_type_names, type);
 			return FAILED;
 		}
 		tnccs->set_auth_type(tnccs, this->auth_type);
@@ -136,6 +136,11 @@ METHOD(tls_t, process, status_t,
 METHOD(tls_t, build, status_t,
 	private_tnccs_dynamic_t *this, void *buf, size_t *buflen, size_t *msglen)
 {
+	if (!this->tls)
+	{
+		DBG1(DBG_TNC, "no TNCCS protocol detected, unable to respond");
+		return FAILED;
+	}
 	return this->tls->build(this->tls, buf, buflen, msglen);
 }
 
@@ -241,6 +246,11 @@ METHOD(tnccs_t, get_pdp_server, chunk_t,
 {
 	tnccs_t *tnccs = (tnccs_t*)this->tls;
 
+	if (!tnccs)
+	{
+		*port = 0;
+		return chunk_empty;
+	}
 	return tnccs->get_pdp_server(tnccs, port);
 }
 
