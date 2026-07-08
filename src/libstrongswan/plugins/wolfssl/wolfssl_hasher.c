@@ -84,7 +84,12 @@ METHOD(hasher_t, allocate_hash, bool,
 	if (hash)
 	{
 		*hash = chunk_alloc(get_hash_size(this));
-		return get_hash(this, chunk, hash->ptr);
+		if (!get_hash(this, chunk, hash->ptr))
+		{
+			chunk_free(hash);
+			return FALSE;
+		}
+		return TRUE;
 	}
 	return get_hash(this, chunk, NULL);
 }
