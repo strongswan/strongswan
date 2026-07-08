@@ -561,12 +561,12 @@ METHOD(watcher_t, add, void,
 METHOD(watcher_t, remove_, void,
 	private_watcher_t *this, int fd)
 {
-	entry_t *entry, *prev = NULL;
 	watcher_event_t found = 0;
 
 	this->mutex->lock(this->mutex);
 	while (TRUE)
 	{
+		entry_t *entry, *prev = NULL;
 		bool is_in_callback = FALSE;
 
 		entry = this->fds;
