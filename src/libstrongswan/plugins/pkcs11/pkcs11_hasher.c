@@ -16,14 +16,17 @@
 
 #include "pkcs11_hasher.h"
 
-#include <unistd.h>
-
 #include <utils/debug.h>
-#include <threading/mutex.h>
 
 #include "pkcs11_manager.h"
 
 typedef struct private_pkcs11_hasher_t private_pkcs11_hasher_t;
+
+/**
+ * Some limits for allocating state
+ */
+#define STATE_SIZE_MAX			1024
+#define STATE_RETRIES_MAX		3
 
 /**
  * Private data of an pkcs11_hasher_t object.
@@ -51,29 +54,19 @@ struct private_pkcs11_hasher_t {
 	CK_SESSION_HANDLE session;
 
 	/**
-	 * size of the hash
+	 * Size of the hash
 	 */
 	size_t size;
 
 	/**
-	 * Mutex to lock the tokens hashing engine
+	 * Data currently in the state buffer
 	 */
-	mutex_t *mutex;
+	size_t have_state;
 
 	/**
-	 * do we have an initialized state?
+	 * State buffer
 	 */
-	bool have_state;
-
-	/**
-	 * state buffer
-	 */
-	CK_BYTE_PTR state;
-
-	/**
-	 * Length of the state buffer
-	 */
-	CK_ULONG state_len;
+	chunk_t state;
 };
 
 METHOD(hasher_t, get_hash_size, size_t,
@@ -83,34 +76,54 @@ METHOD(hasher_t, get_hash_size, size_t,
 }
 
 /**
+ * Clear the saved state
+ */
+static void clear_state(private_pkcs11_hasher_t *this)
+{
+	chunk_clear(&this->state);
+	this->have_state = 0;
+}
+
+/**
  * Save the Operation state to host memory
  */
 static bool save_state(private_pkcs11_hasher_t *this)
 {
 	CK_RV rv;
+	CK_ULONG state_len = this->state.len;
+	int retries = 0;
 
 	while (TRUE)
 	{
-		if (!this->state)
+		if (!this->state.ptr)
 		{
 			rv = this->lib->f->C_GetOperationState(this->session, NULL,
-												   &this->state_len);
+												   &state_len);
 			if (rv != CKR_OK)
 			{
 				break;
 			}
-			this->state = malloc(this->state_len);
+			if (state_len > STATE_SIZE_MAX)
+			{
+				rv = CKR_HOST_MEMORY;
+				break;
+			}
+			this->state = chunk_alloc(state_len);
 		}
-		rv = this->lib->f->C_GetOperationState(this->session, this->state,
-											   &this->state_len);
+		rv = this->lib->f->C_GetOperationState(this->session, this->state.ptr,
+											   &state_len);
 		switch (rv)
 		{
 			case CKR_BUFFER_TOO_SMALL:
-				free(this->state);
-				this->state = NULL;
+				if (++retries >= STATE_RETRIES_MAX || state_len > STATE_SIZE_MAX)
+				{
+					rv = CKR_HOST_MEMORY;
+					break;
+				}
+				clear_state(this);
 				continue;
 			case CKR_OK:
-				this->have_state = TRUE;
+				this->have_state = state_len;
 				return TRUE;
 			default:
 				break;
@@ -118,6 +131,7 @@ static bool save_state(private_pkcs11_hasher_t *this)
 		break;
 	}
 	DBG1(DBG_CFG, "C_GetOperationState() failed: %N", ck_rv_names, rv);
+	clear_state(this);
 	return FALSE;
 }
 
@@ -128,21 +142,22 @@ static bool load_state(private_pkcs11_hasher_t *this)
 {
 	CK_RV rv;
 
-	rv = this->lib->f->C_SetOperationState(this->session, this->state,
-						this->state_len, CK_INVALID_HANDLE, CK_INVALID_HANDLE);
+	rv = this->lib->f->C_SetOperationState(this->session, this->state.ptr,
+						this->have_state, CK_INVALID_HANDLE, CK_INVALID_HANDLE);
 	if (rv != CKR_OK)
 	{
 		DBG1(DBG_CFG, "C_SetOperationState() failed: %N", ck_rv_names, rv);
 		return FALSE;
 	}
-	this->have_state = FALSE;
+	this->have_state = 0;
 	return TRUE;
 }
 
 METHOD(hasher_t, reset, bool,
 	private_pkcs11_hasher_t *this)
 {
-	this->have_state = FALSE;
+	/* just reuse the existing buffer if any and sized correctly */
+	this->have_state = 0;
 	return TRUE;
 }
 
@@ -152,12 +167,10 @@ METHOD(hasher_t, get_hash, bool,
 	CK_RV rv;
 	CK_ULONG len;
 
-	this->mutex->lock(this->mutex);
 	if (this->have_state)
 	{
 		if (!load_state(this))
 		{
-			this->mutex->unlock(this->mutex);
 			return FALSE;
 		}
 	}
@@ -167,7 +180,6 @@ METHOD(hasher_t, get_hash, bool,
 		if (rv != CKR_OK)
 		{
 			DBG1(DBG_CFG, "C_DigestInit() failed: %N", ck_rv_names, rv);
-			this->mutex->unlock(this->mutex);
 			return FALSE;
 		}
 	}
@@ -177,19 +189,16 @@ METHOD(hasher_t, get_hash, bool,
 		if (rv != CKR_OK)
 		{
 			DBG1(DBG_CFG, "C_DigestUpdate() failed: %N", ck_rv_names, rv);
-			this->mutex->unlock(this->mutex);
 			return FALSE;
 		}
 	}
 	if (hash)
 	{
 		len = this->size;
-		rv = this->lib->f->C_DigestFinal(this->session,
-								hash, &len);
+		rv = this->lib->f->C_DigestFinal(this->session, hash, &len);
 		if (rv != CKR_OK)
 		{
 			DBG1(DBG_CFG, "C_DigestFinal() failed: %N", ck_rv_names, rv);
-			this->mutex->unlock(this->mutex);
 			return FALSE;
 		}
 	}
@@ -197,11 +206,9 @@ METHOD(hasher_t, get_hash, bool,
 	{
 		if (!save_state(this))
 		{
-			this->mutex->unlock(this->mutex);
 			return FALSE;
 		}
 	}
-	this->mutex->unlock(this->mutex);
 	return TRUE;
 }
 
@@ -211,7 +218,12 @@ METHOD(hasher_t, allocate_hash, bool,
 	if (hash)
 	{
 		*hash = chunk_alloc(this->size);
-		return get_hash(this, chunk, hash->ptr);
+		if (!get_hash(this, chunk, hash->ptr))
+		{
+			chunk_free(hash);
+			return FALSE;
+		}
+		return TRUE;
 	}
 	return get_hash(this, chunk, NULL);
 }
@@ -220,7 +232,7 @@ METHOD(hasher_t, destroy, void,
 	private_pkcs11_hasher_t *this)
 {
 	this->lib->f->C_CloseSession(this->session);
-	this->mutex->destroy(this->mutex);
+	clear_state(this);
 	free(this);
 }
 
@@ -320,13 +332,11 @@ pkcs11_hasher_t *pkcs11_hasher_create(hash_algorithm_t algo)
 				.destroy = _destroy,
 			},
 		},
-		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
 	);
 
 	this->lib = find_token(algo, &this->session, &this->mech, &this->size);
 	if (!this->lib)
 	{
-		this->mutex->destroy(this->mutex);
 		free(this);
 		return NULL;
 	}
