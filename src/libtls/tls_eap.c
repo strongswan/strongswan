@@ -360,6 +360,12 @@ METHOD(tls_eap_t, process, status_t,
 	if ((this->type == EAP_PT_EAP && (pkt->flags & EAP_PT_START)) ||
         (pkt->flags & EAP_TLS_START))
 	{
+		if (this->is_server)
+		{
+			DBG1(DBG_TLS, "received unexpected %N start from client",
+				 eap_type_names, this->type);
+			return FAILED;
+		}
 		if (this->type == EAP_TTLS || this->type == EAP_TNC ||
 			this->type == EAP_PEAP || this->type == EAP_PT_EAP)
 		{
