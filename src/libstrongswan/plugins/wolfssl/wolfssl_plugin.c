@@ -145,9 +145,16 @@ METHOD(plugin_t, get_features, int,
 #if defined(WOLFSSL_SHA3) && !defined(WOLFSSL_NOSHA3_512)
 			PLUGIN_PROVIDE(HASHER, HASH_SHA3_512),
 #endif
-#if defined(WOLFSSL_SHAKE256) && LIBWOLFSSL_VERSION_HEX >= 0x04007001
+#if LIBWOLFSSL_VERSION_HEX >= 0x05005001
+#if defined(WOLFSSL_SHAKE128) || defined(WOLFSSL_SHAKE256)
 		PLUGIN_REGISTER(XOF, wolfssl_xof_create),
+	#ifdef WOLFSSL_SHAKE128
+			PLUGIN_PROVIDE(XOF, XOF_SHAKE_128),
+	#endif
+	#ifdef WOLFSSL_SHAKE256
 			PLUGIN_PROVIDE(XOF, XOF_SHAKE_256),
+	#endif
+#endif
 #endif
 #ifndef NO_SHA
 		/* keyed sha1 hasher (aka prf) */
