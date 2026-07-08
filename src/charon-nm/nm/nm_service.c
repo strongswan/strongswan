@@ -583,7 +583,7 @@ static bool add_auth_cfg_cert(NMStrongswanPluginPrivate *priv,
 	identification_t *id = NULL;
 	certificate_t *cert = NULL;
 	auth_cfg_t *auth;
-	const char *str, *method, *cert_source, *agent_user;
+	const char *str, *method, *cert_source;
 	chunk_t safe_file;
 
 	method = nm_setting_vpn_get_data_item(vpn, "method");
@@ -633,15 +633,13 @@ static bool add_auth_cfg_cert(NMStrongswanPluginPrivate *priv,
 		str = nm_setting_vpn_get_secret(vpn, "agent");
 		if (agent && str)
 		{
-			agent_user = nm_setting_vpn_get_secret(vpn, "agent-user");
-
 			public = cert->get_public_key(cert);
 			if (public)
 			{
 				private = lib->creds->create(lib->creds, CRED_PRIVATE_KEY,
 											 public->get_type(public),
 											 BUILD_AGENT_SOCKET, str,
-											 BUILD_AGENT_USER, agent_user ?: user,
+											 BUILD_AGENT_USER, user,
 											 BUILD_PUBLIC_KEY, public,
 											 BUILD_END);
 				public->destroy(public);
@@ -1206,7 +1204,6 @@ static gboolean need_secrets(NMVpnServicePlugin *plugin, NMConnection *connectio
 				if (!priv->agent_requested)
 				{
 					nm_setting_vpn_remove_secret(settings, "agent");
-					nm_setting_vpn_remove_secret(settings, "agent-user");
 					priv->agent_requested = TRUE;
 				}
 			}

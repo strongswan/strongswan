@@ -28,7 +28,6 @@
 #include <glib/gi18n.h>
 #include <gtk/gtk.h>
 #include <libsecret/secret.h>
-#include <pwd.h>
 
 #include <NetworkManager.h>
 #include <nm-vpn-service-plugin.h>
@@ -218,11 +217,6 @@ static void print_secret (const char *secret_name, gchar *secret)
 		printf("%s\n%s\n", secret_name, secret);
 		g_free(secret);
 	}
-}
-
-static void print_last_secret (const char *secret_name, gchar *secret)
-{
-	print_secret(secret_name, secret);
 	printf("\n\n");
 	fflush(stdout);
 }
@@ -322,17 +316,6 @@ int main (int argc, char *argv[])
 			agent = getenv("SSH_AUTH_SOCK");
 			if (agent)
 			{
-				int uid = getuid();
-				struct passwd *pw = getpwuid(uid);
-
-				if (!pw)
-				{
-					fprintf(stderr, "Unable to determine username for "
-							"authentication via ssh-agent\n");
-					status = 1;
-					goto out;
-				}
-
 				if (external_ui_mode)
 				{
 					GKeyFile *keyfile;
@@ -343,7 +326,6 @@ int main (int argc, char *argv[])
 					g_key_file_set_string (keyfile, UI_KEYFILE_GROUP, "Description", "SSH agent");
 					g_key_file_set_string (keyfile, UI_KEYFILE_GROUP, "Title", _("Authenticate VPN"));
 
-					keyfile_add_entry_info (keyfile, "agent-user", pw->pw_name, "SSH agent user", TRUE, FALSE);
 					keyfile_add_entry_info (keyfile, "agent", agent, "SSH agent socket", TRUE, FALSE);
 
 					keyfile_print_stdout (keyfile);
@@ -351,8 +333,7 @@ int main (int argc, char *argv[])
 				}
 				else
 				{
-					print_secret("agent-user", g_strdup (pw->pw_name));
-					print_last_secret("agent", g_strdup (agent));
+					print_secret("agent", g_strdup (agent));
 					wait_for_quit ();
 				}
 			}
@@ -385,7 +366,7 @@ int main (int argc, char *argv[])
 		}
 		else if (!external_ui_mode)
 		{
-			print_last_secret("password", pass);
+			print_secret("password", pass);
 			wait_for_quit ();
 		}
 	}
