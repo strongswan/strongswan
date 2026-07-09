@@ -28,6 +28,10 @@
 
 #define RADIUS_DAE_PORT 3799
 
+/* maximum number of cached responses for retransmits (= number of concurrent
+ * clients) */
+#define DAE_RESPONSES_MAX 32
+
 typedef struct private_eap_radius_dae_t private_eap_radius_dae_t;
 
 /**
@@ -105,7 +109,9 @@ static void save_retransmit(private_eap_radius_dae_t *this,
 	while (enumerator->enumerate(enumerator, &entry))
 	{
 		if (client->equals(client, entry->client))
-		{
+		{	/* move recently used entries to the front */
+			this->responses->remove_at(this->responses, enumerator);
+			this->responses->insert_first(this->responses, entry);
 			entry->response->destroy(entry->response);
 			entry->response = response;
 			found = TRUE;
@@ -121,6 +127,13 @@ static void save_retransmit(private_eap_radius_dae_t *this,
 			.client = client->clone(client),
 		);
 		this->responses->insert_first(this->responses, entry);
+
+		/* remove least recently used entry once we reach the maximum */
+		if (this->responses->get_count(this->responses) > DAE_RESPONSES_MAX &&
+			this->responses->remove_last(this->responses, (void**)&entry))
+		{
+			entry_destroy(entry);
+		}
 	}
 }
 
