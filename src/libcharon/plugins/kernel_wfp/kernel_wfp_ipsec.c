@@ -2055,16 +2055,19 @@ static job_requeue_t expire_job(expire_data_t *data)
 	{
 		this->mutex->lock(this->mutex);
 		entry = this->isas->remove(this->isas, &key);
+		if (entry)
+		{
+			if (entry->osa.spi)
+			{
+				key.spi = entry->osa.spi;
+				key.dst = entry->osa.dst;
+				this->osas->remove(this->osas, &key);
+			}
+		}
 		this->mutex->unlock(this->mutex);
 		if (entry)
 		{
 			protocol = entry->isa.protocol;
-			if (entry->osa.dst)
-			{
-				key.dst = entry->osa.dst;
-				key.spi = entry->osa.spi;
-				this->osas->remove(this->osas, &key);
-			}
 			entry_destroy(this, entry);
 		}
 	}
@@ -2328,27 +2331,46 @@ METHOD(kernel_ipsec_t, del_sa, status_t,
 		.dst = id->dst,
 		.spi = id->spi,
 	};
+	bool destroy = FALSE;
 
+	/* make sure we support deleting in either order (regular is inbound before
+	 * outbound, during rekeying, the inbound is usually kept installed longer).
+	 * only once both directions are deleted can the entry be destroyed */
 	this->mutex->lock(this->mutex);
 	entry = this->isas->remove(this->isas, &key);
+	if (entry)
+	{
+		entry->isa.spi = 0;
+		if (!entry->osa.spi)
+		{
+			destroy = TRUE;
+		}
+	}
 	this->mutex->unlock(this->mutex);
+
+	if (!entry)
+	{
+		this->mutex->lock(this->mutex);
+		entry = this->osas->remove(this->osas, &key);
+		if (entry)
+		{
+			entry->osa.spi = 0;
+			if (!entry->isa.spi)
+			{
+				destroy = TRUE;
+			}
+		}
+		this->mutex->unlock(this->mutex);
+	}
 
 	if (entry)
 	{
-		/* keep entry until removal of outbound */
+		if (destroy)
+		{
+			entry_destroy(this, entry);
+		}
 		return SUCCESS;
 	}
-
-	this->mutex->lock(this->mutex);
-	entry = this->osas->remove(this->osas, &key);
-	this->mutex->unlock(this->mutex);
-
-	if (entry)
-	{
-		entry_destroy(this, entry);
-		return SUCCESS;
-	}
-
 	return NOT_FOUND;
 }
 
