@@ -17,6 +17,8 @@
  * for more details.
  */
 
+#include <errno.h>
+
 #include "host.h"
 
 #include <utils/debug.h>
@@ -571,8 +573,9 @@ bool host_create_from_range(char *string, host_t **from, host_t **to)
  */
 host_t *host_create_from_subnet(char *string, int *bits)
 {
-	char *pos, buf[64];
+	char *pos, *end, buf[64];
 	host_t *net;
+	long netbits;
 
 	pos = strchr(string, '/');
 	if (pos)
@@ -583,8 +586,24 @@ host_t *host_create_from_subnet(char *string, int *bits)
 		}
 		strncpy(buf, string, pos - string);
 		buf[pos - string] = '\0';
-		*bits = atoi(pos + 1);
-		return host_create_from_string(buf, 0);
+		errno = 0;
+		netbits = strtol(pos + 1, &end, 10);
+		if (errno || end == pos + 1 || *end || netbits < 0 || netbits > 128)
+		{
+			return NULL;
+		}
+		net = host_create_from_string(buf, 0);
+		if (!net)
+		{
+			return NULL;
+		}
+		if (net->get_family(net) == AF_INET && netbits > 32)
+		{
+			net->destroy(net);
+			return NULL;
+		}
+		*bits = netbits;
+		return net;
 	}
 	net = host_create_from_string(string, 0);
 	if (net)
