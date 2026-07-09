@@ -90,8 +90,8 @@ static void token_event_cb(private_pkcs11_plugin_t *this, pkcs11_library_t *p11,
 			{
 				this->mutex->lock(this->mutex);
 				this->creds->insert_last(this->creds, creds);
-				this->mutex->unlock(this->mutex);
 				lib->credmgr->add_set(lib->credmgr, &creds->set);
+				this->mutex->unlock(this->mutex);
 			}
 		}
 	}
