@@ -942,8 +942,12 @@ METHOD(key_exchange_t, get_method, key_exchange_method_t,
 METHOD(key_exchange_t, get_shared_secret, bool,
 	private_key_exchange_t *this, chunk_t *secret)
 {
-	*secret = chunk_clone(this->shared_secret);
-	return TRUE;
+	if (this->shared_secret.ptr != NULL)
+	{
+		*secret = chunk_clone(this->shared_secret);
+		return TRUE;
+	}
+	return FALSE;
 }
 
 #ifdef TESTABLE_KE
