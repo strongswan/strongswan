@@ -192,6 +192,7 @@ static jobjectArray string_array_create(JNIEnv *env, enumerator_t *enumerator)
 			goto failed;
 		}
 		(*env)->SetObjectArrayElement(env, jarray, i++, jstring);
+		(*env)->DeleteLocalRef(env, jstring);
 	}
 	enumerator->destroy(enumerator);
 	list->destroy(list);
