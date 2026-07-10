@@ -1693,6 +1693,12 @@ METHOD(task_t, process_i, status_t,
 				goto local_auth_failed;
 			}
 		}
+		else if (this->peer_cfg->has_option(this->peer_cfg, OPT_PPK_REQUIRED))
+		{
+			DBG1(DBG_CFG, "PPK required but peer didn't use PPK for PPK_ID "
+				 "'%Y'", this->ppk_id);
+			goto peer_auth_failed;
+		}
 		else
 		{
 			DBG1(DBG_CFG, "peer didn't use PPK for PPK_ID '%Y'", this->ppk_id);
