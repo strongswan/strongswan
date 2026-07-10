@@ -939,6 +939,7 @@ static void process_payloads_multi_ke(private_ike_init_t *this,
 	else
 	{
 		DBG1(DBG_IKE, "KE payload missing in message");
+		this->ke_failed = TRUE;
 	}
 }
 
