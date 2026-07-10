@@ -134,6 +134,7 @@ METHOD(xauth_method_t, process_server, status_t,
 	configuration_attribute_t *attr;
 	enumerator_t *enumerator;
 	shared_key_t *shared;
+	id_match_t match_other;
 	identification_t *id;
 	chunk_t user = chunk_empty, pass = chunk_empty;
 	status_t status = FAILED;
@@ -179,9 +180,10 @@ METHOD(xauth_method_t, process_server, status_t,
 
 	enumerator = lib->credmgr->create_shared_enumerator(lib->credmgr,
 										SHARED_EAP, this->server, this->peer);
-	while (enumerator->enumerate(enumerator, &shared, NULL, NULL))
+	while (enumerator->enumerate(enumerator, &shared, NULL, &match_other))
 	{
-		if (chunk_equals_const(shared->get_key(shared), pass))
+		if (match_other > ID_MATCH_NONE &&
+			chunk_equals_const(shared->get_key(shared), pass))
 		{
 			status = SUCCESS;
 			break;
