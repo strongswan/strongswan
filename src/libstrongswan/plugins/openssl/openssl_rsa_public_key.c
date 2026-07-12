@@ -156,9 +156,9 @@ static bool verify_plain_signature(private_openssl_rsa_public_key_t *this,
 	{
 		valid = chunk_equals_const(data, chunk_create(buf, len));
 	}
-	free(buf);
 	EVP_PKEY_CTX_free(ctx);
 #endif
+	free(buf);
 	return valid;
 }
 
