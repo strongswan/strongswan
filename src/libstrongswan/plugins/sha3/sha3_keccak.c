@@ -59,17 +59,17 @@ struct private_sha3_keccak_t {
 	/**
 	 * Internal state of 1600 bits as defined by FIPS-202
 	 */
-	uint8_t state[KECCAK_STATE_SIZE];
+	uint8_t state[KECCAK_STATE_SIZE] __attribute__((aligned(8)));
+
+	/**
+	 * Rate input buffer
+	 */
+	uint8_t rate_buffer[KECCAK_MAX_RATE] __attribute__((aligned(8)));
 
 	/**
 	 * Rate in bytes
 	 */
 	u_int rate;
-
-	/**
-	 * Rate input buffer
-	 */
-	uint8_t rate_buffer[KECCAK_MAX_RATE];
 
 	/**
 	 * Index pointing to the current position in the rate buffer
