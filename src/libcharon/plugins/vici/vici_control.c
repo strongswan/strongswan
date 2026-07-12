@@ -507,10 +507,10 @@ CALLBACK(redirect, vici_message_t*,
 	enumerator_t *sas;
 	char *ike, *peer_ip, *peer_id, *gw, *errmsg = NULL;
 	u_int ike_id, current, found = 0;
-	identification_t *gateway, *identity = NULL, *other_id;
+	identification_t *gateway = NULL, *identity = NULL, *other_id;
 	traffic_selector_t *ts = NULL;
 	ike_sa_t *ike_sa;
-	vici_builder_t *builder;
+	vici_builder_t *builder = NULL;
 
 	ike = request->get_str(request, NULL, "ike");
 	ike_id = request->get_int(request, 0, "ike-id");
@@ -529,14 +529,16 @@ CALLBACK(redirect, vici_message_t*,
 		case ID_FQDN:
 			break;
 		default:
-			return send_reply(this, "unsupported gateway identity");
+			errmsg = "unsupported gateway identity";
+			goto failed;
 	}
 	if (peer_ip)
 	{
 		ts = parse_peer_ip(peer_ip);
 		if (!ts)
 		{
-			return send_reply(this, "invalid peer IP selector");
+			errmsg = "invalid peer IP selector";
+			goto failed;
 		}
 		DBG1(DBG_CFG, "vici redirect IKE_SAs with src %R to %Y", ts,
 			 gateway);
@@ -546,8 +548,8 @@ CALLBACK(redirect, vici_message_t*,
 		identity = identification_create_from_string(peer_id);
 		if (!identity)
 		{
-			DESTROY_IF(ts);
-			return send_reply(this, "invalid peer identity selector");
+			errmsg = "invalid peer identity selector";
+			goto failed;
 		}
 		DBG1(DBG_CFG, "vici redirect IKE_SAs with ID '%Y' to %Y", identity,
 			 gateway);
@@ -562,7 +564,8 @@ CALLBACK(redirect, vici_message_t*,
 	}
 	if (!peer_ip && !peer_id && !ike && !ike_id)
 	{
-		return send_reply(this, "missing redirect selector");
+		errmsg = "missing redirect selector";
+		goto failed;
 	}
 
 	sas = charon->controller->create_ike_sa_enumerator(charon->controller, TRUE);
@@ -610,10 +613,16 @@ CALLBACK(redirect, vici_message_t*,
 	{
 		builder->add_kv(builder, "errmsg", "%s", errmsg);
 	}
-	gateway->destroy(gateway);
+
+failed:
+	DESTROY_IF(gateway);
 	DESTROY_IF(identity);
 	DESTROY_IF(ts);
-	return builder->finalize(builder);
+	if (builder)
+	{
+		return builder->finalize(builder);
+	}
+	return send_reply(this, errmsg);
 }
 
 CALLBACK(install, vici_message_t*,
