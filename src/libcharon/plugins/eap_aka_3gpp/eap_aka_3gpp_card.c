@@ -100,10 +100,10 @@ METHOD(simaka_card_t, get_quintuplet, status_t,
 		return FAILED;
 	}
 	*res_len = AKA_RES_LEN;
-	DBG3(DBG_IKE, "using RES %b", res, AKA_RES_LEN);
-	DBG3(DBG_IKE, "using CK %b", ck, AKA_CK_LEN);
-	DBG3(DBG_IKE, "using IK %b", ik, AKA_IK_LEN);
-	DBG3(DBG_IKE, "using AK %b", ak, AKA_AK_LEN);
+	DBG4(DBG_IKE, "using RES %b", res, AKA_RES_LEN);
+	DBG4(DBG_IKE, "using CK %b", ck, AKA_CK_LEN);
+	DBG4(DBG_IKE, "using IK %b", ik, AKA_IK_LEN);
+	DBG4(DBG_IKE, "using AK %b", ak, AKA_AK_LEN);
 
 	/* XOR anonymity key AK into SQN to decrypt it */
 	memxor(sqn, ak, AKA_SQN_LEN);
@@ -161,7 +161,7 @@ METHOD(simaka_card_t, resync, bool,
 	memcpy(auts, this->sqn, AKA_SQN_LEN);
 	memxor(auts, aks, AKA_AK_LEN);
 	memcpy(auts + AKA_AK_LEN, macs, AKA_MAC_LEN);
-	DBG3(DBG_IKE, "generated AUTS %b", auts, AKA_AUTN_LEN);
+	DBG3(DBG_IKE, "generated AUTS %b", auts, AKA_AUTS_LEN);
 
 	return TRUE;
 }
