@@ -116,7 +116,7 @@ PLUGIN_DEFINE(xauth_pam)
 				.destroy = _destroy,
 			},
 		},
-		.session = lib->settings->get_str(lib->settings,
+		.session = lib->settings->get_bool(lib->settings,
 						"%s.plugins.xauth-pam.session", FALSE, lib->ns),
 		.listener = xauth_pam_listener_create(),
 	);
