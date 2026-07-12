@@ -300,14 +300,14 @@
                 <restriction
                     android:defaultValue="false"
                     android:description="@string/managed_config_split_tunneling_block_ipv4_description"
-                    android:key="split_tunnelling_block_IPv4"
+                    android:key="split_tunneling_block_ipv4"
                     android:restrictionType="bool"
                     android:title="@string/managed_config_split_tunneling_block_ipv4_title" />
 
                 <restriction
                     android:defaultValue="false"
                     android:description="@string/managed_config_split_tunneling_block_ipv6_description"
-                    android:key="split_tunnelling_block_IPv6"
+                    android:key="split_tunneling_block_ipv6"
                     android:restrictionType="bool"
                     android:title="@string/managed_config_split_tunneling_block_ipv6_title" />
 

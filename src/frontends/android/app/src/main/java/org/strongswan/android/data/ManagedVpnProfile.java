@@ -41,8 +41,8 @@ public class ManagedVpnProfile extends VpnProfile
 	private static final String KEY_LOCAL_USER_CERTIFICATE_ALIAS = "user_certificate_alias";
 	private static final String KEY_LOCAL_RSA_PSS_FLAG = "local_rsa_pss";
 
-	private static final String KEY_SPLIT_TUNNELLING_BLOCK_IPV4_FLAG = "split_tunnelling_block_ipv4";
-	private static final String KEY_SPLIT_TUNNELLING_BLOCK_IPV6_FLAG = "split_tunnelling_block_ipv6";
+	private static final String KEY_SPLIT_TUNNELING_BLOCK_IPV4_FLAG = "split_tunneling_block_ipv4";
+	private static final String KEY_SPLIT_TUNNELING_BLOCK_IPV6_FLAG = "split_tunneling_block_ipv6";
 
 	private ManagedTrustedCertificate trustedCertificate;
 	private ManagedUserCertificate userCertificate;
@@ -77,8 +77,8 @@ public class ManagedVpnProfile extends VpnProfile
 		final Bundle splitTunneling = bundle.getBundle(VpnProfileDataSource.KEY_SPLIT_TUNNELING);
 		if (splitTunneling != null)
 		{
-			splitFlags = addPositiveFlag(splitFlags, splitTunneling, KEY_SPLIT_TUNNELLING_BLOCK_IPV4_FLAG, VpnProfile.SPLIT_TUNNELING_BLOCK_IPV4);
-			splitFlags = addPositiveFlag(splitFlags, splitTunneling, KEY_SPLIT_TUNNELLING_BLOCK_IPV6_FLAG, VpnProfile.SPLIT_TUNNELING_BLOCK_IPV6);
+			splitFlags = addPositiveFlag(splitFlags, splitTunneling, KEY_SPLIT_TUNNELING_BLOCK_IPV4_FLAG, VpnProfile.SPLIT_TUNNELING_BLOCK_IPV4);
+			splitFlags = addPositiveFlag(splitFlags, splitTunneling, KEY_SPLIT_TUNNELING_BLOCK_IPV6_FLAG, VpnProfile.SPLIT_TUNNELING_BLOCK_IPV6);
 
 			setExcludedSubnets(getString(splitTunneling, VpnProfileDataSource.KEY_EXCLUDED_SUBNETS));
 			setIncludedSubnets(getString(splitTunneling, VpnProfileDataSource.KEY_INCLUDED_SUBNETS));
