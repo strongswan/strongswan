@@ -408,11 +408,15 @@ static bool manage_policies(private_connmark_listener_t *this,
 	mark = child_sa->get_mark(child_sa, TRUE).value;
 	mask = child_sa->get_mark(child_sa, TRUE).mask;
 
+	if (!manage_pre(this, ipth, add, mark, mask, spi, encap, dst, src))
+	{
+		return FALSE;
+	}
+
 	enumerator = child_sa->create_policy_enumerator(child_sa);
 	while (enumerator->enumerate(enumerator, &local, &remote))
 	{
-		if (!manage_pre(this, ipth, add, mark, mask, spi, encap, dst, src) ||
-			!manage_in(this, ipth, add, mark, mask, spi, local, remote) ||
+		if (!manage_in(this, ipth, add, mark, mask, spi, local, remote) ||
 			!manage_out(this, ipth, add, mask, remote, local))
 		{
 			done = FALSE;
