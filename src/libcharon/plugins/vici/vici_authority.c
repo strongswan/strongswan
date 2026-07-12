@@ -325,8 +325,8 @@ CALLBACK(parse_string, bool,
 	{
 		return FALSE;
 	}
+	free(*str);
 	*str = strndup(v.ptr, v.len);
-
 	return TRUE;
 }
 
@@ -383,16 +383,18 @@ CALLBACK(parse_cacert, bool,
 										  BUILD_BLOB_PEM, v, BUILD_END);
 	if (!cert)
 	{
-		return create_reply("parsing %N certificate failed",
-							certificate_type_names, CERT_X509);
+		return FALSE;
 	}
 	x509 = (x509_t*)cert;
 
 	if ((x509->get_flags(x509) & X509_CA) != X509_CA)
 	{
+		DBG1(DBG_CFG, "certificate in authority section lacks CA basic "
+			 "constraint, rejected");
 		cert->destroy(cert);
-		return create_reply("certificate without CA flag, rejected");
+		return FALSE;
 	}
+	DESTROY_IF(*cacert);
 	*cacert = cert;
 
 	return TRUE;
