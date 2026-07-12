@@ -875,6 +875,7 @@ static void process_child_add(private_ha_dispatcher_t *this,
 		child_sa->destroy(child_sa);
 		proposal->destroy(proposal);
 		charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
+		message->destroy(message);
 		return;
 	}
 	child_sa->set_proposal(child_sa, proposal);
