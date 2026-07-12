@@ -89,16 +89,16 @@ METHOD(tkm_chunk_map_t, get_id, uint64_t,
 	private_tkm_chunk_map_t * const this, chunk_t *data)
 {
 	entry_t *entry;
+	uint64_t id = 0;
+
 	this->lock->read_lock(this->lock);
 	entry = this->mappings->get(this->mappings, data);
-	this->lock->unlock(this->lock);
-
-	if (!entry)
+	if (entry)
 	{
-		return 0;
+		id = entry->value;
 	}
-
-	return entry->value;
+	this->lock->unlock(this->lock);
+	return id;
 }
 
 METHOD(tkm_chunk_map_t, remove_, bool,
