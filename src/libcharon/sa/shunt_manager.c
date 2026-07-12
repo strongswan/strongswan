@@ -377,6 +377,10 @@ METHOD(shunt_manager_t, uninstall, bool,
 	entry_t *entry, *found = NULL;
 
 	this->lock->write_lock(this->lock);
+	while (this->installing)
+	{
+		this->condvar->wait(this->condvar, this->lock);
+	}
 	enumerator = this->shunts->create_enumerator(this->shunts);
 	while (enumerator->enumerate(enumerator, &entry))
 	{
