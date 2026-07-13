@@ -564,8 +564,7 @@ static bool lost_collision(private_child_rekey_t *this)
 	this_nonce = this->child_create->get_lower_nonce(this->child_create);
 	other_nonce = other->child_create->get_lower_nonce(other->child_create);
 
-	return memcmp(this_nonce.ptr, other_nonce.ptr,
-				  min(this_nonce.len, other_nonce.len)) < 0;
+	return chunk_compare_prefix(this_nonce, other_nonce) < 0;
 }
 
 /**

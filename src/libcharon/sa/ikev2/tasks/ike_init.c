@@ -1493,8 +1493,7 @@ METHOD(task_t, destroy, void,
 METHOD(ike_init_t, get_lower_nonce, chunk_t,
 	private_ike_init_t *this)
 {
-	if (memcmp(this->my_nonce.ptr, this->other_nonce.ptr,
-			   min(this->my_nonce.len, this->other_nonce.len)) < 0)
+	if (chunk_compare_prefix(this->my_nonce, this->other_nonce) < 0)
 	{
 		return this->my_nonce;
 	}

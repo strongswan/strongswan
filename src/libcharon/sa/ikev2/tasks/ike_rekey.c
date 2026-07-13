@@ -582,8 +582,7 @@ static bool collision_lost(private_ike_rekey_t *this, bool multi_ke)
 
 	/* the SA with the lowest nonce should be deleted (if already complete),
 	 * check if we or the peer created that */
-	if (memcmp(this_nonce.ptr, other_nonce.ptr,
-			   min(this_nonce.len, other_nonce.len)) < 0)
+	if (chunk_compare_prefix(this_nonce, other_nonce) < 0)
 	{
 		if (multi_ke)
 		{
