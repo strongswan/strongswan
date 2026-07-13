@@ -435,7 +435,7 @@ METHOD(sha3_keccak_t, finalize, void,
 	 * optimizations */
 	rate_lanes = (this->rate - 1) / sizeof(uint64_t);
 	remainder = (this->rate - 1) % sizeof(uint64_t);
-	state_lanes[rate_lanes] ^= (0x80ULL << remainder * 8);
+	state_lanes[rate_lanes] ^= htole64(0x80ULL << remainder * 8);
 
 	/* Switch to the squeezing phase */
 	keccak_f1600_state_permute(this->state);
