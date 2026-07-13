@@ -86,7 +86,7 @@ static host_t* offset2host(pool_t *pool, int offset)
 	host_t *host;
 	uint32_t *pos;
 
-	if (offset > pool->size)
+	if (offset >= pool->size)
 	{
 		return NULL;
 	}
@@ -132,11 +132,19 @@ static int host2offset(pool_t *pool, host_t *addr)
 	}
 	hosti = ntohl(*(uint32_t*)(host.ptr));
 	basei = ntohl(*(uint32_t*)(base.ptr));
-	if (hosti > basei + pool->size)
+	if (hosti - basei >= pool->size)
 	{
 		return -1;
 	}
 	return hosti - basei;
+}
+
+/**
+ * Check if the given offset is valid for the size of the pool
+ */
+static bool valid_offset(pool_t *pool, int offset)
+{
+	return offset > 0 && offset < pool->size - 1;
 }
 
 /**
@@ -201,7 +209,8 @@ METHOD(attribute_provider_t, acquire_address, host_t*,
 				for (bit = 0; bit < 8; bit++)
 				{
 					tmp_offset = byte * 8 + bit;
-					if (!(pool->mask[byte] & 1 << bit) &&
+					if (valid_offset(pool, tmp_offset) &&
+						!(pool->mask[byte] & 1 << bit) &&
 						responsible_for(this, tmp_offset))
 					{
 						offset = tmp_offset;
@@ -261,7 +270,7 @@ METHOD(attribute_provider_t, release_address, bool,
 			continue;
 		}
 		offset = host2offset(pool, address);
-		if (offset > 0 && offset < pool->size)
+		if (valid_offset(pool, offset))
 		{
 			pool->mask[offset / 8] &= ~(1 << (offset % 8));
 			DBG1(DBG_CFG, "released address %H to HA pool '%s'", address, name);
@@ -286,7 +295,7 @@ METHOD(ha_attribute_t, reserve, void,
 	if (pool)
 	{
 		offset = host2offset(pool, address);
-		if (offset > 0 && offset < pool->size)
+		if (valid_offset(pool, offset))
 		{
 			pool->mask[offset / 8] |= 1 << (offset % 8);
 			DBG1(DBG_CFG, "reserved address %H in HA pool '%s'", address, name);
