@@ -157,6 +157,7 @@ METHOD(eap_method_t, process_peer, status_t,
 		DBG1(DBG_IKE, "received invalid EAP-MD5 message");
 		return FAILED;
 	}
+	chunk_free(&this->challenge);
 	this->challenge = chunk_clone(chunk_create(data.ptr + 6, data.ptr[5]));
 	if (hash_challenge(this, &response, this->peer, this->server) != SUCCESS)
 	{
