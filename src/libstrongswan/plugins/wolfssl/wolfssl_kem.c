@@ -25,10 +25,7 @@
 
 #ifdef WOLFSSL_HAVE_MLKEM
 
-#include <wolfssl/wolfcrypt/mlkem.h>
-#ifdef WOLFSSL_WC_MLKEM
 #include <wolfssl/wolfcrypt/wc_mlkem.h>
-#endif
 
 typedef struct private_key_exchange_t private_key_exchange_t;
 

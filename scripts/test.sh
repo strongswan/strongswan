@@ -39,7 +39,7 @@ build_botan()
 
 build_wolfssl()
 {
-	WOLFSSL_REV=v5.9.1-stable
+	WOLFSSL_REV=v5.9.2-stable
 	WOLFSSL_DIR=$DEPS_BUILD_DIR/wolfssl
 
 	if test -d "$WOLFSSL_DIR"; then
@@ -94,7 +94,7 @@ build_tss2()
 
 build_openssl()
 {
-	: ${SSL_REV=openssl-3.6.1}
+	: ${SSL_REV=openssl-3.6.3}
 	SSL_DIR=$DEPS_BUILD_DIR/openssl
 	SSL_INS=$DEPS_PREFIX/ssl
 	SSL_OPT="-d shared no-dtls no-ssl3 no-zlib no-idea no-psk
@@ -123,7 +123,7 @@ build_openssl()
 
 build_awslc()
 {
-	LC_REV=1.73.0
+	LC_REV=5.1.0
 	LC_PKG=aws-lc-$LC_REV
 	LC_DIR=$DEPS_BUILD_DIR/$LC_PKG
 	LC_SRC=https://github.com/aws/aws-lc/archive/refs/tags/v${LC_REV}.tar.gz
@@ -168,20 +168,6 @@ system_uses_openssl3()
 
 prepare_system_openssl()
 {
-	# On systems that ship OpenSSL 3 (e.g. Ubuntu 22.04+), we require debug
-	# symbols to whitelist leaks
-	if test "$1" = "deps"; then
-		echo "deb http://ddebs.ubuntu.com $(lsb_release -cs) main restricted
-			deb http://ddebs.ubuntu.com $(lsb_release -cs)-updates main restricted
-			deb http://ddebs.ubuntu.com $(lsb_release -cs)-proposed main restricted" | \
-			sudo tee -a /etc/apt/sources.list.d/ddebs.list
-		sudo apt-get install -qq ubuntu-dbgsym-keyring
-		if [ "$ID" = "ubuntu" -a "$VERSION_ID" = "24.04" ]; then
-			DEPS="$DEPS libssl3t64-dbgsym"
-		else
-			DEPS="$DEPS libssl3-dbgsym"
-		fi
-	fi
 	if test "$LEAK_DETECTIVE" = "yes"; then
 		# make sure we can properly whitelist functions with leak detective
 		DEPS="$DEPS binutils-dev"
@@ -227,7 +213,7 @@ openssl*)
 		use_custom_openssl $1
 	elif test "$TEST" = "openssl-4"; then
 		DEPS=""
-		SSL_REV=openssl-4.0.0
+		SSL_REV=openssl-4.0.1
 		use_custom_openssl $1
 	elif test "$TEST" = "openssl-awslc"; then
 		DEPS="cmake ninja-build golang"

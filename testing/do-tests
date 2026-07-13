@@ -250,8 +250,14 @@ echo
 
 function abort_tests()
 {
-	echo -n "...aborting..." > /dev/tty
-	aborted=YES
+	if [ -z "$aborted" ]
+	then
+		aborted=YES
+		echo -n "..aborting.." > /dev/tty
+	fi
+	# kill eval subshells that run test scripts
+	[ -n "$TEST_SCRIPT_PID" ] && kill "$TEST_SCRIPT_PID" 2>/dev/null
+	STATUS="failed"
 }
 trap abort_tests INT
 
@@ -380,8 +386,8 @@ do
 	{
 		# wait for packets to get processed, but don't wait longer than 1s
 		eval ssh $SSHCONF root@\$ipv4_${1} "\"i=100; while [ \\\$i -gt 0 ]; do pkill -USR1 tcpdump; tail -1 /tmp/tcpdump.err.log | perl -n -e '/(\\d+).*?(\\d+)/; exit (\\\$1 == \\\$2)' || break; sleep 0.01; i=\\\$((\\\$i-1)); done;\""
-		echo "$(print_time)${1}# killall tcpdump" >> $CONSOLE_LOG
-		eval ssh $SSHCONF root@\$ipv4_${1} "\"killall tcpdump; while true; do killall -q -0 tcpdump || break; sleep 0.01; done;\""
+		echo "$(print_time)${1}# pkill tcpdump" >> $CONSOLE_LOG
+		eval ssh $SSHCONF root@\$ipv4_${1} "\"pkill tcpdump; while true; do pkill -0 tcpdump || break; sleep 0.01; done;\""
 		eval TDUP_${1}="false"
 		echo "" >> $CONSOLE_LOG
 	}
@@ -389,7 +395,7 @@ do
 ############################################################################
 # skip this whole pretest block if we only execute the posttest script
 #
-if [ "$posttest_only" == "YES" ]
+if [ "$posttest_only" == "YES" -o -n "$aborted" ]
 then
 	echo -n "(pre).."
 else
@@ -437,7 +443,7 @@ else
 	echo -n "pre.."
 	echo -e "PRE-TEST\n" >> $CONSOLE_LOG 2>&1
 
-	eval `awk -F "::" '{
+	(eval `awk -F "::" '{
 		if ($0 ~ /^#.*/)
 		{
 			printf("echo \"%s\"; ", $0);
@@ -448,7 +454,10 @@ else
 			printf("ssh \044SSHCONF root@\044ipv4_%s \"%s\"; ", $1, $2)
 			printf("echo;\n")
 		}
-	}' $TESTDIR/pretest.dat` >> $CONSOLE_LOG 2>&1
+	}' $TESTDIR/pretest.dat`) >> $CONSOLE_LOG 2>&1 &
+	TEST_SCRIPT_PID=$!
+	wait $TEST_SCRIPT_PID 2>/dev/null
+	TEST_SCRIPT_PID=""
 
 fi
 ############################################################################
@@ -457,7 +466,7 @@ fi
 ############################################################################
 # skip this whole test block if we only execute the pre- or posttest script
 #
-if [ "$pretest_only" == "YES" -o "$posttest_only" == "YES" ]
+if [ "$pretest_only" == "YES" -o "$posttest_only" == "YES" -o -n "$aborted" ]
 then
 	echo -n "(test).."
 else
@@ -469,7 +478,9 @@ else
 	echo -n "test.."
 	echo -e "\nTEST\n" >> $CONSOLE_LOG 2>&1
 
-	eval `awk -F "::" '{
+	(eval `awk -F "::" '
+	 BEGIN { printf("FAILED=0; ") }
+	 {
 		host=$1
 		command=$2
 		pattern=$3
@@ -507,7 +518,7 @@ else
 			printf("if [ \044cmd_exit -eq 0 -a \"%s\" = \"NO\"  ] ", hit)
 			printf("|| [ \044cmd_exit -ne 0 -a \"%s\" = \"YES\" ] ", hit)
 		}
-		printf("; then STATUS=\"failed\"; cmd_fail=1; fi; \n")
+		printf("; then FAILED=1; cmd_fail=1; fi; \n")
 
 		printf("if [ \044cmd_fail -ne 0 ]; then echo \"~~~~~~~ FAIL ~~~~~~~\"; fi; \n")
 		if (command == "tcpdump")
@@ -527,7 +538,11 @@ else
 		printf("echo \"~~~~~~~~~~~~~~~~~~~~\"; fi; \n")
 		printf("rm -f -- \044cmd_out \044cmd_err; \n")
 		printf("echo; ")
-	}' $TESTDIR/evaltest.dat` >> $CONSOLE_LOG 2>&1
+	}
+	END { printf("exit $FAILED; ") }' $TESTDIR/evaltest.dat`) >> $CONSOLE_LOG 2>&1 &
+	TEST_SCRIPT_PID=$!
+	wait $TEST_SCRIPT_PID 2>/dev/null || STATUS="failed"
+	TEST_SCRIPT_PID=""
 
 
 	##########################################################################
@@ -773,6 +788,7 @@ fi
 
 ############################################################################
 # skip this whole posttest block if we only execute the pretest script
+# if aborted, we don't skip in order to clean up stuff
 #
 if [ "$pretest_only" == "YES" ]
 then
@@ -869,11 +885,8 @@ else
 
 	for host in $TCPDUMPHOSTS
 	do
-	    if [ "`eval echo \\\$TDUP_${host}`" = "true" ]
-	    then
-			stop_tcpdump $host
-	    fi
-	    eval HOSTLOGIN=root@\$ipv4_${host}
+		stop_tcpdump $host
+		eval HOSTLOGIN=root@\$ipv4_${host}
 		scp $SSHCONF $HOSTLOGIN:/tmp/tcpdump.log \
 			$TESTRESULTDIR/${host}.tcpdump.log > /dev/null 2>&1
 	done
@@ -1025,7 +1038,8 @@ echo_failed "Failed : $failed_cnt"
 
 echo
 echo "The results are available in $TODAYDIR"
-echo "or via the link http://$ipv4_winnetou/testresults/$TESTDATE"
+URL=http://$ipv4_winnetou/testresults/$TESTDATE
+echo -e "or via the link \033]8;;$URL\a$URL\033]8;;\a"
 
 ENDDATE=`date +%Y%m%d-%H%M-%S`
 echo
