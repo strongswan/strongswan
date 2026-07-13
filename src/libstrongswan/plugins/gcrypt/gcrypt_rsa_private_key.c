@@ -78,7 +78,7 @@ chunk_t gcrypt_rsa_find_token(gcry_sexp_t sexp, char *name, gcry_sexp_t key)
 				{
 					tmp = chunk_alloc(len);
 					len -= data.len;
-					memset(tmp.ptr, 0, tmp.len - len);
+					memset(tmp.ptr, 0, len);
 					memcpy(tmp.ptr + len, data.ptr, data.len);
 					data = tmp;
 				}
