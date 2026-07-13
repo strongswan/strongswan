@@ -161,7 +161,7 @@ static host_t *apply_offset(host_t *base, int offset)
 static host_t* offset2host(private_mem_pool_t *pool, int offset)
 {
 	offset--;
-	if (offset > pool->size)
+	if (offset >= pool->size)
 	{
 		return NULL;
 	}
@@ -194,7 +194,7 @@ static int host2offset(private_mem_pool_t *pool, host_t *addr)
 	}
 	hosti = ntohl(*(uint32_t*)(host.ptr));
 	basei = ntohl(*(uint32_t*)(base.ptr));
-	if (hosti > basei + pool->size)
+	if (hosti - basei >= pool->size)
 	{
 		return -1;
 	}
@@ -742,11 +742,15 @@ mem_pool_t *mem_pool_create_range(char *name, host_t *from, host_t *to)
 		DBG1(DBG_CFG, "IP address range too large: %H-%H", from, to);
 		return NULL;
 	}
-	this = create_generic(name);
-	this->base = from->clone(from);
 	diff = untoh32(toaddr.ptr + toaddr.len - sizeof(diff)) -
 		   untoh32(fromaddr.ptr + fromaddr.len - sizeof(diff));
+	if (diff >= (1U << POOL_LIMIT) - 1)
+	{
+		DBG1(DBG_CFG, "IP address range too large: %H-%H", from, to);
+		return NULL;
+	}
+	this = create_generic(name);
+	this->base = from->clone(from);
 	this->size = diff + 1;
-
 	return &this->public;
 }

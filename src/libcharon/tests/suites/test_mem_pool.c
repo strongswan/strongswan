@@ -63,6 +63,20 @@ static void assert_acquire(mem_pool_t *pool, char *requested, char *expected,
 	id->destroy(id);
 }
 
+static void assert_release(mem_pool_t *pool, char *released)
+{
+	identification_t *id;
+	host_t *rel;
+
+	id = identification_create_from_string("tester");
+	rel = host_create_from_string(released, 0);
+
+	ck_assert(pool->release_address(pool, rel, id));
+
+	rel->destroy(rel);
+	id->destroy(id);
+}
+
 static void assert_acquires_new(mem_pool_t *pool, char *pattern, int first)
 {
 	char expected[16];
@@ -223,9 +237,39 @@ START_TEST(test_range)
 	pool->destroy(pool);
 
 	from->destroy(from);
+	from = host_create_from_string("255.255.255.254", 0);
+	to->destroy(to);
+	to = host_create_from_string("255.255.255.255", 0);
+	pool = mem_pool_create_range("test", from, to);
+	ck_assert_int_eq(2, pool->get_size(pool));
+	assert_base(pool, "255.255.255.254");
+	assert_acquires_new(pool, "255.255.255.%d", 254);
+	assert_release(pool, "255.255.255.255");
+	ck_assert_int_eq(1, pool->get_online(pool));
+	assert_acquire(pool, "0.0.0.0", "255.255.255.255", MEM_POOL_EXISTING);
+	ck_assert_int_eq(2, pool->get_online(pool));
+	pool->destroy(pool);
+
+	/* this range is too large */
+	from->destroy(from);
+	from = host_create_from_string("0.0.0.0", 0);
+	to->destroy(to);
+	to = host_create_from_string("255.255.255.255", 0);
+	pool = mem_pool_create_range("test", from, to);
+	ck_assert(!pool);
+
+	from->destroy(from);
 	from = host_create_from_string("fec::1", 0);
 	to->destroy(to);
 	to = host_create_from_string("fed::1", 0);
+	pool = mem_pool_create_range("test", from, to);
+	ck_assert(!pool);
+
+	/* this range is too large */
+	from->destroy(from);
+	from = host_create_from_string("fec::", 0);
+	to->destroy(to);
+	to = host_create_from_string("fec::ffff:ffff", 0);
 	pool = mem_pool_create_range("test", from, to);
 	ck_assert(!pool);
 
