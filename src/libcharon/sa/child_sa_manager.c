@@ -143,7 +143,7 @@ static bool equals_id(child_entry_t *a, child_entry_t *b)
 METHOD(child_sa_manager_t, add, void,
 	private_child_sa_manager_t *this, child_sa_t *child_sa, ike_sa_t *ike_sa)
 {
-	child_entry_t *entry;
+	child_entry_t *entry, *replaced;
 	host_t *in, *out;
 	ike_sa_id_t *id;
 
@@ -165,9 +165,16 @@ METHOD(child_sa_manager_t, add, void,
 	if (!this->in->get(this->in, entry) &&
 		!this->out->get(this->out, entry))
 	{
+		replaced = this->ids->put(this->ids, entry, entry);
+		if (replaced)
+		{	/* remove the replaced entry in the other tables in case the unique
+			 * ID got reused */
+			this->in->remove(this->in, replaced);
+			this->out->remove(this->out, replaced);
+		}
 		this->in->put(this->in, entry, entry);
 		this->out->put(this->out, entry, entry);
-		entry = this->ids->put(this->ids, entry, entry);
+		entry = replaced;
 	}
 	this->mutex->unlock(this->mutex);
 
