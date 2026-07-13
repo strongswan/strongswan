@@ -2450,6 +2450,17 @@ METHOD(kernel_net_t, add_ip, status_t,
 			}
 			this->lock->unlock(this->lock);
 		}
+		this->lock->write_lock(this->lock);
+		entry = this->vips->get_match(this->vips, &lookup,
+									  (void*)addr_map_entry_match);
+		if (entry)
+		{	/* clean up the pending entry we inserted */
+			iface->addrs->remove(iface->addrs, addr, NULL);
+			addr_map_entry_remove(this->vips, addr, iface);
+			addr_entry_destroy(addr);
+			this->condvar->broadcast(this->condvar);
+		}
+		this->lock->unlock(this->lock);
 		DBG1(DBG_KNL, "adding virtual IP %H failed", virtual_ip);
 		return FAILED;
 	}
