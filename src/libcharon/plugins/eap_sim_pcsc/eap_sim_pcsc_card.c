@@ -95,7 +95,7 @@ METHOD(simaka_card_t, get_triplet, bool,
 	LONG rv;
 	SCARDCONTEXT hContext;
 	DWORD dwReaders;
-	LPSTR mszReaders;
+	LPSTR mszReaders = NULL;
 	char *cur_reader;
 	char full_nai[128];
 	SCARDHANDLE hCard;
@@ -116,7 +116,7 @@ METHOD(simaka_card_t, get_triplet, bool,
 	if (rv != SCARD_S_SUCCESS)
 	{
 		DBG1(DBG_IKE, "SCardListReaders: %s", pcsc_stringify_error(rv));
-		return FALSE;
+		goto failed;
 	}
 	mszReaders = malloc(sizeof(char)*dwReaders);
 
@@ -124,8 +124,7 @@ METHOD(simaka_card_t, get_triplet, bool,
 	if (rv != SCARD_S_SUCCESS)
 	{
 		DBG1(DBG_IKE, "SCardListReaders: %s", pcsc_stringify_error(rv));
-		free(mszReaders);
-		return FALSE;
+		goto failed;
 	}
 
 	/* mszReaders is a multi-string of readers, separated by '\0' and
@@ -334,6 +333,7 @@ METHOD(simaka_card_t, get_triplet, bool,
 		 * beginning of this loop or after this loop */
 	}
 
+failed:
 	/* Make sure we end any previous transaction and disconnect card */
 	switch (hCard_status)
 	{
