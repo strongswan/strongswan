@@ -331,10 +331,25 @@ static inline chunk_t chunk_skip_zero(chunk_t chunk)
 chunk_t chunk_copy_pad(chunk_t dst, chunk_t src, u_char chr);
 
 /**
- *  Compare two chunks, returns zero if a equals b
- *  or negative/positive if a is small/greater than b
+ * Compare two chunks, returns zero if they are equal or negative/positive if
+ * a is smaller/greater than b.
+ *
+ * Note that if the chunks are not of equal length, their prefix is not
+ * compared, only their lengths.
  */
 int chunk_compare(chunk_t a, chunk_t b);
+
+/**
+ * Compare two chunks, returns zero if they are equal or negative/positive if
+ * a is smaller/greater than b.
+ *
+ * Unlike chunk_compare(), this first compares the two chunks' prefix and only
+ * then falls back to comparing their lengths (shorter is "lower") if the
+ * prefix is equal.
+ *
+ * This can e.g. be used to compare nonces.
+ */
+int chunk_compare_prefix(chunk_t a, chunk_t b);
 
 /**
  * Compare two chunks for equality,

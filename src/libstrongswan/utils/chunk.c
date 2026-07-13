@@ -816,15 +816,34 @@ chunk_t chunk_to_dec(chunk_t chunk, char *buf)
 int chunk_compare(chunk_t a, chunk_t b)
 {
 	int compare_len = a.len - b.len;
-	int len = (compare_len < 0)? a.len : b.len;
+	int len = (compare_len < 0) ? a.len : b.len;
 
 	if (compare_len != 0 || len == 0)
 	{
 		return compare_len;
 	}
 	return memcmp(a.ptr, b.ptr, len);
-};
+}
 
+/**
+ * Described in header.
+ */
+int chunk_compare_prefix(chunk_t a, chunk_t b)
+{
+	int cmp, compare_len = a.len - b.len;
+	int len = (compare_len < 0) ? a.len : b.len;
+
+	if (!len)
+	{
+		return compare_len;
+	}
+	cmp = memcmp(a.ptr, b.ptr, len);
+	if (!cmp)
+	{
+		return compare_len;
+	}
+	return cmp;
+}
 
 /**
  * Described in header.

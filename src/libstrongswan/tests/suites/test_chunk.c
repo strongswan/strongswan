@@ -93,20 +93,24 @@ END_TEST
 
 static struct {
 	int result;
+	int result_prefix;
 	chunk_t a;
 	chunk_t b;
 } compare_data[] = {
-	{ 0, { NULL, 0 }, { NULL, 0 }},
-	{ 0, chunk_from_chars(0x00), chunk_from_chars(0x00)},
-	{-1, chunk_from_chars(0x00), chunk_from_chars(0x01)},
-	{ 1, chunk_from_chars(0x01), chunk_from_chars(0x00)},
-	{ 0, chunk_from_chars(0x00, 0x00), chunk_from_chars(0x00, 0x00)},
-	{-1, chunk_from_chars(0x00, 0x00), chunk_from_chars(0x00, 0x01)},
-	{ 1, chunk_from_chars(0x00, 0x01), chunk_from_chars(0x00, 0x00)},
-	{-1, chunk_from_chars(0x00, 0x00), chunk_from_chars(0x01, 0x00)},
-	{ 1, chunk_from_chars(0x01, 0x00), chunk_from_chars(0x00, 0x00)},
-	{-1, chunk_from_chars(0xff), chunk_from_chars(0x00, 0x00)},
-	{ 1, chunk_from_chars(0x00, 0x00), chunk_from_chars(0xff)},
+	{ 0,  0, { NULL, 0 }, { NULL, 0 }},
+	{ 0,  0, chunk_from_chars(0x00), chunk_from_chars(0x00)},
+	{-1, -1, chunk_from_chars(0x00), chunk_from_chars(0x01)},
+	{ 1,  1, chunk_from_chars(0x01), chunk_from_chars(0x00)},
+	{ 0,  0, chunk_from_chars(0x00, 0x00), chunk_from_chars(0x00, 0x00)},
+	{-1, -1, chunk_from_chars(0x00, 0x00), chunk_from_chars(0x00, 0x01)},
+	{ 1,  1, chunk_from_chars(0x00, 0x01), chunk_from_chars(0x00, 0x00)},
+	{-1, -1, chunk_from_chars(0x00, 0x00), chunk_from_chars(0x01, 0x00)},
+	{ 1,  1, chunk_from_chars(0x01, 0x00), chunk_from_chars(0x00, 0x00)},
+	{-1,  1, chunk_from_chars(0xff), chunk_from_chars(0x00, 0x00)},
+	{ 1, -1, chunk_from_chars(0x00, 0x00), chunk_from_chars(0xff)},
+	{-1, -1, chunk_from_chars(0x01), chunk_from_chars(0xff, 0x00)},
+	{-1, -1, chunk_from_chars(0x01), chunk_from_chars(0x01, 0x00)},
+	{ 1,  1, chunk_from_chars(0x01, 0x00), chunk_from_chars(0x01)},
 };
 
 START_TEST(test_compare)
@@ -115,6 +119,18 @@ START_TEST(test_compare)
 
 	result = chunk_compare(compare_data[_i].a, compare_data[_i].b);
 	expected = compare_data[_i].result;
+	ck_assert((result == 0 && expected == 0) ||
+			  (result < 0 && expected < 0) ||
+			  (result > 0 && expected > 0));
+}
+END_TEST
+
+START_TEST(test_compare_prefix)
+{
+	int result, expected;
+
+	result = chunk_compare_prefix(compare_data[_i].a, compare_data[_i].b);
+	expected = compare_data[_i].result_prefix;
 	ck_assert((result == 0 && expected == 0) ||
 			  (result < 0 && expected < 0) ||
 			  (result > 0 && expected > 0));
@@ -1200,6 +1216,7 @@ Suite *chunk_suite_create()
 
 	tc = tcase_create("chunk_compare");
 	tcase_add_loop_test(tc, test_compare, 0, countof(compare_data));
+	tcase_add_loop_test(tc, test_compare_prefix, 0, countof(compare_data));
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("clear");
