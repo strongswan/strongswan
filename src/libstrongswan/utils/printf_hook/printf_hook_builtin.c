@@ -1038,6 +1038,10 @@ int builtin_vsnprintf(char *buffer, size_t n, const char *format, va_list ap)
 		/* Overflow - terminate at end of buffer */
 		buffer[n - 1] = '\0';
 	}
+	if (o > INT_MAX)
+	{
+		return INT_MAX;
+	}
 	return o;
 }
 
@@ -1172,6 +1176,10 @@ int builtin_vfprintf(FILE *stream, const char *format, va_list ap)
 	DWORD clen, mode;
 
 	total = len = builtin_vsnprintf(buf, sizeof(buf), format, ap);
+	if (len >= sizeof(buf))
+	{
+		total = len = sizeof(buf) - 1;
+	}
 	switch (fileno(stream))
 	{
 		case 1:
@@ -1187,7 +1195,11 @@ int builtin_vfprintf(FILE *stream, const char *format, va_list ap)
 	/* GetConsoleMode fails if output redirected */
 	if (handle == INVALID_HANDLE_VALUE || !GetConsoleMode(handle, &mode))
 	{
-		return fwrite(buf, 1, len, stream);
+		if (fwrite(buf, 1, len, stream) != len)
+		{
+			return -1;
+		}
+		return len;
 	}
 	while (len)
 	{
@@ -1234,7 +1246,15 @@ int builtin_vfprintf(FILE *stream, const char *format, va_list ap)
 	int len;
 
 	len = builtin_vsnprintf(buf, sizeof(buf), format, ap);
-	return fwrite(buf, 1, len, stream);
+	if (len >= sizeof(buf))
+	{
+		len = sizeof(buf) - 1;
+	}
+	if (fwrite(buf, 1, len, stream) != len)
+	{
+		return -1;
+	}
+	return len;
 }
 
 #endif /* !WIN32 */
@@ -1247,10 +1267,31 @@ int builtin_vsprintf(char *str, const char *format, va_list ap)
 int builtin_vasprintf(char **str, const char *format, va_list ap)
 {
 	char buf[PRINTF_BUF_LEN];
+	va_list ac;
 	int len;
 
-	len = builtin_vsnprintf(buf, sizeof(buf), format, ap);
-	*str = strdup(buf);
+	va_copy(ac, ap);
+	len = builtin_vsnprintf(buf, sizeof(buf), format, ac);
+	va_end(ac);
+	if (len == INT_MAX)
+	{
+		return -1;
+	}
+	if (len >= sizeof(buf))
+	{
+		*str = malloc(len + 1);
+		if (!*str)
+		{
+			return -1;
+		}
+		va_copy(ac, ap);
+		builtin_vsnprintf(*str, len + 1, format, ac);
+		va_end(ac);
+	}
+	else
+	{
+		*str = strdup(buf);
+	}
 	return len;
 }
 
