@@ -61,11 +61,6 @@ struct private_stroke_list_t {
 };
 
 /**
- * Static certificate printer object
- */
-static certificate_printer_t *cert_printer = NULL;
-
-/**
  * Log tasks of a specific queue to out
  */
 static void log_task_q(FILE *out, ike_sa_t *ike_sa, task_queue_t q, char *name)
@@ -770,7 +765,8 @@ static bool has_privkey(certificate_t *cert)
 /**
  * list all X.509 certificates matching the flags
  */
-static void stroke_list_x509_certs(linked_list_t *list, x509_flag_t flag)
+static void stroke_list_x509_certs(certificate_printer_t *cert_printer,
+								   linked_list_t *list, x509_flag_t flag)
 {
 	enumerator_t *enumerator;
 	certificate_t *cert;
@@ -794,7 +790,8 @@ static void stroke_list_x509_certs(linked_list_t *list, x509_flag_t flag)
 /**
  * list all other certificates types
  */
-static void stroke_list_other_certs(certificate_type_t type)
+static void stroke_list_other_certs(certificate_printer_t *cert_printer,
+									certificate_type_t type)
 {
 	enumerator_t *enumerator;
 	certificate_t *cert;
@@ -1006,17 +1003,18 @@ static void list_plugins(FILE *out)
 METHOD(stroke_list_t, list, void,
 	private_stroke_list_t *this, stroke_msg_t *msg, FILE *out)
 {
+	certificate_printer_t *cert_printer;
 	linked_list_t *cert_list = NULL;
 
 	cert_printer = certificate_printer_create(out, TRUE, msg->list.utc);
 
 	if (msg->list.flags & LIST_PUBKEYS)
 	{
-		stroke_list_other_certs(CERT_TRUSTED_PUBKEY);
+		stroke_list_other_certs(cert_printer, CERT_TRUSTED_PUBKEY);
 	}
 	if (msg->list.flags & LIST_CERTS)
 	{
-		stroke_list_other_certs(CERT_GPG);
+		stroke_list_other_certs(cert_printer, CERT_GPG);
 	}
 	if (msg->list.flags & (LIST_CERTS | LIST_CACERTS | LIST_OCSPCERTS | LIST_AACERTS))
 	{
@@ -1024,33 +1022,33 @@ METHOD(stroke_list_t, list, void,
 	}
 	if (msg->list.flags & LIST_CERTS)
 	{
-		stroke_list_x509_certs(cert_list, X509_NONE);
+		stroke_list_x509_certs(cert_printer, cert_list, X509_NONE);
 	}
 	if (msg->list.flags & LIST_CACERTS)
 	{
-		stroke_list_x509_certs(cert_list, X509_CA);
+		stroke_list_x509_certs(cert_printer, cert_list, X509_CA);
 	}
 	if (msg->list.flags & LIST_OCSPCERTS)
 	{
-		stroke_list_x509_certs(cert_list, X509_OCSP_SIGNER);
+		stroke_list_x509_certs(cert_printer, cert_list, X509_OCSP_SIGNER);
 	}
 	if (msg->list.flags & LIST_AACERTS)
 	{
-		stroke_list_x509_certs(cert_list, X509_AA);
+		stroke_list_x509_certs(cert_printer, cert_list, X509_AA);
 	}
 	DESTROY_OFFSET_IF(cert_list, offsetof(certificate_t, destroy));
 
 	if (msg->list.flags & LIST_ACERTS)
 	{
-		stroke_list_other_certs(CERT_X509_AC);
+		stroke_list_other_certs(cert_printer, CERT_X509_AC);
 	}
 	if (msg->list.flags & LIST_CRLS)
 	{
-		stroke_list_other_certs(CERT_X509_CRL);
+		stroke_list_other_certs(cert_printer, CERT_X509_CRL);
 	}
 	if (msg->list.flags & LIST_OCSP)
 	{
-		stroke_list_other_certs(CERT_X509_OCSP_RESPONSE);
+		stroke_list_other_certs(cert_printer, CERT_X509_OCSP_RESPONSE);
 	}
 	if (msg->list.flags & LIST_ALGS)
 	{
@@ -1061,7 +1059,6 @@ METHOD(stroke_list_t, list, void,
 		list_plugins(out);
 	}
 	cert_printer->destroy(cert_printer);
-	cert_printer = NULL;
 }
 
 /**
