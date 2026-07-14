@@ -402,18 +402,24 @@ static void encode_poly_arr(uint8_t k, ml_poly_t *a, uint8_t *out)
  * Decode k polynomials from a byte array (12-bit version that unpacks 2
  * coefficients from 3 bytes, not using ml_bitpacker_t for performance reasons).
  *
+ * As described in section 4.2.1, d=12 is a special version of ByteDecode that
+ * does a reduction mod q.
+ *
  * Algorithm 6 in FIPS 203.
  */
 static void decode_poly_arr(uint8_t k, uint8_t *in, ml_poly_t *a)
 {
+	uint16_t f0, f1;
 	int i, j;
 
 	for (i = 0; i < k; i++)
 	{
 		for (j = 0; j < ML_KEM_N / 2; j++)
 		{
-			a[i].f[2*j]   =  (in[3*j]         | ((uint16_t)in[3*j+1] << 8)) & 0xfff;
-			a[i].f[2*j+1] = ((in[3*j+1] >> 4) | ((uint16_t)in[3*j+2] << 4)) & 0xfff;
+			f0 = ( in[3*j]         | ((uint16_t)in[3*j+1] << 8)) & 0xfff;
+			f1 = ((in[3*j+1] >> 4) | ((uint16_t)in[3*j+2] << 4)) & 0xfff;
+			a[i].f[2*j]   = ml_reduce_modq(f0);
+			a[i].f[2*j+1] = ml_reduce_modq(f1);
 		}
 		in += ML_KEM_POLY_LEN;
 	}
