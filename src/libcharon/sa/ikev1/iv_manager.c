@@ -352,6 +352,7 @@ iv_manager_t *iv_manager_create(int max_exchanges)
 	{
 		this->max_exchanges = lib->settings->get_int(lib->settings,
 					"%s.max_ikev1_exchanges", MAX_EXCHANGES_DEFAULT, lib->ns);
+		this->max_exchanges = this->max_exchanges ?: MAX_EXCHANGES_DEFAULT;
 	}
 	return &this->public;
 }
