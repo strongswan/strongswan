@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2014-2026 Tobias Brunner
  * Copyright (C) 2013 Martin Willi
  *
  * Copyright (C) secunet Security Networks AG
@@ -71,11 +72,6 @@ struct private_thread_t {
 	 * Thread specific values for this thread
 	 */
 	hashtable_t *tls;
-
-	/**
-	 * Thread terminated?
-	 */
-	bool terminated;
 
 	/**
 	 * Thread detached?
@@ -287,13 +283,11 @@ static void docleanup(private_thread_t *this)
 }
 
 /**
- * Clean up and destroy a thread
+ * Destroy a thread
  */
 static void destroy(private_thread_t *this)
 {
 	bool old;
-
-	docleanup(this);
 
 	old = set_leak_detective(FALSE);
 
@@ -309,19 +303,16 @@ static void destroy(private_thread_t *this)
 }
 
 /**
- * End a thread, destroy when detached
+ * End and cleanup a thread, destroy when detached
  */
 static void end_thread(private_thread_t *this)
 {
+	docleanup(this);
+	remove_thread(this);
+
 	if (this->detached)
 	{
-		remove_thread(this);
 		destroy(this);
-	}
-	else
-	{
-		this->terminated = TRUE;
-		docleanup(this);
 	}
 }
 
@@ -398,15 +389,14 @@ METHOD(thread_t, join, void*,
 		return NULL;
 	}
 
-	while (!this->terminated)
+	/* join is a cancellation point, use alertable wait until thread exited */
+	while (WaitForSingleObjectEx(this->handle, INFINITE,
+								 TRUE) == WAIT_IO_COMPLETION)
 	{
-		/* join is a cancellation point, use alertable wait */
-		WaitForSingleObjectEx(this->handle, INFINITE, TRUE);
 	}
 
 	ret = this->ret;
 
-	remove_thread(this);
 	destroy(this);
 
 	return ret;
@@ -631,7 +621,6 @@ void thread_exit(void *val)
 static void cleanup_tls()
 {
 	private_thread_t *this;
-	bool old;
 
 	/* ignore this if called for the thread that called threads_deinit() */
 	if (!threads_lock)
@@ -639,23 +628,17 @@ static void cleanup_tls()
 		return;
 	}
 
-	old = set_leak_detective(FALSE);
+	/* we target externally spawned threads only here, our threads remove
+	 * themselves in end_thread(), which runs before DLL_THREAD_DETACH */
 	threads_lock->lock(threads_lock);
-
-	this = threads->remove(threads, (void*)(uintptr_t)GetCurrentThreadId());
-
+	this = threads->get(threads, (void*)(uintptr_t)GetCurrentThreadId());
 	threads_lock->unlock(threads_lock);
-	set_leak_detective(old);
 
 	if (this)
 	{
-		/* If the thread exited, but has not been joined, it is in terminated
-		 * state. We must not mangle it, as we target externally spawned
-		 * threads only. */
-		if (!this->terminated && !this->detached)
-		{
-			destroy(this);
-		}
+		docleanup(this);
+		remove_thread(this);
+		destroy(this);
 	}
 }
 
@@ -696,7 +679,9 @@ void threads_deinit()
 {
 	private_thread_t *this;
 
-	this = threads->remove(threads, (void*)(uintptr_t)GetCurrentThreadId());
+	this = get_current_thread();
+	docleanup(this);
+	remove_thread(this);
 	destroy(this);
 
 	threads_lock->destroy(threads_lock);
