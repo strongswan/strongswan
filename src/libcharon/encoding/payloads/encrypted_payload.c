@@ -575,22 +575,22 @@ METHOD(encrypted_payload_t, encrypt_v1, status_t,
 static status_t parse(private_encrypted_payload_t *this, chunk_t plain)
 {
 	parser_t *parser;
-	payload_type_t type;
+	payload_type_t type = this->next_payload;
+
+	if (type != PL_NONE &&
+		(plain.len < 4 || untoh16(plain.ptr + 2) > plain.len))
+	{
+		DBG1(DBG_ENC, "invalid %N payload length, decryption failed?",
+			 payload_type_names, type);
+		return PARSE_ERROR;
+	}
 
 	parser = parser_create(plain);
 	parser->set_major_version(parser, this->type == PLV1_ENCRYPTED ? 1 : 2);
-	type = this->next_payload;
 	while (type != PL_NONE)
 	{
 		payload_t *payload;
 
-		if (plain.len < 4 || untoh16(plain.ptr + 2) > plain.len)
-		{
-			DBG1(DBG_ENC, "invalid %N payload length, decryption failed?",
-				 payload_type_names, type);
-			parser->destroy(parser);
-			return PARSE_ERROR;
-		}
 		if (parser->parse_payload(parser, type, &payload) != SUCCESS)
 		{
 			parser->destroy(parser);
