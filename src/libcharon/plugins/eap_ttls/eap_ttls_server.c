@@ -231,14 +231,15 @@ METHOD(tls_application_t, process, status_t,
 			{
 				DBG1(DBG_IKE, "%N method not available",
 							   eap_type_names, EAP_IDENTITY);
+				in->destroy(in);
 				return FAILED;
 			}
 		}
 
 		if (this->method->process(this->method, in, &this->out) != SUCCESS)
 		{
-
 			DBG1(DBG_IKE, "%N method failed", eap_type_names, EAP_IDENTITY);
+			in->destroy(in);
 			return FAILED;
 		}
 
