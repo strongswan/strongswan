@@ -95,6 +95,7 @@ static status_t pem_decrypt(chunk_t *blob, encryption_algorithm_t alg,
 	chunk_t decrypted;
 	chunk_t key = {alloca(key_size), key_size};
 	uint8_t padding, *last_padding_pos, *first_padding_pos;
+	size_t block_size;
 
 	if (!key_size)
 	{
@@ -141,8 +142,8 @@ static status_t pem_decrypt(chunk_t *blob, encryption_algorithm_t alg,
 		return NOT_SUPPORTED;
 	}
 
-	if (iv.len != crypter->get_iv_size(crypter) ||
-		blob->len % crypter->get_block_size(crypter))
+	block_size = crypter->get_block_size(crypter);
+	if (iv.len != crypter->get_iv_size(crypter) || blob->len % block_size)
 	{
 		DBG1(DBG_ASN, "  data size is not multiple of block size");
 		crypter->destroy(crypter);
@@ -164,14 +165,12 @@ static status_t pem_decrypt(chunk_t *blob, encryption_algorithm_t alg,
 	/* determine amount of padding */
 	last_padding_pos = blob->ptr + blob->len - 1;
 	padding = *last_padding_pos;
-	if (padding > blob->len)
+	if (!padding || padding > block_size)
 	{
-		first_padding_pos = blob->ptr;
+		DBG1(DBG_ASN, "  invalid passphrase");
+		return INVALID_ARG;
 	}
-	else
-	{
-		first_padding_pos = last_padding_pos - padding;
-	}
+	first_padding_pos = last_padding_pos - padding;
 	/* check the padding pattern */
 	while (--last_padding_pos > first_padding_pos)
 	{
