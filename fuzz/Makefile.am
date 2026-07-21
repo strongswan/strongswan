@@ -8,7 +8,8 @@ AM_CPPFLAGS = @CPPFLAGS@ \
 	-I$(top_srcdir)/src/libtls \
 	-I$(top_srcdir)/src/libtnccs \
 	-I$(top_srcdir)/src/libtnccs/plugins/tnccs_20 \
-	-I$(top_srcdir)/src/libradius
+	-I$(top_srcdir)/src/libradius \
+	-I$(top_srcdir)/src/libsimaka
 
 fuzz_cppflags_def = ${AM_CPPFLAGS} \
 	-DPLUGINS="\"${fd_plugins}\""
@@ -41,7 +42,16 @@ pb_tnc_ldflags = \
 
 charon_ldflags = \
 	$(top_builddir)/src/libcharon/.libs/libcharon.a \
-	$(top_builddir)/src/libradius/.libs/libradius.a \
+	$(top_builddir)/src/libradius/.libs/libradius.a
+
+if USE_SIMAKA
+charon_ldflags += $(top_builddir)/src/libsimaka/.libs/libsimaka.a
+endif
+
+charon_ldflags += $(fuzz_ldflags)
+
+simaka_ldflags = \
+	$(top_builddir)/src/libsimaka/.libs/libsimaka.a \
 	$(fuzz_ldflags)
 
 radius_ldflags = \
@@ -61,6 +71,10 @@ fuzzers_with_cus = $(fuzzers_with_plugins:%=%_cus)
 
 fuzzers_no_plugins = \
 	fuzz_ids fuzz_ike fuzz_pa_tnc fuzz_pb_tnc fuzz_radius fuzz_tls fuzz_vici
+
+if USE_SIMAKA
+fuzzers_no_plugins += fuzz_simaka
+endif
 
 ALL_FUZZERS=$(fuzzers_with_def) $(fuzzers_with_cus) $(fuzzers_no_plugins)
 
@@ -106,6 +120,9 @@ fuzz_ike: fuzz_ike.c ${libfuzzer}
 
 fuzz_radius: fuzz_radius.c ${libfuzzer}
 	$(CC) $(fuzz_cppflags_def) $(CFLAGS) -o $@ $< $(radius_ldflags)
+
+fuzz_simaka: fuzz_simaka.c ${libfuzzer}
+	$(CC) $(fuzz_cppflags_def) $(CFLAGS) -o $@ $< $(simaka_ldflags)
 
 fuzz_tls: fuzz_tls.c ${libfuzzer}
 	$(CC) $(fuzz_cppflags_def) $(CFLAGS) -o $@ $< $(tls_ldflags)

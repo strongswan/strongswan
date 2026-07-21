@@ -1584,7 +1584,7 @@ ADD_PLUGIN([gcrypt],               [s charon swanctl pki scripts manager medsrv 
 ADD_PLUGIN([botan],                [s charon swanctl pki scripts manager medsrv attest nm cmd aikgen])
 ADD_PLUGIN([pkcs8],                [s charon swanctl pki scripts manager medsrv attest nm cmd])
 ADD_PLUGIN([af-alg],               [s charon swanctl pki scripts medsrv attest nm cmd aikgen])
-ADD_PLUGIN([fips-prf],             [s charon nm cmd])
+ADD_PLUGIN([fips-prf],             [s charon nm cmd fd])
 ADD_PLUGIN([gmp],                  [s charon swanctl pki scripts manager medsrv attest nm cmd aikgen fc])
 ADD_PLUGIN([curve25519],           [s charon swanctl pki scripts nm cmd])
 ADD_PLUGIN([agent],                [s charon nm cmd])
