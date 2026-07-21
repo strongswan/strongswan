@@ -992,7 +992,7 @@ static status_t process_finished(private_tls_server_t *this,
 		this->crypto->change_cipher(this->crypto, TRUE);
 	}
 
-	if (!chunk_equals_const(received, verify_data))
+	if (!chunk_equals_const(verify_data, received))
 	{
 		DBG1(DBG_TLS, "received client finished invalid");
 		this->alert->add(this->alert, TLS_FATAL, TLS_DECRYPT_ERROR);

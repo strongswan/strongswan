@@ -76,14 +76,18 @@ START_TEST(test_chunk_equals_const)
 
 	chunk_a = chunk;
 	ck_assert(!chunk_equals_const(chunk_a, chunk_b));
+	ck_assert(!chunk_equals_const(chunk_b, chunk_a));
 	chunk_b = chunk;
 	ck_assert(chunk_equals_const(chunk_a, chunk_b));
+	ck_assert(chunk_equals_const(chunk_b, chunk_a));
 
 	chunk_b = chunk_from_str("asdf");
 	ck_assert(!chunk_equals_const(chunk_a, chunk_b));
+	ck_assert(!chunk_equals_const(chunk_b, chunk_a));
 
 	chunk_b = chunk_from_str("chunk");
 	ck_assert(chunk_equals_const(chunk_a, chunk_b));
+	ck_assert(chunk_equals_const(chunk_b, chunk_a));
 }
 END_TEST
 

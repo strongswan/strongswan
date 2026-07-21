@@ -845,7 +845,7 @@ static bool decaps_shared_secret(private_key_exchange_t *this, chunk_t ciphertex
 	/* replace the shared secret with K based on whether our own ciphertext
 	 * matches what we received (in constant time) */
 	memcpy_cond(this->shared_secret.ptr, Kr, this->shared_secret.len,
-				chunk_equals_const(ciphertext, c));
+				chunk_equals_const(c, ciphertext));
 
 	success = TRUE;
 

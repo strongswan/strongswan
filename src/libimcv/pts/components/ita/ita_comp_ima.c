@@ -549,7 +549,7 @@ static status_t verify_ima_measuremnt(pts_t *pts, pts_database_t *pts_db,
 			status = FAILED;
 			break;
 		}
-		if (chunk_equals_const(measurement, hash))
+		if (chunk_equals_const(hash, measurement))
 		{
 			status = SUCCESS;
 			break;
@@ -861,7 +861,7 @@ METHOD(pts_component_t, verify, status_t,
 	}
 
 	has_pcr_info = evidence->get_pcr_info(evidence, &pcr_before, &pcr_after);
-	if (has_pcr_info && !chunk_equals_const(pcr_before, pcrs->get(pcrs, pcr)))
+	if (has_pcr_info && !chunk_equals_const(pcrs->get(pcrs, pcr), pcr_before))
 	{
 		DBG1(DBG_PTS, "PCR %2u: pcr_before is not equal to register value", pcr);
 		return FAILED;
@@ -873,7 +873,7 @@ METHOD(pts_component_t, verify, status_t,
 		return FAILED;
 	}
 
-	if (has_pcr_info && !chunk_equals_const(pcr_after, pcr_value))
+	if (has_pcr_info && !chunk_equals_const(pcr_value, pcr_after))
 	{
 		DBG1(DBG_PTS, "PCR %2u: pcr_after is not equal to register value", pcr);
 		return FAILED;

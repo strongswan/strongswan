@@ -362,16 +362,34 @@ static inline bool chunk_equals(chunk_t a, chunk_t b)
 }
 
 /**
- * Compare two chunks for equality, constant time for cryptographic purposes.
+ * Compare a secret chunk against some arbitrary input in constant time for
+ * cryptographic purposes.
  *
- * Note that this function is constant time only for chunks with the same
- * length, i.e. it does not protect against guessing the length of one of the
- * chunks.
+ * If neither chunk is NULL, this function is always constant time and bound by
+ * the secret's length.  If the length is known to be equal, the order of the
+ * arguments doesn't matter.
+ *
+ * @param secret        expected/reference value (loop bound)
+ * @param input         value to verify against secret
+ * @return              TRUE if the chunks are equal
  */
-static inline bool chunk_equals_const(chunk_t a, chunk_t b)
+static inline bool chunk_equals_const(chunk_t secret, chunk_t input)
 {
-	return a.ptr != NULL  && b.ptr != NULL &&
-			a.len == b.len && memeq_const(a.ptr, b.ptr, a.len);
+	u_int diff = 0;
+	size_t i;
+
+	if (!secret.ptr || !input.ptr)
+	{
+		return FALSE;
+	}
+	diff |= constant_time_neq64(secret.len, input.len);
+	for (i = 0; i < secret.len; i++)
+	{
+		/* the ternary here is OK as the input length is known to the attacker
+		 * and the overall time is always bound by the secret's length */
+		diff |= secret.ptr[i] ^ (i < input.len ? input.ptr[i]: 0);
+	}
+	return !diff;
 }
 
 /**

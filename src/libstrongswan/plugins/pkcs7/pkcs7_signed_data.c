@@ -274,7 +274,7 @@ METHOD(enumerator_t, enumerate, bool,
 		hasher->destroy(hasher);
 		DBG3(DBG_LIB, "hash: %B", &hash);
 
-		valid = chunk_equals_const(chunk, hash);
+		valid = chunk_equals_const(hash, chunk);
 		free(hash.ptr);
 		if (!valid)
 		{

@@ -232,7 +232,7 @@ static status_t process_server_hello(private_tls_peer_t *this,
 		return NEED_MORE;
 	}
 
-	is_retry_request = chunk_equals_const(random, tls_hello_retry_request_magic);
+	is_retry_request = chunk_equals_const(tls_hello_retry_request_magic, random);
 
 	memcpy(this->server_random, random.ptr, sizeof(this->server_random));
 
@@ -1044,7 +1044,7 @@ static status_t process_finished(private_tls_peer_t *this, bio_reader_t *reader)
 		}
 	}
 
-	if (!chunk_equals_const(received, verify_data))
+	if (!chunk_equals_const(verify_data, received))
 	{
 		DBG1(DBG_TLS, "received server finished invalid");
 		this->alert->add(this->alert, TLS_FATAL, TLS_DECRYPT_ERROR);

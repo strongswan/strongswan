@@ -318,7 +318,7 @@ static bool verify_digest(CMS_ContentInfo *cms, CMS_SignerInfo *si, int hash_oid
 	}
 	hasher->destroy(hasher);
 
-	if (!chunk_equals_const(digest, hash))
+	if (!chunk_equals_const(hash, digest))
 	{
 		free(hash.ptr);
 		DBG1(DBG_LIB, "invalid messageDigest");

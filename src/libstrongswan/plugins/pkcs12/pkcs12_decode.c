@@ -337,7 +337,7 @@ static bool verify_mac_pw(signer_t *signer, hash_algorithm_t hash, chunk_t salt,
 	if (pkcs12_derive_key(hash, pw, salt, iterations, PKCS12_KEY_MAC, key) &&
 		signer->set_key(signer, key) &&
 		signer->get_signature(signer, data, calculated.ptr) &&
-		chunk_equals_const(mac, calculated))
+		chunk_equals_const(calculated, mac))
 	{
 		success = TRUE;
 	}

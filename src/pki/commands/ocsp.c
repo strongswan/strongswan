@@ -106,7 +106,7 @@ static bool find_issuer_cacert(hash_algorithm_t hashAlgorithm,
 			break;
 		}
 
-		issuerKeyHash_ok = chunk_equals_const(issuerKeyHash, caKeyHash);
+		issuerKeyHash_ok = chunk_equals_const(caKeyHash, issuerKeyHash);
 		public->destroy(public);
 		if (!issuerKeyHash_ok)
 		{
@@ -132,7 +132,7 @@ static bool find_issuer_cacert(hash_algorithm_t hashAlgorithm,
 		}
 		hasher->destroy(hasher);
 
-		issuerNameHash_ok = chunk_equals_const(issuerNameHash, caNameHash);
+		issuerNameHash_ok = chunk_equals_const(caNameHash, issuerNameHash);
 		chunk_free(&caNameHash);
 		if (!issuerNameHash_ok)
 		{

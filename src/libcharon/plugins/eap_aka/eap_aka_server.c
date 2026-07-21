@@ -426,7 +426,7 @@ static status_t process_challenge(private_eap_aka_server_t *this,
 	enumerator->destroy(enumerator);
 
 	/* compare received RES against stored XRES */
-	if (!chunk_equals_const(res, this->xres))
+	if (!chunk_equals_const(this->xres, res))
 	{
 		DBG1(DBG_IKE, "received RES does not match XRES");
 		return FAILED;
@@ -487,7 +487,7 @@ static status_t process_reauthentication(private_eap_aka_server_t *this,
 		this->crypto->clear_keys(this->crypto);
 		return challenge(this, out);
 	}
-	if (!chunk_equals_const(counter, this->counter))
+	if (!chunk_equals_const(this->counter, counter))
 	{
 		DBG1(DBG_IKE, "received counter does not match");
 		return FAILED;
