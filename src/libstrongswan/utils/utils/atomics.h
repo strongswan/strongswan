@@ -52,7 +52,9 @@ typedef u_int refcount_t;
  * __ATOMIC_ACQUIRE if we reach 0, but since we don't have control over the use
  * of ref_put() we have to make sure. */
 #define ref_put(ref) (!__atomic_sub_fetch(ref, 1, __ATOMIC_ACQ_REL))
-#define ref_cur(ref) __atomic_load_n(ref, __ATOMIC_RELAXED)
+/* Use __ATOMIC_ACQUIRE here so a thread checking for 0 to e.g. reuse an unused
+ * object sees writes prior to ref_put() that set the counter to 0. */
+#define ref_cur(ref) __atomic_load_n(ref, __ATOMIC_ACQUIRE)
 
 #define _cas_impl(ptr, oldval, newval) ({ typeof(*ptr) _old = oldval; \
 			__atomic_compare_exchange_n(ptr, &_old, newval, FALSE, \
