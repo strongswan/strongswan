@@ -515,7 +515,8 @@ METHOD(tpm_tss_t, quote, bool,
 
 	if (aik_blob.len == 0)
 	{
-		DBG1(DBG_PTS, "%s AIK private key for handle 0x%80x not found", LABEL);
+		DBG1(DBG_PTS, "%s AIK private key for handle 0x%80x not found", LABEL,
+			 aik_handle);
 		return FALSE;
 	}
 	result = Tspi_Context_LoadKeyByBlob(this->hContext, hSRK, aik_blob.len,
