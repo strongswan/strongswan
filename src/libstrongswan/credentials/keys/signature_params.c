@@ -186,13 +186,13 @@ void signature_params_clear(signature_params_t *this)
 bool signature_params_parse(chunk_t asn1, int level0,
 							signature_params_t *params)
 {
+	signature_params_t parsed = {};
 	chunk_t parameters = chunk_empty;
 	int oid;
 
 	oid = asn1_parse_algorithmIdentifier(asn1, level0, &parameters);
-	params->scheme = signature_scheme_from_oid(oid);
-	params->params = NULL;
-	switch (params->scheme)
+	parsed.scheme = signature_scheme_from_oid(oid);
+	switch (parsed.scheme)
 	{
 		case SIGN_UNKNOWN:
 			return FALSE;
@@ -206,7 +206,7 @@ bool signature_params_parse(chunk_t asn1, int level0,
 				free(pss);
 				return FALSE;
 			}
-			params->params = pss;
+			parsed.params = pss;
 			break;
 		}
 		default:
@@ -214,11 +214,12 @@ bool signature_params_parse(chunk_t asn1, int level0,
 				!chunk_equals(parameters, chunk_from_chars(0x05, 0x00)))
 			{
 				DBG1(DBG_IKE, "unexpected parameters for %N",
-					 signature_scheme_names, params->scheme);
+					 signature_scheme_names, parsed.scheme);
 				return FALSE;
 			}
 			break;
 	}
+	*params = parsed;
 	return TRUE;
 }
 
