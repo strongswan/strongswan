@@ -315,9 +315,6 @@ static bool parse(private_x509_crl_t *this)
 						}
 						this->baseCrlNumber = object;
 						break;
-					case OID_ISSUING_DIST_POINT:
-						/* TODO support of IssuingDistributionPoints */
-						break;
 					default:
 						if (critical && lib->settings->get_bool(lib->settings,
 							"%s.x509.enforce_critical", TRUE, lib->ns))

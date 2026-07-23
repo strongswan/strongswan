@@ -543,10 +543,6 @@ static bool parse_extensions(private_openssl_crl_t *this)
 				case NID_freshest_crl:
 					ok = openssl_parse_crlDistributionPoints(ext, this->crl_uris);
 					break;
-				case NID_issuing_distribution_point:
-					/* TODO support of IssuingDistributionPoints */
-					ok = TRUE;
-					break;
 				default:
 					ok = X509_EXTENSION_get_critical(ext) == 0 ||
 						 !lib->settings->get_bool(lib->settings,
