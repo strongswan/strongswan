@@ -358,11 +358,18 @@ static bool authenticate(private_pt_tls_client_t *this)
  */
 static bool assess(private_pt_tls_client_t *this, tls_t *tnccs)
 {
+	const size_t max_buflen = PT_TLS_MAX_MESSAGE_LEN;
+	char *buf;
+
+	buf = malloc(max_buflen);
+	if (!buf)
+	{
+		return FALSE;
+	}
+
 	while (TRUE)
 	{
-		size_t msglen;
-		size_t buflen = PT_TLS_MAX_MESSAGE_LEN;
-		char buf[buflen];
+		size_t msglen, buflen = max_buflen;
 		bio_reader_t *reader;
 		uint32_t vendor, type, identifier;
 		chunk_t data;
@@ -370,26 +377,27 @@ static bool assess(private_pt_tls_client_t *this, tls_t *tnccs)
 		switch (tnccs->build(tnccs, buf, &buflen, &msglen))
 		{
 			case SUCCESS:
+				free(buf);
 				return tnccs->is_complete(tnccs);
 			case ALREADY_DONE:
 				data = chunk_create(buf, buflen);
 				if (!pt_tls_write(this->tls, PT_TLS_PB_TNC_BATCH,
 								  this->identifier++, data))
 				{
-					return FALSE;
+					goto failed;
 				}
 				break;
 			case INVALID_STATE:
 				break;
 			case FAILED:
 			default:
-				return FALSE;
+				goto failed;
 		}
 
 		reader = pt_tls_read(this->tls, &vendor, &type, &identifier);
 		if (!reader)
 		{
-			return FALSE;
+			goto failed;
 		}
 		if (vendor == 0)
 		{
@@ -397,24 +405,25 @@ static bool assess(private_pt_tls_client_t *this, tls_t *tnccs)
 			{
 				DBG1(DBG_TNC, "received PT-TLS error");
 				reader->destroy(reader);
-				return FALSE;
+				goto failed;
 			}
 			if (type != PT_TLS_PB_TNC_BATCH)
 			{
 				DBG1(DBG_TNC, "unexpected PT-TLS message: %d", type);
 				reader->destroy(reader);
-				return FALSE;
+				goto failed;
 			}
 			data = reader->peek(reader);
 			switch (tnccs->process(tnccs, data.ptr, data.len))
 			{
 				case SUCCESS:
 					reader->destroy(reader);
+					free(buf);
 					return tnccs->is_complete(tnccs);
 				case FAILED:
 				default:
 					reader->destroy(reader);
-					return FALSE;
+					goto failed;
 				case NEED_MORE:
 					break;
 			}
@@ -425,6 +434,10 @@ static bool assess(private_pt_tls_client_t *this, tls_t *tnccs)
 		}
 		reader->destroy(reader);
 	}
+
+failed:
+	free(buf);
+	return FALSE;
 }
 
 METHOD(pt_tls_client_t, run_assessment, status_t,
