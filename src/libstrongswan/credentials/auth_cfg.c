@@ -1146,8 +1146,9 @@ METHOD(auth_cfg_t, complies, bool,
 		char *key_type DBG_UNUSED;
 
 		e2 = create_enumerator(this);
-		while (e2->enumerate(e2, &t2, &strength))
+		while (e2->enumerate(e2, &t2, &value))
 		{
+			strength = (uintptr_t)value;
 			switch (t2)
 			{
 				default:
