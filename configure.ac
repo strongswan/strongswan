@@ -267,7 +267,6 @@ ARG_ENABL_SET([certexpire],     [enable CSV export of expiration dates of used c
 ARG_ENABL_SET([connmark],       [enable connmark plugin using conntrack based marks to select return path SA.])
 ARG_ENABL_SET([counters],       [enable plugin that collects several performance counters.])
 ARG_ENABL_SET([forecast],       [enable forecast plugin forwarding broadcast/multicast messages.])
-ARG_ENABL_SET([duplicheck],     [advanced duplicate checking plugin using liveness checks.])
 ARG_ENABL_SET([error-notify],   [enable error notification plugin.])
 ARG_ENABL_SET([farp],           [enable ARP faking plugin that responds to ARP requests to peers virtual IP])
 ARG_ENABL_SET([ha],             [enable high availability cluster plugin.])
@@ -1614,7 +1613,6 @@ ADD_PLUGIN([error-notify],         [c charon])
 ADD_PLUGIN([certexpire],           [c charon])
 ADD_PLUGIN([systime-fix],          [c charon])
 ADD_PLUGIN([led],                  [c charon])
-ADD_PLUGIN([duplicheck],           [c charon])
 ADD_PLUGIN([coupling],             [c charon])
 ADD_PLUGIN([radattr],              [c charon])
 ADD_PLUGIN([addrblock],            [c charon])
@@ -1730,7 +1728,6 @@ AM_CONDITIONAL(USE_ERROR_NOTIFY, test x$error_notify = xtrue)
 AM_CONDITIONAL(USE_CERTEXPIRE, test x$certexpire = xtrue)
 AM_CONDITIONAL(USE_SYSTIME_FIX, test x$systime_fix = xtrue)
 AM_CONDITIONAL(USE_LED, test x$led = xtrue)
-AM_CONDITIONAL(USE_DUPLICHECK, test x$duplicheck = xtrue)
 AM_CONDITIONAL(USE_COUPLING, test x$coupling = xtrue)
 AM_CONDITIONAL(USE_RADATTR, test x$radattr = xtrue)
 AM_CONDITIONAL(USE_EAP_SIM, test x$eap_sim = xtrue)
@@ -2078,7 +2075,6 @@ AC_CONFIG_FILES([
 	src/libcharon/plugins/certexpire/Makefile
 	src/libcharon/plugins/systime_fix/Makefile
 	src/libcharon/plugins/led/Makefile
-	src/libcharon/plugins/duplicheck/Makefile
 	src/libcharon/plugins/coupling/Makefile
 	src/libcharon/plugins/radattr/Makefile
 	src/libcharon/plugins/osx_attr/Makefile

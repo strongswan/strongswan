@@ -41,7 +41,6 @@ plugins = \
 	plugins/dhcp.opt \
 	plugins/dnscert.opt \
 	plugins/drbg.opt \
-	plugins/duplicheck.opt \
 	plugins/eap-aka.opt \
 	plugins/eap-aka-3gpp.opt \
 	plugins/eap-aka-3gpp2.opt \

@@ -311,7 +311,7 @@ aikgen|pki)
 	# fall through
 	;;
 attest|conftest|dumm|irdumm|pool|pt-tls-client|stroke|\
-duplicheck|error-notify|imv_policy_manager|load-tester|lookip|whitelist|\
+error-notify|imv_policy_manager|load-tester|lookip|whitelist|\
 _updown|_imv_policy)
 	# fall through
 	;;
