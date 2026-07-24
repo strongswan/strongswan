@@ -287,7 +287,6 @@ ARG_ENABL_SET([aikgen],         [enable AIK generator for TPM 1.2.])
 ARG_DISBL_SET([charon],         [disable the IKEv1/IKEv2 keying daemon charon.])
 ARG_ENABL_SET([cmd],            [enable the command line IKE client charon-cmd.])
 ARG_ENABL_SET([conftest],       [enforce Suite B conformance test framework.])
-ARG_ENABL_SET([fast],           [enable libfast (FastCGI Application Server w/ templates.])
 ARG_ENABL_SET([fuzzing],        [enable fuzzing scripts (found in directory fuzz).])
 ARG_ENABL_SET([libipsec],       [enable user space IPsec implementation.])
 ARG_ENABL_SET([nm],             [enable NetworkManager backend.])
@@ -1106,36 +1105,6 @@ if test x$imc_swima = xtrue -o x$imv_swima = xtrue; then
 	AC_SUBST(json_LIBS)
 fi
 
-if test x$fast = xtrue; then
-	AC_CHECK_LIB([neo_utl],[hdf_init],[LIBS="$LIBS"],[AC_MSG_ERROR([ClearSilver library neo_utl not found!])],[])
-	AC_MSG_CHECKING([for -lneo_cgi and dependencies])
-	saved_CFLAGS=$CFLAGS
-	saved_LIBS=$LIBS
-	LIBS="-lneo_cgi -lneo_cs -lneo_utl"
-	CFLAGS="-I/usr/include/ClearSilver"
-	AC_LINK_IFELSE(
-		[AC_LANG_PROGRAM(
-			[[#include <cgi/cgi.h>]],
-			[[NEOERR *err = cgi_display(NULL, NULL);]])],
-		[AC_MSG_RESULT([yes])],
-		[LIBS="$LIBS -lz";
-		 AC_LINK_IFELSE(
-			[AC_LANG_PROGRAM(
-				[[#include <cgi/cgi.h>]],
-				[[NEOERR *err = cgi_display(NULL, NULL);]])],
-			[AC_MSG_RESULT([yes, zlib required])],
-			[AC_MSG_ERROR([not found])]
-		 )]
-	)
-	clearsilver_LIBS="$LIBS"
-	AC_SUBST(clearsilver_LIBS)
-	LIBS=$saved_LIBS
-	CFLAGS=$saved_CFLAGS
-
-	AC_CHECK_LIB([fcgi],[FCGX_Init],[LIBS="$LIBS"],[AC_MSG_ERROR([FastCGI library fcgi not found!])],[])
-	AC_CHECK_HEADER([fcgiapp.h],,[AC_MSG_ERROR([FastCGI header file fcgiapp.h not found!])])
-fi
-
 if test x$mysql = xtrue; then
 	if test "x$windows" = xtrue; then
 		AC_CHECK_HEADER([mysql.h],,[AC_MSG_ERROR([MySQL header file mysql.h not found!])])
@@ -1846,7 +1815,6 @@ AM_CONDITIONAL(USE_PF_HANDLER, test x$dhcp = xtrue -o x$farp = xtrue)
 # ---------------
 AM_CONDITIONAL(USE_LEAK_DETECTIVE, test x$leak_detective = xtrue)
 AM_CONDITIONAL(USE_LOCK_PROFILER, test x$lock_profiler = xtrue)
-AM_CONDITIONAL(USE_FAST, test x$fast = xtrue)
 AM_CONDITIONAL(USE_ME, test x$mediation = xtrue)
 AM_CONDITIONAL(USE_INTEGRITY_TEST, test x$integrity_test = xtrue)
 AM_CONDITIONAL(USE_LOAD_WARNING, test x$load_warning = xtrue)
@@ -1861,7 +1829,7 @@ AM_CONDITIONAL(USE_PKI, test x$pki = xtrue)
 AM_CONDITIONAL(USE_SCRIPTS, test x$scripts = xtrue)
 AM_CONDITIONAL(USE_FUZZING, test x$fuzzing = xtrue)
 AM_CONDITIONAL(USE_CONFTEST, test x$conftest = xtrue)
-AM_CONDITIONAL(USE_LIBSTRONGSWAN, test x$charon = xtrue -o x$pki = xtrue -o x$conftest = xtrue -o x$fast = xtrue -o x$imcv = xtrue -o x$nm = xtrue -o x$tkm = xtrue -o x$cmd = xtrue -o x$tls = xtrue -o x$tnc_tnccs = xtrue -o x$aikgen = xtrue -o x$svc = xtrue -o x$systemd = xtrue)
+AM_CONDITIONAL(USE_LIBSTRONGSWAN, test x$charon = xtrue -o x$pki = xtrue -o x$conftest = xtrue -o x$imcv = xtrue -o x$nm = xtrue -o x$tkm = xtrue -o x$cmd = xtrue -o x$tls = xtrue -o x$tnc_tnccs = xtrue -o x$aikgen = xtrue -o x$svc = xtrue -o x$systemd = xtrue)
 AM_CONDITIONAL(USE_LIBCHARON, test x$charon = xtrue -o x$conftest = xtrue -o x$nm = xtrue -o x$tkm = xtrue -o x$cmd = xtrue -o x$svc = xtrue -o x$systemd = xtrue)
 AM_CONDITIONAL(USE_LIBIPSEC, test x$libipsec = xtrue)
 AM_CONDITIONAL(USE_LIBTNCIF, test x$tnc_tnccs = xtrue -o x$imcv = xtrue)
@@ -2162,7 +2130,6 @@ AC_CONFIG_FILES([
 	src/pki/Makefile
 	src/pki/man/Makefile
 	src/pool/Makefile
-	src/libfast/Makefile
 	src/checksum/Makefile
 	src/conftest/Makefile
 	src/pt-tls-client/Makefile

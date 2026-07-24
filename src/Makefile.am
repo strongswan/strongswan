@@ -87,10 +87,6 @@ if USE_CONFTEST
   SUBDIRS += conftest
 endif
 
-if USE_FAST
-  SUBDIRS += libfast
-endif
-
 if USE_ATTR_SQL
   SUBDIRS += pool
 else

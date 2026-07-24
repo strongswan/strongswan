@@ -280,7 +280,7 @@ all|alpine|codeql|coverage|sonarcloud|no-dbg|no-testable-ke)
 		CONFIG="$CONFIG --without-testable-ke"
 	fi
 	DEPS="$DEPS libcurl4-gnutls-dev libsoup-3.0-dev libunbound-dev libldns-dev
-		  libmysqlclient-dev libsqlite3-dev clearsilver-dev libfcgi-dev
+		  libmysqlclient-dev libsqlite3-dev
 		  libldap2-dev libpcsclite-dev libpam0g-dev binutils-dev libnm-dev
 		  libgcrypt20-dev libjson-c-dev libtspi-dev libsystemd-dev
 		  libselinux1-dev libiptc-dev ruby-rubygems python3-build tox"
@@ -303,8 +303,6 @@ all|alpine|codeql|coverage|sonarcloud|no-dbg|no-testable-ke)
 		CONFIG="$CONFIG --disable-systemd --disable-cert-enroll-timer"
 		# no TrouSerS either
 		CONFIG="$CONFIG --disable-tss-trousers --disable-aikgen"
-		# and no Clearsilver
-		CONFIG="$CONFIG --disable-fast"
 	fi
 	if test "$1" = "build-deps"; then
 		build_botan

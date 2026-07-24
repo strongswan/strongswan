@@ -555,8 +555,6 @@ static char *whitelist[] = {
 	"mysql_init_character_set",
 	"init_client_errs",
 	"my_thread_init",
-	/* fastcgi library */
-	"FCGX_Init",
 	/* libxml */
 	"xmlInitCharEncodingHandlers",
 	"xmlInitParser",
@@ -566,8 +564,6 @@ static char *whitelist[] = {
 	/* libldap */
 	"ldap_int_initialize",
 	"ldap_pvt_tls_set_option",
-	/* ClearSilver */
-	"nerr_init",
 	/* libgcrypt */
 	"gcrypt_plugin_create",
 	"gcry_control",
