@@ -42,7 +42,6 @@ CONFIG_OPTS = \
 	--enable-tnc-pdp \
 	--enable-tnc-imc \
 	--enable-tnc-imv \
-	--enable-tnccs-11 \
 	--enable-tnccs-20 \
 	--enable-tnccs-dynamic \
 	--enable-imc-test \

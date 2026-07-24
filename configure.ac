@@ -252,7 +252,6 @@ ARG_ENABL_SET([imv-hcd],        [enable IMV hcd module.])
 ARG_ENABL_SET([tnc-imc],        [enable TNC IMC module.])
 ARG_ENABL_SET([tnc-imv],        [enable TNC IMV module.])
 ARG_ENABL_SET([tnc-pdp],        [enable TNC policy decision point module.])
-ARG_ENABL_SET([tnccs-11],       [enable TNCCS 1.1 protocol module. Requires libxml])
 ARG_ENABL_SET([tnccs-20],       [enable TNCCS 2.0 protocol module.])
 ARG_ENABL_SET([tnccs-dynamic],  [enable dynamic TNCCS protocol discovery module.])
 # misc plugins
@@ -430,7 +429,7 @@ if test x$eap_radius = xtrue -o x$radattr = xtrue -o x$tnc_pdp = xtrue; then
 	radius=true;
 fi
 
-if test x$tnc_imc = xtrue -o x$tnc_imv = xtrue -o x$tnccs_11 = xtrue -o x$tnccs_20 = xtrue -o x$tnccs_dynamic = xtrue -o x$eap_tnc = xtrue; then
+if test x$tnc_imc = xtrue -o x$tnc_imv = xtrue -o x$tnccs_20 = xtrue -o x$tnccs_dynamic = xtrue -o x$eap_tnc = xtrue; then
 	tnc_tnccs=true;
 fi
 
@@ -454,10 +453,6 @@ fi
 
 if test x$swanctl = xtrue; then
 	vici=true
-fi
-
-if test x$tnccs_11 = xtrue; then
-	xml=true
 fi
 
 if test x$ruby_gems_install = xtrue; then
@@ -1016,12 +1011,6 @@ if test x$unbound = xtrue; then
 	AC_CHECK_HEADER([unbound.h],,[AC_MSG_ERROR([UNBOUND header unbound.h not found!])])
 fi
 
-if test x$xml = xtrue; then
-	PKG_CHECK_MODULES(xml, [libxml-2.0])
-	AC_SUBST(xml_CFLAGS)
-	AC_SUBST(xml_LIBS)
-fi
-
 if test x$systemd = xtrue -o x$cert_enroll_timer = xtrue; then
 	AC_MSG_CHECKING([for systemd system unit directory])
 	if test -n "$systemdsystemunitdir" -a "x$systemdsystemunitdir" != xno; then
@@ -1568,7 +1557,6 @@ ADD_PLUGIN([tnc-imc],              [t charon])
 ADD_PLUGIN([tnc-imv],              [t charon])
 ADD_PLUGIN([tnc-tnccs],            [t charon])
 ADD_PLUGIN([tnccs-20],             [t charon])
-ADD_PLUGIN([tnccs-11],             [t charon])
 ADD_PLUGIN([tnccs-dynamic],        [t charon])
 ADD_PLUGIN([dhcp],                 [c charon])
 ADD_PLUGIN([osx-attr],             [c charon cmd])
@@ -1720,7 +1708,6 @@ AM_CONDITIONAL(USE_TNC_PDP, test x$tnc_pdp = xtrue)
 AM_CONDITIONAL(USE_TNC_IMC, test x$tnc_imc = xtrue)
 AM_CONDITIONAL(USE_TNC_IMV, test x$tnc_imv = xtrue)
 AM_CONDITIONAL(USE_TNC_TNCCS, test x$tnc_tnccs = xtrue)
-AM_CONDITIONAL(USE_TNCCS_11, test x$tnccs_11 = xtrue)
 AM_CONDITIONAL(USE_TNCCS_20, test x$tnccs_20 = xtrue)
 AM_CONDITIONAL(USE_TNCCS_DYNAMIC, test x$tnccs_dynamic = xtrue)
 AM_CONDITIONAL(USE_IMC_TEST, test x$imc_test = xtrue)
@@ -1955,7 +1942,6 @@ AC_CONFIG_FILES([
 	src/libtnccs/plugins/tnc_tnccs/Makefile
 	src/libtnccs/plugins/tnc_imc/Makefile
 	src/libtnccs/plugins/tnc_imv/Makefile
-	src/libtnccs/plugins/tnccs_11/Makefile
 	src/libtnccs/plugins/tnccs_20/Makefile
 	src/libtnccs/plugins/tnccs_dynamic/Makefile
 	src/libpttls/Makefile

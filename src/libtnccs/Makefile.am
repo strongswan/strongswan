@@ -65,13 +65,6 @@ if MONOLITHIC
 endif
 endif
 
-if USE_TNCCS_11
-  SUBDIRS += plugins/tnccs_11
-if MONOLITHIC
-  libtnccs_la_LIBADD += plugins/tnccs_11/libstrongswan-tnccs-11.la
-endif
-endif
-
 if USE_TNCCS_20
   SUBDIRS += plugins/tnccs_20
 if MONOLITHIC

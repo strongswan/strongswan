@@ -92,7 +92,6 @@ plugins = \
 	plugins/tnc-imc.opt \
 	plugins/tnc-imv.opt \
 	plugins/tnc-pdp.opt \
-	plugins/tnccs-11.opt \
 	plugins/tnccs-20.opt \
 	plugins/tpm.opt \
 	plugins/unbound.opt \

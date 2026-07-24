@@ -286,7 +286,7 @@ all|alpine|codeql|coverage|sonarcloud|no-dbg|no-testable-ke)
 	if [ "$TEST" = "alpine" ]; then
 		# override the whole list for alpine
 		DEPS="git gmp-dev openldap-dev curl-dev ldns-dev unbound-dev
-			  libxml2-dev tpm2-tss-dev tpm2-tss-sys mariadb-dev wolfssl-dev
+			  tpm2-tss-dev tpm2-tss-sys mariadb-dev wolfssl-dev
 			  botan3-dev pcsc-lite-dev networkmanager-dev
 			  linux-pam-dev iptables-dev libselinux-dev binutils-dev libunwind-dev
 			  ruby py3-setuptools py3-build py3-tox"
@@ -414,7 +414,7 @@ freebsd)
 			--enable-unbound --enable-unity --enable-xauth-eap --enable-xauth-pam
 			--with-printf-hooks=builtin --enable-attr-sql --enable-sql
 			--enable-farp"
-	DEPS="git gmp libxml2 mysql80-client sqlite3 unbound ldns tpm2-tss"
+	DEPS="git gmp mysql80-client sqlite3 unbound ldns tpm2-tss"
 	;;
 fuzzing)
 	CFLAGS="$CFLAGS -DNO_CHECK_MEMWIPE"
