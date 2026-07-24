@@ -232,7 +232,6 @@ ARG_ENABL_SET([socket-dynamic], [enable dynamic socket implementation for charon
 ARG_ENABL_SET([socket-win],     [enable Winsock2 based socket implementation for charon])
 # configuration/control plugins
 ARG_ENABL_SET([stroke],         [enable the stroke configuration backend.])
-ARG_ENABL_SET([smp],            [enable SMP configuration and control interface. Requires libxml.])
 ARG_ENABL_SET([sql],            [enable SQL database configuration backend.])
 ARG_DISBL_SET([vici],           [disable strongSwan IKE generic IPC interface plugin.])
 # attribute provider/consumer plugins
@@ -470,7 +469,7 @@ if test x$swanctl = xtrue; then
 	vici=true
 fi
 
-if test x$smp = xtrue -o x$tnccs_11 = xtrue -o x$tnc_ifmap = xtrue; then
+if test x$tnccs_11 = xtrue -o x$tnc_ifmap = xtrue; then
 	xml=true
 fi
 
@@ -1627,7 +1626,6 @@ ADD_PLUGIN([forecast],             [c charon])
 ADD_PLUGIN([farp],                 [c charon])
 ADD_PLUGIN([stroke],               [c charon])
 ADD_PLUGIN([vici],                 [c charon])
-ADD_PLUGIN([smp],                  [c charon])
 ADD_PLUGIN([sql],                  [c charon])
 ADD_PLUGIN([updown],               [c charon])
 ADD_PLUGIN([eap-identity],         [c charon nm cmd])
@@ -1778,7 +1776,6 @@ AM_CONDITIONAL(USE_OSX_ATTR, test x$osx_attr = xtrue)
 AM_CONDITIONAL(USE_P_CSCF, test x$p_cscf = xtrue)
 AM_CONDITIONAL(USE_ANDROID_DNS, test x$android_dns = xtrue)
 AM_CONDITIONAL(USE_ANDROID_LOG, test x$android_log = xtrue)
-AM_CONDITIONAL(USE_SMP, test x$smp = xtrue)
 AM_CONDITIONAL(USE_SQL, test x$sql = xtrue)
 AM_CONDITIONAL(USE_DNSCERT, test x$dnscert = xtrue)
 AM_CONDITIONAL(USE_IPSECKEY, test x$ipseckey = xtrue)
@@ -2132,7 +2129,6 @@ AC_CONFIG_FILES([
 	src/libcharon/plugins/counters/Makefile
 	src/libcharon/plugins/forecast/Makefile
 	src/libcharon/plugins/farp/Makefile
-	src/libcharon/plugins/smp/Makefile
 	src/libcharon/plugins/sql/Makefile
 	src/libcharon/plugins/dnscert/Makefile
 	src/libcharon/plugins/ipseckey/Makefile

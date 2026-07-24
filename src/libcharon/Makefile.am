@@ -292,13 +292,6 @@ if MONOLITHIC
 endif
 endif
 
-if USE_SMP
-  SUBDIRS += plugins/smp
-if MONOLITHIC
-  libcharon_la_LIBADD += plugins/smp/libstrongswan-smp.la
-endif
-endif
-
 if USE_SQL
   SUBDIRS += plugins/sql
 if MONOLITHIC

@@ -408,9 +408,8 @@ macos)
 	export LDFLAGS
 	;;
 freebsd)
-	# use the options of the FreeBSD port (including options), except smp,
-	# which requires a patch but is deprecated anyway, only using the builtin
-	# printf hooks
+	# use the options of the FreeBSD port (including options),
+	# only using the builtin printf hooks
 	CONFIG="--enable-kernel-pfkey --enable-kernel-pfroute --disable-scripts
 			--disable-kernel-netlink --enable-openssl --enable-eap-identity
 			--enable-eap-md5 --enable-eap-tls --enable-eap-mschapv2
