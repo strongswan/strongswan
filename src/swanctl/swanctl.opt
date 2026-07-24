@@ -11,11 +11,11 @@ connections { # }
 connections.<conn> { # }
 	Section for an IKE connection named <conn>.
 
-connections.<conn>.version = 0
+connections.<conn>.version = 2
 	IKE major version to use for connection.
 
 	IKE major version to use for connection. _1_ uses IKEv1 aka ISAKMP, _2_
-	uses IKEv2. A connection using the default of _0_ accepts both IKEv1
+	uses IKEv2 (the default). A connection using _0_ accepts both IKEv1
 	and IKEv2 as responder, and initiates the connection actively with IKEv2.
 
 connections.<conn>.local_addrs = %any

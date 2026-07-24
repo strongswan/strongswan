@@ -2804,7 +2804,7 @@ CALLBACK(config_sn, bool,
 		.send_certreq = TRUE,
 		.send_cert = CERT_SEND_IF_ASKED,
 		.ocsp = OCSP_SEND_REPLY,
-		.version = IKE_ANY,
+		.version = IKEV2,
 		.remote_port = IKEV2_UDP_PORT,
 		.fragmentation = FRAGMENTATION_YES,
 		.unique = UNIQUE_NO,
@@ -2935,6 +2935,14 @@ CALLBACK(config_sn, bool,
 #endif /* ME */
 
 	log_peer_data(&peer);
+
+#ifdef USE_IKEV1
+	if (peer.version != IKEV2)
+	{
+		DBG0(DBG_CFG, "WARNING: IKEv1 support is deprecated and will be "
+			 "removed soon, configure 'version = 2' in order to use IKEv2");
+	}
+#endif
 
 	ike = (ike_cfg_create_t){
 		.version = peer.version,
