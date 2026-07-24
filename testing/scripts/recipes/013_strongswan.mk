@@ -43,7 +43,6 @@ CONFIG_OPTS = \
 	--enable-tnc-imc \
 	--enable-tnc-imv \
 	--enable-tnccs-20 \
-	--enable-tnccs-dynamic \
 	--enable-imc-test \
 	--enable-imv-test \
 	--enable-imc-scanner \

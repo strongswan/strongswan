@@ -291,14 +291,6 @@ static eap_tnc_t *eap_tnc_create(identification_t *server,
 	{
 		tnccs_type = TNCCS_2_0;
 	}
-	else if (strcaseeq(protocol, "tnccs-1.1"))
-	{
-		tnccs_type = TNCCS_1_1;
-	}
-	else if (strcaseeq(protocol, "tnccs-dynamic") && is_server)
-	{
-		tnccs_type = TNCCS_DYNAMIC;
-	}
 	else
 	{
 		DBG1(DBG_TNC, "TNCCS protocol '%s' not supported", protocol);

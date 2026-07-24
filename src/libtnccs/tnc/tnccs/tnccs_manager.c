@@ -41,14 +41,6 @@ bool tnccs_method_register(plugin_t *plugin, plugin_feature_t *feature,
 			{
 				type = TNCCS_2_0;
 			}
-			else if (streq(feature->arg.custom, "tnccs-1.1"))
-			{
-				type = TNCCS_1_1;
-			}
-			else if (streq(feature->arg.custom, "tnccs-dynamic"))
-			{
-				type = TNCCS_DYNAMIC;
-			}
 			else
 			{
 				return FALSE;

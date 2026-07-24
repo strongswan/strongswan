@@ -71,10 +71,3 @@ if MONOLITHIC
   libtnccs_la_LIBADD += plugins/tnccs_20/libstrongswan-tnccs-20.la
 endif
 endif
-
-if USE_TNCCS_DYNAMIC
-  SUBDIRS += plugins/tnccs_dynamic
-if MONOLITHIC
-  libtnccs_la_LIBADD += plugins/tnccs_dynamic/libstrongswan-tnccs-dynamic.la
-endif
-endif

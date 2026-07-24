@@ -253,7 +253,6 @@ ARG_ENABL_SET([tnc-imc],        [enable TNC IMC module.])
 ARG_ENABL_SET([tnc-imv],        [enable TNC IMV module.])
 ARG_ENABL_SET([tnc-pdp],        [enable TNC policy decision point module.])
 ARG_ENABL_SET([tnccs-20],       [enable TNCCS 2.0 protocol module.])
-ARG_ENABL_SET([tnccs-dynamic],  [enable dynamic TNCCS protocol discovery module.])
 # misc plugins
 ARG_ENABL_SET([android-log],    [enable Android specific logger plugin.])
 ARG_ENABL_SET([bypass-lan],     [enable plugin to install bypass policies for local subnets.])
@@ -429,7 +428,7 @@ if test x$eap_radius = xtrue -o x$radattr = xtrue -o x$tnc_pdp = xtrue; then
 	radius=true;
 fi
 
-if test x$tnc_imc = xtrue -o x$tnc_imv = xtrue -o x$tnccs_20 = xtrue -o x$tnccs_dynamic = xtrue -o x$eap_tnc = xtrue; then
+if test x$tnc_imc = xtrue -o x$tnc_imv = xtrue -o x$tnccs_20 = xtrue -o x$eap_tnc = xtrue; then
 	tnc_tnccs=true;
 fi
 
@@ -1557,7 +1556,6 @@ ADD_PLUGIN([tnc-imc],              [t charon])
 ADD_PLUGIN([tnc-imv],              [t charon])
 ADD_PLUGIN([tnc-tnccs],            [t charon])
 ADD_PLUGIN([tnccs-20],             [t charon])
-ADD_PLUGIN([tnccs-dynamic],        [t charon])
 ADD_PLUGIN([dhcp],                 [c charon])
 ADD_PLUGIN([osx-attr],             [c charon cmd])
 ADD_PLUGIN([p-cscf],               [c charon cmd])
@@ -1709,7 +1707,6 @@ AM_CONDITIONAL(USE_TNC_IMC, test x$tnc_imc = xtrue)
 AM_CONDITIONAL(USE_TNC_IMV, test x$tnc_imv = xtrue)
 AM_CONDITIONAL(USE_TNC_TNCCS, test x$tnc_tnccs = xtrue)
 AM_CONDITIONAL(USE_TNCCS_20, test x$tnccs_20 = xtrue)
-AM_CONDITIONAL(USE_TNCCS_DYNAMIC, test x$tnccs_dynamic = xtrue)
 AM_CONDITIONAL(USE_IMC_TEST, test x$imc_test = xtrue)
 AM_CONDITIONAL(USE_IMV_TEST, test x$imv_test = xtrue)
 AM_CONDITIONAL(USE_IMC_SCANNER, test x$imc_scanner = xtrue)
@@ -1943,7 +1940,6 @@ AC_CONFIG_FILES([
 	src/libtnccs/plugins/tnc_imc/Makefile
 	src/libtnccs/plugins/tnc_imv/Makefile
 	src/libtnccs/plugins/tnccs_20/Makefile
-	src/libtnccs/plugins/tnccs_dynamic/Makefile
 	src/libpttls/Makefile
 	src/libimcv/Makefile
 	src/libimcv/plugins/imc_test/Makefile
