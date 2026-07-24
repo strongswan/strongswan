@@ -249,7 +249,6 @@ ARG_ENABL_SET([imc-swima],      [enable IMC swima module.])
 ARG_ENABL_SET([imv-swima],      [enable IMV swima module.])
 ARG_ENABL_SET([imc-hcd],        [enable IMC hcd module.])
 ARG_ENABL_SET([imv-hcd],        [enable IMV hcd module.])
-ARG_ENABL_SET([tnc-ifmap],      [enable TNC IF-MAP module. Requires libxml])
 ARG_ENABL_SET([tnc-imc],        [enable TNC IMC module.])
 ARG_ENABL_SET([tnc-imv],        [enable TNC IMV module.])
 ARG_ENABL_SET([tnc-pdp],        [enable TNC policy decision point module.])
@@ -457,7 +456,7 @@ if test x$swanctl = xtrue; then
 	vici=true
 fi
 
-if test x$tnccs_11 = xtrue -o x$tnc_ifmap = xtrue; then
+if test x$tnccs_11 = xtrue; then
 	xml=true
 fi
 
@@ -1564,7 +1563,6 @@ ADD_PLUGIN([xauth-generic],        [c charon cmd])
 ADD_PLUGIN([xauth-eap],            [c charon])
 ADD_PLUGIN([xauth-pam],            [c charon])
 ADD_PLUGIN([xauth-noauth],         [c charon])
-ADD_PLUGIN([tnc-ifmap],            [c charon])
 ADD_PLUGIN([tnc-pdp],              [c charon])
 ADD_PLUGIN([tnc-imc],              [t charon])
 ADD_PLUGIN([tnc-imv],              [t charon])
@@ -1718,7 +1716,6 @@ AM_CONDITIONAL(USE_XAUTH_GENERIC, test x$xauth_generic = xtrue)
 AM_CONDITIONAL(USE_XAUTH_EAP, test x$xauth_eap = xtrue)
 AM_CONDITIONAL(USE_XAUTH_PAM, test x$xauth_pam = xtrue)
 AM_CONDITIONAL(USE_XAUTH_NOAUTH, test x$xauth_noauth = xtrue)
-AM_CONDITIONAL(USE_TNC_IFMAP, test x$tnc_ifmap = xtrue)
 AM_CONDITIONAL(USE_TNC_PDP, test x$tnc_pdp = xtrue)
 AM_CONDITIONAL(USE_TNC_IMC, test x$tnc_imc = xtrue)
 AM_CONDITIONAL(USE_TNC_IMV, test x$tnc_imv = xtrue)
@@ -2006,7 +2003,6 @@ AC_CONFIG_FILES([
 	src/libcharon/plugins/xauth_eap/Makefile
 	src/libcharon/plugins/xauth_pam/Makefile
 	src/libcharon/plugins/xauth_noauth/Makefile
-	src/libcharon/plugins/tnc_ifmap/Makefile
 	src/libcharon/plugins/tnc_pdp/Makefile
 	src/libcharon/plugins/save_keys/Makefile
 	src/libcharon/plugins/socket_default/Makefile

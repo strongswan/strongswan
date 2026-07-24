@@ -481,13 +481,6 @@ if MONOLITHIC
 endif
 endif
 
-if USE_TNC_IFMAP
-  SUBDIRS += plugins/tnc_ifmap
-if MONOLITHIC
-  libcharon_la_LIBADD += plugins/tnc_ifmap/libstrongswan-tnc-ifmap.la
-endif
-endif
-
 if USE_TNC_PDP
   SUBDIRS += plugins/tnc_pdp
 if MONOLITHIC

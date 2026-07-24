@@ -89,7 +89,6 @@ plugins = \
 	plugins/sql.opt \
 	plugins/stroke.opt \
 	plugins/systime-fix.opt \
-	plugins/tnc-ifmap.opt \
 	plugins/tnc-imc.opt \
 	plugins/tnc-imv.opt \
 	plugins/tnc-pdp.opt \
