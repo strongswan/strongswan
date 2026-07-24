@@ -75,16 +75,13 @@ Contents
 
     If you intend to dynamically fetch Certificate Revocation Lists (CRLs)
     from an HTTP server or as an alternative want to use the Online
-    Certificate Status Protocol (OCSP) then you will need the either of the
-    following libraries:
+    Certificate Status Protocol (OCSP) then you will need the following library:
 
       * The cURL library (libcurl)
         https://curl.se/libcurl/
-      * The LibSoup library (libsoup)
-        https://live.gnome.org/LibSoup
 
-    In order to activate the use of either of these libraries in strongSwan you
-    must enable the appropriate ./configure switch.
+    In order to activate the use of this library in strongSwan you must enable
+    the appropriate ./configure switch.
 
 
 3.2 LDAP

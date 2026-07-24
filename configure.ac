@@ -173,7 +173,6 @@ ARG_ENABL_SET([openxpki],       [enable OCSP responder accessing OpenXPKI certif
 ARG_ENABL_SET([curl],           [enable CURL fetcher plugin to fetch files via libcurl. Requires libcurl.])
 ARG_ENABL_SET([files],          [enable simple file:// URI fetcher.])
 ARG_ENABL_SET([ldap],           [enable LDAP fetching plugin to fetch files via libldap. Requires openLDAP.])
-ARG_ENABL_SET([soup],           [enable soup fetcher plugin to fetch from HTTP via libsoup. Requires libsoup.])
 ARG_ENABL_SET([unbound],        [enable UNBOUND resolver plugin to perform DNS queries via libunbound. Requires libldns and libunbound.])
 ARG_ENABL_SET([winhttp],        [enable WinHTTP based HTTP/HTTPS fetching plugin.])
 # database plugins
@@ -1018,12 +1017,6 @@ if test x$unbound = xtrue; then
 	AC_CHECK_HEADER([unbound.h],,[AC_MSG_ERROR([UNBOUND header unbound.h not found!])])
 fi
 
-if test x$soup = xtrue; then
-	PKG_CHECK_MODULES(soup, [libsoup-3.0])
-	AC_SUBST(soup_CFLAGS)
-	AC_SUBST(soup_LIBS)
-fi
-
 if test x$xml = xtrue; then
 	PKG_CHECK_MODULES(xml, [libxml-2.0])
 	AC_SUBST(xml_CFLAGS)
@@ -1522,7 +1515,6 @@ ADD_PLUGIN([drbg],                 [s charon swanctl pki scripts nm cmd])
 ADD_PLUGIN([curl],                 [s charon pki scripts nm cmd])
 ADD_PLUGIN([files],                [s charon pki scripts nm cmd])
 ADD_PLUGIN([winhttp],              [s charon pki scripts])
-ADD_PLUGIN([soup],                 [s charon pki scripts nm cmd])
 ADD_PLUGIN([mysql],                [s charon pki pool attest])
 ADD_PLUGIN([sqlite],               [s charon pki pool attest])
 ADD_PLUGIN([openxpki],             [s pki])
@@ -1625,7 +1617,6 @@ AM_CONDITIONAL(USE_CURL, test x$curl = xtrue)
 AM_CONDITIONAL(USE_FILES, test x$files = xtrue)
 AM_CONDITIONAL(USE_WINHTTP, test x$winhttp = xtrue)
 AM_CONDITIONAL(USE_UNBOUND, test x$unbound = xtrue)
-AM_CONDITIONAL(USE_SOUP, test x$soup = xtrue)
 AM_CONDITIONAL(USE_LDAP, test x$ldap = xtrue)
 AM_CONDITIONAL(USE_AES, test x$aes = xtrue)
 AM_CONDITIONAL(USE_DES, test x$des = xtrue)
@@ -1940,7 +1931,6 @@ AC_CONFIG_FILES([
 	src/libstrongswan/plugins/files/Makefile
 	src/libstrongswan/plugins/winhttp/Makefile
 	src/libstrongswan/plugins/unbound/Makefile
-	src/libstrongswan/plugins/soup/Makefile
 	src/libstrongswan/plugins/ldap/Makefile
 	src/libstrongswan/plugins/mysql/Makefile
 	src/libstrongswan/plugins/sqlite/Makefile

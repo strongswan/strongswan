@@ -272,7 +272,7 @@ all|alpine|codeql|coverage|sonarcloud|no-dbg|no-testable-ke)
 	if [ "$TEST" = "no-testable-ke" ]; then
 		CONFIG="$CONFIG --without-testable-ke"
 	fi
-	DEPS="$DEPS libcurl4-gnutls-dev libsoup-3.0-dev libunbound-dev libldns-dev
+	DEPS="$DEPS libcurl4-gnutls-dev libunbound-dev libldns-dev
 		  libmysqlclient-dev libsqlite3-dev
 		  libldap2-dev libpcsclite-dev libpam0g-dev binutils-dev libnm-dev
 		  libjson-c-dev libtspi-dev libsystemd-dev
@@ -285,7 +285,7 @@ all|alpine|codeql|coverage|sonarcloud|no-dbg|no-testable-ke)
 	fi
 	if [ "$TEST" = "alpine" ]; then
 		# override the whole list for alpine
-		DEPS="git gmp-dev openldap-dev curl-dev ldns-dev unbound-dev libsoup3-dev
+		DEPS="git gmp-dev openldap-dev curl-dev ldns-dev unbound-dev
 			  libxml2-dev tpm2-tss-dev tpm2-tss-sys mariadb-dev wolfssl-dev
 			  botan3-dev pcsc-lite-dev networkmanager-dev
 			  linux-pam-dev iptables-dev libselinux-dev binutils-dev libunwind-dev
