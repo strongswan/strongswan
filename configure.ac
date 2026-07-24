@@ -291,7 +291,6 @@ ARG_ENABL_SET([conftest],       [enforce Suite B conformance test framework.])
 ARG_ENABL_SET([fast],           [enable libfast (FastCGI Application Server w/ templates.])
 ARG_ENABL_SET([fuzzing],        [enable fuzzing scripts (found in directory fuzz).])
 ARG_ENABL_SET([libipsec],       [enable user space IPsec implementation.])
-ARG_ENABL_SET([manager],        [enable web management console (proof of concept).])
 ARG_ENABL_SET([medcli],         [enable mediation client configuration database plugin.])
 ARG_ENABL_SET([medsrv],         [enable mediation server web frontend and daemon plugin.])
 ARG_ENABL_SET([nm],             [enable NetworkManager backend.])
@@ -473,10 +472,6 @@ fi
 
 if test x$smp = xtrue -o x$tnccs_11 = xtrue -o x$tnc_ifmap = xtrue; then
 	xml=true
-fi
-
-if test x$manager = xtrue; then
-	fast=true
 fi
 
 if test x$medsrv = xtrue; then
@@ -1534,7 +1529,6 @@ pool_plugins=
 attest_plugins=
 pki_plugins=
 scripts_plugins=
-manager_plugins=
 medsrv_plugins=
 nm_plugins=
 cmd_plugins=
@@ -1562,19 +1556,19 @@ ADD_PLUGIN([blowfish],             [s charon swanctl pki scripts nm cmd])
 ADD_PLUGIN([rc2],                  [s charon swanctl pki scripts nm cmd])
 ADD_PLUGIN([sha2],                 [s charon swanctl pki scripts medsrv attest nm cmd aikgen fc])
 ADD_PLUGIN([sha3],                 [s charon swanctl pki scripts medsrv attest nm cmd aikgen fc])
-ADD_PLUGIN([sha1],                 [s charon swanctl pki scripts manager medsrv attest nm cmd aikgen fc])
+ADD_PLUGIN([sha1],                 [s charon swanctl pki scripts medsrv attest nm cmd aikgen fc])
 ADD_PLUGIN([md4],                  [s charon swanctl pki nm cmd])
 ADD_PLUGIN([md5],                  [s charon swanctl pki scripts attest nm cmd aikgen])
 ADD_PLUGIN([mgf1],                 [s charon swanctl pki scripts medsrv attest nm cmd aikgen fc])
 ADD_PLUGIN([rdrand],               [s charon swanctl pki scripts medsrv attest nm cmd aikgen])
-ADD_PLUGIN([random],               [s charon swanctl pki scripts manager medsrv attest nm cmd aikgen])
+ADD_PLUGIN([random],               [s charon swanctl pki scripts medsrv attest nm cmd aikgen])
 ADD_PLUGIN([nonce],                [s charon nm cmd aikgen])
 ADD_PLUGIN([x509],                 [s charon swanctl pki scripts attest nm cmd aikgen fd fc])
 ADD_PLUGIN([revocation],           [s charon pki nm cmd])
 ADD_PLUGIN([constraints],          [s charon pki nm cmd])
 ADD_PLUGIN([acert],                [s charon])
 ADD_PLUGIN([pubkey],               [s charon swanctl pki cmd aikgen])
-ADD_PLUGIN([pkcs1],                [s charon swanctl pki scripts manager medsrv attest nm cmd aikgen fd fc])
+ADD_PLUGIN([pkcs1],                [s charon swanctl pki scripts medsrv attest nm cmd aikgen fd fc])
 ADD_PLUGIN([pkcs7],                [s charon swanctl pki scripts nm cmd])
 ADD_PLUGIN([pkcs12],               [s charon swanctl pki scripts cmd])
 ADD_PLUGIN([pgp],                  [s charon])
@@ -1582,16 +1576,16 @@ ADD_PLUGIN([dnskey],               [s charon swanctl pki])
 ADD_PLUGIN([sshkey],               [s charon swanctl pki nm cmd])
 ADD_PLUGIN([dnscert],              [c charon])
 ADD_PLUGIN([ipseckey],             [c charon])
-ADD_PLUGIN([pem],                  [s charon swanctl pki scripts manager medsrv attest nm cmd aikgen fd fc])
+ADD_PLUGIN([pem],                  [s charon swanctl pki scripts medsrv attest nm cmd aikgen fd fc])
 ADD_PLUGIN([padlock],              [s charon])
-ADD_PLUGIN([openssl],              [s charon swanctl pki scripts manager medsrv attest nm cmd aikgen fd])
-ADD_PLUGIN([wolfssl],              [s charon swanctl pki scripts manager medsrv attest nm cmd aikgen])
-ADD_PLUGIN([gcrypt],               [s charon swanctl pki scripts manager medsrv attest nm cmd aikgen])
-ADD_PLUGIN([botan],                [s charon swanctl pki scripts manager medsrv attest nm cmd aikgen])
-ADD_PLUGIN([pkcs8],                [s charon swanctl pki scripts manager medsrv attest nm cmd])
+ADD_PLUGIN([openssl],              [s charon swanctl pki scripts medsrv attest nm cmd aikgen fd])
+ADD_PLUGIN([wolfssl],              [s charon swanctl pki scripts medsrv attest nm cmd aikgen])
+ADD_PLUGIN([gcrypt],               [s charon swanctl pki scripts medsrv attest nm cmd aikgen])
+ADD_PLUGIN([botan],                [s charon swanctl pki scripts medsrv attest nm cmd aikgen])
+ADD_PLUGIN([pkcs8],                [s charon swanctl pki scripts medsrv attest nm cmd])
 ADD_PLUGIN([af-alg],               [s charon swanctl pki scripts medsrv attest nm cmd aikgen])
 ADD_PLUGIN([fips-prf],             [s charon nm cmd])
-ADD_PLUGIN([gmp],                  [s charon swanctl pki scripts manager medsrv attest nm cmd aikgen fc])
+ADD_PLUGIN([gmp],                  [s charon swanctl pki scripts medsrv attest nm cmd aikgen fc])
 ADD_PLUGIN([curve25519],           [s charon swanctl pki scripts nm cmd])
 ADD_PLUGIN([agent],                [s charon nm cmd])
 ADD_PLUGIN([keychain],             [s charon cmd])
@@ -1609,8 +1603,8 @@ ADD_PLUGIN([curl],                 [s charon pki scripts nm cmd])
 ADD_PLUGIN([files],                [s charon pki scripts nm cmd])
 ADD_PLUGIN([winhttp],              [s charon pki scripts])
 ADD_PLUGIN([soup],                 [s charon pki scripts nm cmd])
-ADD_PLUGIN([mysql],                [s charon pki pool manager medsrv attest])
-ADD_PLUGIN([sqlite],               [s charon pki pool manager medsrv attest])
+ADD_PLUGIN([mysql],                [s charon pki pool medsrv attest])
+ADD_PLUGIN([sqlite],               [s charon pki pool medsrv attest])
 ADD_PLUGIN([openxpki],             [s pki])
 ADD_PLUGIN([attr],                 [c charon])
 ADD_PLUGIN([attr-sql],             [c charon])
@@ -1695,7 +1689,6 @@ AC_SUBST(pool_plugins)
 AC_SUBST(attest_plugins)
 AC_SUBST(pki_plugins)
 AC_SUBST(scripts_plugins)
-AC_SUBST(manager_plugins)
 AC_SUBST(medsrv_plugins)
 AC_SUBST(nm_plugins)
 AC_SUBST(cmd_plugins)
@@ -1874,7 +1867,6 @@ AM_CONDITIONAL(USE_PF_HANDLER, test x$dhcp = xtrue -o x$farp = xtrue)
 AM_CONDITIONAL(USE_LEAK_DETECTIVE, test x$leak_detective = xtrue)
 AM_CONDITIONAL(USE_LOCK_PROFILER, test x$lock_profiler = xtrue)
 AM_CONDITIONAL(USE_FAST, test x$fast = xtrue)
-AM_CONDITIONAL(USE_MANAGER, test x$manager = xtrue)
 AM_CONDITIONAL(USE_ME, test x$mediation = xtrue)
 AM_CONDITIONAL(USE_INTEGRITY_TEST, test x$integrity_test = xtrue)
 AM_CONDITIONAL(USE_LOAD_WARNING, test x$load_warning = xtrue)
@@ -1986,7 +1978,6 @@ AM_COND_IF([USE_IMCV], [strongswan_options=${strongswan_options}" imcv imv_polic
 AM_COND_IF([USE_IMC_SWIMA], [strongswan_options=${strongswan_options}" sw-collector"])
 AM_COND_IF([USE_IMV_SWIMA], [strongswan_options=${strongswan_options}" sec-updater"])
 AM_COND_IF([USE_LIBTNCCS], [strongswan_options=${strongswan_options}" tnc"])
-AM_COND_IF([USE_MANAGER], [strongswan_options=${strongswan_options}" manager"])
 AM_COND_IF([USE_MEDSRV], [strongswan_options=${strongswan_options}" medsrv"])
 AM_COND_IF([USE_CMD], [strongswan_options=${strongswan_options}" charon-cmd"])
 AM_COND_IF([USE_NM], [strongswan_options=${strongswan_options}" charon-nm"])
@@ -2196,7 +2187,6 @@ AC_CONFIG_FILES([
 	src/pki/man/Makefile
 	src/pool/Makefile
 	src/libfast/Makefile
-	src/manager/Makefile
 	src/medsrv/Makefile
 	src/checksum/Makefile
 	src/conftest/Makefile

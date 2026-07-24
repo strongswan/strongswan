@@ -304,7 +304,7 @@ all|alpine|codeql|coverage|sonarcloud|no-dbg|no-testable-ke)
 		# no TrouSerS either
 		CONFIG="$CONFIG --disable-tss-trousers --disable-aikgen"
 		# and no Clearsilver
-		CONFIG="$CONFIG --disable-fast --disable-manager --disable-medsrv"
+		CONFIG="$CONFIG --disable-fast --disable-medsrv"
 	fi
 	if test "$1" = "build-deps"; then
 		build_botan

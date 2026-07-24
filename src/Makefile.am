@@ -91,10 +91,6 @@ if USE_FAST
   SUBDIRS += libfast
 endif
 
-if USE_MANAGER
-  SUBDIRS += manager
-endif
-
 if USE_MEDSRV
   SUBDIRS += medsrv
 endif

@@ -20,7 +20,6 @@ options = \
 	options/imcv.opt \
 	options/imv_policy_manager.opt \
 	options/iptfs.opt \
-	options/manager.opt \
 	options/medsrv.opt \
 	options/pki.opt \
 	options/pool.opt \
