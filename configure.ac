@@ -270,7 +270,6 @@ ARG_ENABL_SET([forecast],       [enable forecast plugin forwarding broadcast/mul
 ARG_ENABL_SET([error-notify],   [enable error notification plugin.])
 ARG_ENABL_SET([farp],           [enable ARP faking plugin that responds to ARP requests to peers virtual IP])
 ARG_ENABL_SET([ha],             [enable high availability cluster plugin.])
-ARG_ENABL_SET([led],            [enable plugin to control LEDs on IKEv2 activity using the Linux kernel LED subsystem.])
 ARG_ENABL_SET([load-tester],    [enable load testing plugin for IKEv2 daemon.])
 ARG_ENABL_SET([lookip],         [enable fast virtual IP lookup and notification plugin.])
 ARG_ENABL_SET([radattr],        [enable plugin to inject and process custom RADIUS attributes as IKEv2 client.])
@@ -1612,7 +1611,6 @@ ADD_PLUGIN([lookip],               [c charon])
 ADD_PLUGIN([error-notify],         [c charon])
 ADD_PLUGIN([certexpire],           [c charon])
 ADD_PLUGIN([systime-fix],          [c charon])
-ADD_PLUGIN([led],                  [c charon])
 ADD_PLUGIN([coupling],             [c charon])
 ADD_PLUGIN([radattr],              [c charon])
 ADD_PLUGIN([addrblock],            [c charon])
@@ -1727,7 +1725,6 @@ AM_CONDITIONAL(USE_LOOKIP, test x$lookip = xtrue)
 AM_CONDITIONAL(USE_ERROR_NOTIFY, test x$error_notify = xtrue)
 AM_CONDITIONAL(USE_CERTEXPIRE, test x$certexpire = xtrue)
 AM_CONDITIONAL(USE_SYSTIME_FIX, test x$systime_fix = xtrue)
-AM_CONDITIONAL(USE_LED, test x$led = xtrue)
 AM_CONDITIONAL(USE_COUPLING, test x$coupling = xtrue)
 AM_CONDITIONAL(USE_RADATTR, test x$radattr = xtrue)
 AM_CONDITIONAL(USE_EAP_SIM, test x$eap_sim = xtrue)
@@ -2074,7 +2071,6 @@ AC_CONFIG_FILES([
 	src/libcharon/plugins/error_notify/Makefile
 	src/libcharon/plugins/certexpire/Makefile
 	src/libcharon/plugins/systime_fix/Makefile
-	src/libcharon/plugins/led/Makefile
 	src/libcharon/plugins/coupling/Makefile
 	src/libcharon/plugins/radattr/Makefile
 	src/libcharon/plugins/osx_attr/Makefile

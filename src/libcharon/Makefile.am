@@ -614,13 +614,6 @@ if MONOLITHIC
 endif
 endif
 
-if USE_LED
-  SUBDIRS += plugins/led
-if MONOLITHIC
-  libcharon_la_LIBADD += plugins/led/libstrongswan-led.la
-endif
-endif
-
 if USE_COUPLING
   SUBDIRS += plugins/coupling
 if MONOLITHIC
