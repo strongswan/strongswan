@@ -48,7 +48,7 @@ esac
 SERVICES="apache2 dbus isc-dhcp-server slapd bind9 freeradius"
 INC=$INC,${SERVICES// /,}
 # packages to install via APT, for SWIMA tests
-APT1="libgcrypt20-dev traceroute iptables"
+APT1="traceroute iptables"
 APT="tmux"
 # additional services to disable
 case "$BASEIMGSUITE" in

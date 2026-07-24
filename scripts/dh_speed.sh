@@ -11,15 +11,12 @@ function modptest {
 }
 
 echo "testing gmp"
-# gmp needs an RNG plugin, pick gcrypt
-modptest "gmp gcrypt"
+# gmp needs an RNG plugin, pick random
+modptest "gmp random"
 
 echo "testing curve25519"
-# curve25519 needs an RNG plugin, pick gcrypt
-$DIR/dh_speed "curve25519 gcrypt" 300 curve25519 curve25519 | tail -n 1
-
-echo "testing gcrypt"
-modptest "gcrypt"
+# curve25519 needs an RNG plugin, pick random
+$DIR/dh_speed "curve25519 random" 300 curve25519 curve25519 | tail -n 1
 
 echo "testing openssl"
 modptest "openssl"

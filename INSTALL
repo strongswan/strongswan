@@ -59,8 +59,6 @@ Contents
         https://botan.randombit.net
       * The GNU Multiprecision Arithmetic Library (GMP, libgmp)
         https://gmplib.org
-      * The GNU Cryptographic Library (libgcrypt)
-        https://www.gnupg.org
 
     If no other options are specified during ./configure libgmp will be used.
 

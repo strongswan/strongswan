@@ -138,7 +138,6 @@ ARG_ENABL_SET([des],            [enable DES/3DES software implementation plugin.
 ARG_DISBL_SET([drbg],           [disable the NIST Deterministic Random Bit Generator plugin.])
 ARG_ENABL_SET([fips-prf],       [enable FIPS PRF software implementation plugin.])
 ARG_ENABL_SET([gcm],            [enable the GCM AEAD wrapper crypto plugin.])
-ARG_ENABL_SET([gcrypt],         [enables the libgcrypt plugin.])
 ARG_ENABL_SET([gmp],            [enable GNU MP (libgmp) based crypto implementation plugin.])
 ARG_ENABL_SET([curve25519],     [enable Curve25519 Diffie-Hellman plugin.])
 ARG_ENABL_SET([hmac],           [enable HMAC crypto implementation plugin.])
@@ -1159,20 +1158,6 @@ if test x$wolfssl = xtrue; then
 	AC_SUBST(wolfssl_LIBS)
 fi
 
-if test x$gcrypt = xtrue; then
-	AC_CHECK_LIB([gcrypt],[gcry_control],[LIBS="$LIBS"],[AC_MSG_ERROR([gcrypt library not found])],[-lgpg-error])
-	AC_CHECK_HEADER([gcrypt.h],,[AC_MSG_ERROR([gcrypt header gcrypt.h not found!])])
-	AC_MSG_CHECKING([gcrypt CAMELLIA cipher])
-	AC_COMPILE_IFELSE(
-		[AC_LANG_PROGRAM(
-			[[#include <gcrypt.h>]],
-			[[enum gcry_cipher_algos alg = GCRY_CIPHER_CAMELLIA128;]])],
-		[AC_MSG_RESULT([yes]);
-		 AC_DEFINE([HAVE_GCRY_CIPHER_CAMELLIA], [], [have GCRY_CIPHER_CAMELLIA128])],
-		[AC_MSG_RESULT([no])]
-	)
-fi
-
 if test x$botan = xtrue; then
 	PKG_CHECK_MODULES(botan, [botan-3], [],
 		[PKG_CHECK_MODULES(botan, [botan-2])])
@@ -1518,7 +1503,6 @@ ADD_PLUGIN([ipseckey],             [c charon])
 ADD_PLUGIN([pem],                  [s charon swanctl pki scripts attest nm cmd aikgen fd fc])
 ADD_PLUGIN([openssl],              [s charon swanctl pki scripts attest nm cmd aikgen fd])
 ADD_PLUGIN([wolfssl],              [s charon swanctl pki scripts attest nm cmd aikgen])
-ADD_PLUGIN([gcrypt],               [s charon swanctl pki scripts attest nm cmd aikgen])
 ADD_PLUGIN([botan],                [s charon swanctl pki scripts attest nm cmd aikgen])
 ADD_PLUGIN([pkcs8],                [s charon swanctl pki scripts attest nm cmd])
 ADD_PLUGIN([fips-prf],             [s charon nm cmd])
@@ -1681,7 +1665,6 @@ AM_CONDITIONAL(USE_MYSQL, test x$mysql = xtrue)
 AM_CONDITIONAL(USE_SQLITE, test x$sqlite = xtrue)
 AM_CONDITIONAL(USE_OPENSSL, test x$openssl = xtrue)
 AM_CONDITIONAL(USE_WOLFSSL, test x$wolfssl = xtrue)
-AM_CONDITIONAL(USE_GCRYPT, test x$gcrypt = xtrue)
 AM_CONDITIONAL(USE_BOTAN, test x$botan = xtrue)
 AM_CONDITIONAL(USE_AGENT, test x$agent = xtrue)
 AM_CONDITIONAL(USE_PKCS11, test x$pkcs11 = xtrue)
@@ -1963,7 +1946,6 @@ AC_CONFIG_FILES([
 	src/libstrongswan/plugins/sqlite/Makefile
 	src/libstrongswan/plugins/openssl/Makefile
 	src/libstrongswan/plugins/wolfssl/Makefile
-	src/libstrongswan/plugins/gcrypt/Makefile
 	src/libstrongswan/plugins/botan/Makefile
 	src/libstrongswan/plugins/agent/Makefile
 	src/libstrongswan/plugins/pkcs11/Makefile

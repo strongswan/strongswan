@@ -579,13 +579,6 @@ if MONOLITHIC
 endif
 endif
 
-if USE_GCRYPT
-  SUBDIRS += plugins/gcrypt
-if MONOLITHIC
-  libstrongswan_la_LIBADD += plugins/gcrypt/libstrongswan-gcrypt.la
-endif
-endif
-
 if USE_BOTAN
   SUBDIRS += plugins/botan
 if MONOLITHIC

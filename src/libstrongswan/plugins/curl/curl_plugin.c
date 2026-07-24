@@ -69,11 +69,6 @@ static void add_feature_with_ssl(private_curl_plugin_t *this, const char *ssl,
 		add_feature(this, f);
 		add_feature(this, PLUGIN_DEPENDS(CUSTOM, "openssl-threading"));
 	}
-	else if (strpfx(ssl, "GnuTLS"))
-	{
-		add_feature(this, f);
-		add_feature(this, PLUGIN_DEPENDS(CUSTOM, "gcrypt-threading"));
-	}
 	else
 	{
 		add_feature(this, f);

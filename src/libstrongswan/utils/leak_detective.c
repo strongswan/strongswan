@@ -564,12 +564,6 @@ static char *whitelist[] = {
 	/* libldap */
 	"ldap_int_initialize",
 	"ldap_pvt_tls_set_option",
-	/* libgcrypt */
-	"gcrypt_plugin_create",
-	"gcry_control",
-	"gcry_check_version",
-	"gcry_randomize",
-	"gcry_create_nonce",
 	/* OpenSSL: These are needed for unit-tests only, the openssl plugin
 	 * does properly clean up any memory during destroy(). */
 	"ECDSA_do_sign_ex",

@@ -68,7 +68,6 @@ CONFIG_OPTS = \
 	--enable-leak-detective \
 	--enable-load-tester \
 	--enable-test-vectors \
-	--enable-gcrypt \
 	--enable-socket-default \
 	--enable-socket-dynamic \
 	--enable-dhcp \

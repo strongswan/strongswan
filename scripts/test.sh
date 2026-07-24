@@ -225,11 +225,6 @@ openssl*)
 		TESTS_PLUGINS="$TESTS_PLUGINS kdf"
 	fi
 	;;
-gcrypt)
-	CONFIG="--disable-defaults --enable-pki --enable-gcrypt --enable-random --enable-pem --enable-pkcs1 --enable-pkcs8 --enable-gcm --enable-hmac --enable-kdf --enable-curve25519 --enable-x509 --enable-constraints"
-	export TESTS_PLUGINS="test-vectors gcrypt! random pem pkcs1 pkcs8 gcm hmac kdf curve25519 x509 constraints"
-	DEPS="libgcrypt20-dev"
-	;;
 botan)
 	CONFIG="--disable-defaults --enable-pki --enable-botan --enable-pem --enable-hmac --enable-x509 --enable-constraints --enable-drbg"
 	export TESTS_PLUGINS="test-vectors botan! pem hmac x509 constraints drbg"
@@ -280,7 +275,7 @@ all|alpine|codeql|coverage|sonarcloud|no-dbg|no-testable-ke)
 	DEPS="$DEPS libcurl4-gnutls-dev libsoup-3.0-dev libunbound-dev libldns-dev
 		  libmysqlclient-dev libsqlite3-dev
 		  libldap2-dev libpcsclite-dev libpam0g-dev binutils-dev libnm-dev
-		  libgcrypt20-dev libjson-c-dev libtspi-dev libsystemd-dev
+		  libjson-c-dev libtspi-dev libsystemd-dev
 		  libselinux1-dev libiptc-dev ruby-rubygems python3-build tox"
 	if [ "$ID" = "ubuntu" -a "$VERSION_ID" = "22.04" -a "$1" = "build-deps" ]; then
 		# python3-build is broken on 22.04 with venv (https://bugs.launchpad.net/ubuntu/+source/python-build/+bug/1992108)
@@ -292,7 +287,7 @@ all|alpine|codeql|coverage|sonarcloud|no-dbg|no-testable-ke)
 		# override the whole list for alpine
 		DEPS="git gmp-dev openldap-dev curl-dev ldns-dev unbound-dev libsoup3-dev
 			  libxml2-dev tpm2-tss-dev tpm2-tss-sys mariadb-dev wolfssl-dev
-			  libgcrypt-dev botan3-dev pcsc-lite-dev networkmanager-dev
+			  botan3-dev pcsc-lite-dev networkmanager-dev
 			  linux-pam-dev iptables-dev libselinux-dev binutils-dev libunwind-dev
 			  ruby py3-setuptools py3-build py3-tox"
 		# musl does not provide backtrace(), so use libunwind

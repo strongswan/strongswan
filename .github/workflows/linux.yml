@@ -164,7 +164,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        test: [ botan, wolfssl, openssl-sys, openssl-3, openssl-4, openssl-awslc, gcrypt ]
+        test: [ botan, wolfssl, openssl-sys, openssl-3, openssl-4, openssl-awslc ]
         os: [ ubuntu-latest, ubuntu-22.04 ]
         exclude:
           # test custom-built libs only on the latest platform

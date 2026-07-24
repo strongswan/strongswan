@@ -56,7 +56,6 @@ plugins = \
 	plugins/error-notify.opt \
 	plugins/ext-auth.opt \
 	plugins/forecast.opt \
-	plugins/gcrypt.opt \
 	plugins/ha.opt \
 	plugins/imc-attestation.opt \
 	plugins/imc-hcd.opt \

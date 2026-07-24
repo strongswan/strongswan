@@ -32,8 +32,7 @@ function ecdsatestall {
   ecdsatest secp521r1 "$1" 500
 }
 
-rsatestall "gmp gcrypt pem pkcs1"
-rsatestall "gcrypt pem pkcs1"
+rsatestall "gmp random pem pkcs1"
 rsatestall "openssl pem"
 rsatestall "botan pem"
 ecdsatestall "openssl pem"
