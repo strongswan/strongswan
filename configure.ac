@@ -151,7 +151,6 @@ ARG_ENABL_SET([ml],             [enable Module-Lattice-based crypto (ML-KEM) plu
 ARG_DISBL_SET([nonce],          [disable nonce generation plugin.])
 ARG_DISBL_SET([openssl],        [disable the OpenSSL crypto plugin.])
 ARG_ENABL_SET([wolfssl],        [enables the wolfSSL crypto plugin.])
-ARG_ENABL_SET([padlock],        [enables VIA Padlock crypto plugin.])
 ARG_DISBL_SET([random],         [disable RNG implementation on top of /dev/(u)random.])
 ARG_ENABL_SET([rc2],            [enable RC2 software implementation plugin.])
 ARG_ENABL_SET([rdrand],         [enable Intel RDRAND random generator plugin.])
@@ -1518,7 +1517,6 @@ ADD_PLUGIN([sshkey],               [s charon swanctl pki nm cmd])
 ADD_PLUGIN([dnscert],              [c charon])
 ADD_PLUGIN([ipseckey],             [c charon])
 ADD_PLUGIN([pem],                  [s charon swanctl pki scripts attest nm cmd aikgen fd fc])
-ADD_PLUGIN([padlock],              [s charon])
 ADD_PLUGIN([openssl],              [s charon swanctl pki scripts attest nm cmd aikgen fd])
 ADD_PLUGIN([wolfssl],              [s charon swanctl pki scripts attest nm cmd aikgen])
 ADD_PLUGIN([gcrypt],               [s charon swanctl pki scripts attest nm cmd aikgen])
@@ -1683,7 +1681,6 @@ AM_CONDITIONAL(USE_CMAC, test x$cmac = xtrue)
 AM_CONDITIONAL(USE_XCBC, test x$xcbc = xtrue)
 AM_CONDITIONAL(USE_MYSQL, test x$mysql = xtrue)
 AM_CONDITIONAL(USE_SQLITE, test x$sqlite = xtrue)
-AM_CONDITIONAL(USE_PADLOCK, test x$padlock = xtrue)
 AM_CONDITIONAL(USE_OPENSSL, test x$openssl = xtrue)
 AM_CONDITIONAL(USE_WOLFSSL, test x$wolfssl = xtrue)
 AM_CONDITIONAL(USE_GCRYPT, test x$gcrypt = xtrue)
@@ -1967,7 +1964,6 @@ AC_CONFIG_FILES([
 	src/libstrongswan/plugins/ldap/Makefile
 	src/libstrongswan/plugins/mysql/Makefile
 	src/libstrongswan/plugins/sqlite/Makefile
-	src/libstrongswan/plugins/padlock/Makefile
 	src/libstrongswan/plugins/openssl/Makefile
 	src/libstrongswan/plugins/wolfssl/Makefile
 	src/libstrongswan/plugins/gcrypt/Makefile

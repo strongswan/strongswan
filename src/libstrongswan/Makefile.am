@@ -572,13 +572,6 @@ if MONOLITHIC
 endif
 endif
 
-if USE_PADLOCK
-  SUBDIRS += plugins/padlock
-if MONOLITHIC
-  libstrongswan_la_LIBADD += plugins/padlock/libstrongswan-padlock.la
-endif
-endif
-
 if USE_OPENSSL
   SUBDIRS += plugins/openssl
 if MONOLITHIC
