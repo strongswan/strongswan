@@ -82,7 +82,6 @@ CONFIG_OPTS = \
 	--enable-hmac \
 	--enable-chapoly \
 	--enable-ha \
-	--enable-af-alg \
 	--enable-whitelist \
 	--enable-xauth-generic \
 	--enable-xauth-eap \

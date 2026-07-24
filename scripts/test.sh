@@ -268,8 +268,6 @@ all|alpine|codeql|coverage|sonarcloud|no-dbg|no-testable-ke)
 			--disable-unwind-backtraces
 			--disable-svc --disable-dbghelp-backtraces --disable-socket-win
 			--disable-kernel-wfp --disable-kernel-iph --disable-winhttp"
-	# not enabled on the build server
-	CONFIG="$CONFIG --disable-af-alg"
 	if test "$TEST" != "coverage"; then
 		CONFIG="$CONFIG --disable-coverage"
 	else

@@ -129,7 +129,6 @@ AC_SUBST(ipsec_script_upper, [`echo -n "$ipsec_script" | tr a-z A-Z`])
 
 # crypto plugins
 ARG_ENABL_SET([aes],            [enable AES software implementation plugin.])
-ARG_ENABL_SET([af-alg],         [enable AF_ALG crypto interface to Linux Crypto API.])
 ARG_ENABL_SET([botan],          [enables the Botan crypto plugin.])
 ARG_ENABL_SET([ccm],            [enables the CCM AEAD wrapper crypto plugin.])
 ARG_ENABL_SET([chapoly],        [enables the ChaCha20/Poly1305 AEAD plugin.])
@@ -1522,7 +1521,6 @@ ADD_PLUGIN([wolfssl],              [s charon swanctl pki scripts attest nm cmd a
 ADD_PLUGIN([gcrypt],               [s charon swanctl pki scripts attest nm cmd aikgen])
 ADD_PLUGIN([botan],                [s charon swanctl pki scripts attest nm cmd aikgen])
 ADD_PLUGIN([pkcs8],                [s charon swanctl pki scripts attest nm cmd])
-ADD_PLUGIN([af-alg],               [s charon swanctl pki scripts attest nm cmd aikgen])
 ADD_PLUGIN([fips-prf],             [s charon nm cmd])
 ADD_PLUGIN([gmp],                  [s charon swanctl pki scripts attest nm cmd aikgen fc])
 ADD_PLUGIN([curve25519],           [s charon swanctl pki scripts nm cmd])
@@ -1692,7 +1690,6 @@ AM_CONDITIONAL(USE_CHAPOLY, test x$chapoly = xtrue)
 AM_CONDITIONAL(USE_CTR, test x$ctr = xtrue)
 AM_CONDITIONAL(USE_CCM, test x$ccm = xtrue)
 AM_CONDITIONAL(USE_GCM, test x$gcm = xtrue)
-AM_CONDITIONAL(USE_AF_ALG, test x$af_alg = xtrue)
 AM_CONDITIONAL(USE_DRBG, test x$drbg = xtrue)
 AM_CONDITIONAL(USE_ML, test x$ml = xtrue)
 
@@ -1974,7 +1971,6 @@ AC_CONFIG_FILES([
 	src/libstrongswan/plugins/ctr/Makefile
 	src/libstrongswan/plugins/ccm/Makefile
 	src/libstrongswan/plugins/gcm/Makefile
-	src/libstrongswan/plugins/af_alg/Makefile
 	src/libstrongswan/plugins/drbg/Makefile
 	src/libstrongswan/plugins/ml/Makefile
 	src/libstrongswan/plugins/test_vectors/Makefile

@@ -285,13 +285,6 @@ endif
 # build plugins with their own Makefile
 #######################################
 
-if USE_AF_ALG
-  SUBDIRS += plugins/af_alg
-if MONOLITHIC
-  libstrongswan_la_LIBADD += plugins/af_alg/libstrongswan-af-alg.la
-endif
-endif
-
 if USE_AES
   SUBDIRS += plugins/aes
 if MONOLITHIC
