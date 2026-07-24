@@ -91,10 +91,6 @@ if USE_FAST
   SUBDIRS += libfast
 endif
 
-if USE_MEDSRV
-  SUBDIRS += medsrv
-endif
-
 if USE_ATTR_SQL
   SUBDIRS += pool
 else

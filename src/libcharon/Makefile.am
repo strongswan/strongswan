@@ -502,20 +502,6 @@ if MONOLITHIC
 endif
 endif
 
-if USE_MEDSRV
-  SUBDIRS += plugins/medsrv
-if MONOLITHIC
-  libcharon_la_LIBADD += plugins/medsrv/libstrongswan-medsrv.la
-endif
-endif
-
-if USE_MEDCLI
-  SUBDIRS += plugins/medcli
-if MONOLITHIC
-  libcharon_la_LIBADD += plugins/medcli/libstrongswan-medcli.la
-endif
-endif
-
 if USE_DHCP
   SUBDIRS += plugins/dhcp
 if MONOLITHIC
