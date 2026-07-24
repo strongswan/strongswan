@@ -211,7 +211,6 @@ ARG_ENABL_SET([eap-dynamic],    [enable dynamic EAP proxy module.])
 ARG_ENABL_SET([eap-radius],     [enable RADIUS proxy authentication module.])
 ARG_ENABL_SET([ext-auth],       [enable plugin calling an external authorization script.])
 ARG_ENABL_SET([ipseckey],       [enable IPSECKEY authentication plugin.])
-ARG_ENABL_SET([keychain],       [enables OS X Keychain Services credential set.])
 ARG_ENABL_SET([pkcs11],         [enables the PKCS11 token support plugin.])
 ARG_ENABL_SET([tpm],            [enables the TPM plugin to access private keys and certificates bound to a TPM 2.0.])
 ARG_DISBL_SET([revocation],     [disable X509 CRL/OCSP revocation check plugin.])
@@ -1544,7 +1543,6 @@ ADD_PLUGIN([fips-prf],             [s charon nm cmd])
 ADD_PLUGIN([gmp],                  [s charon swanctl pki scripts attest nm cmd aikgen fc])
 ADD_PLUGIN([curve25519],           [s charon swanctl pki scripts nm cmd])
 ADD_PLUGIN([agent],                [s charon nm cmd])
-ADD_PLUGIN([keychain],             [s charon cmd])
 ADD_PLUGIN([chapoly],              [s charon scripts nm cmd])
 ADD_PLUGIN([xcbc],                 [s charon nm cmd])
 ADD_PLUGIN([cmac],                 [s charon nm cmd])
@@ -1709,7 +1707,6 @@ AM_CONDITIONAL(USE_WOLFSSL, test x$wolfssl = xtrue)
 AM_CONDITIONAL(USE_GCRYPT, test x$gcrypt = xtrue)
 AM_CONDITIONAL(USE_BOTAN, test x$botan = xtrue)
 AM_CONDITIONAL(USE_AGENT, test x$agent = xtrue)
-AM_CONDITIONAL(USE_KEYCHAIN, test x$keychain = xtrue)
 AM_CONDITIONAL(USE_PKCS11, test x$pkcs11 = xtrue)
 AM_CONDITIONAL(USE_TPM, test x$tpm = xtrue)
 AM_CONDITIONAL(USE_CHAPOLY, test x$chapoly = xtrue)
@@ -1998,7 +1995,6 @@ AC_CONFIG_FILES([
 	src/libstrongswan/plugins/gcrypt/Makefile
 	src/libstrongswan/plugins/botan/Makefile
 	src/libstrongswan/plugins/agent/Makefile
-	src/libstrongswan/plugins/keychain/Makefile
 	src/libstrongswan/plugins/pkcs11/Makefile
 	src/libstrongswan/plugins/chapoly/Makefile
 	src/libstrongswan/plugins/ctr/Makefile

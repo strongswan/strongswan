@@ -262,7 +262,7 @@ all|alpine|codeql|coverage|sonarcloud|no-dbg|no-testable-ke)
 		CFLAGS="$CFLAGS -DDEBUG_LEVEL=-1"
 	fi
 	CONFIG="--enable-all --disable-android-dns --disable-android-log
-			--disable-kernel-pfroute --disable-keychain
+			--disable-kernel-pfroute
 			--disable-lock-profiler --disable-padlock --disable-fuzzing
 			--disable-osx-attr --disable-tkm
 			--disable-unwind-backtraces
