@@ -261,7 +261,7 @@ all|alpine|codeql|coverage|sonarcloud|no-dbg|no-testable-ke)
 	if [ "$TEST" = "no-dbg" ]; then
 		CFLAGS="$CFLAGS -DDEBUG_LEVEL=-1"
 	fi
-	CONFIG="--enable-all --disable-android-dns --disable-android-log
+	CONFIG="--enable-all --disable-android-log
 			--disable-kernel-pfroute
 			--disable-lock-profiler --disable-padlock --disable-fuzzing
 			--disable-osx-attr --disable-tkm

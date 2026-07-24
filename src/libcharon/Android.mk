@@ -148,11 +148,6 @@ LOCAL_SRC_FILES := $(filter %.c,$(libcharon_la_SOURCES))
 
 # adding the plugin source files
 
-LOCAL_SRC_FILES += $(call add_plugin, android-dns)
-ifneq ($(call plugin_enabled, android-dns),)
-LOCAL_SHARED_LIBRARIES += libcutils
-endif
-
 LOCAL_SRC_FILES += $(call add_plugin, android-log)
 ifneq ($(call plugin_enabled, android-log),)
 LOCAL_LDLIBS += -llog

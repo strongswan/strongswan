@@ -234,7 +234,6 @@ ARG_ENABL_SET([stroke],         [enable the stroke configuration backend.])
 ARG_ENABL_SET([sql],            [enable SQL database configuration backend.])
 ARG_DISBL_SET([vici],           [disable strongSwan IKE generic IPC interface plugin.])
 # attribute provider/consumer plugins
-ARG_ENABL_SET([android-dns],    [enable Android specific DNS handler.])
 ARG_DISBL_SET([attr],           [disable strongswan.conf based configuration attribute plugin.])
 ARG_ENABL_SET([attr-sql],       [enable SQL based configuration attribute plugin.])
 ARG_ENABL_SET([dhcp],           [enable DHCP based attribute provider plugin.])
@@ -1190,15 +1189,6 @@ if test x$botan = xtrue; then
 	LIBS=$saved_LIBS
 fi
 
-if test x$android_dns = xtrue; then
-	AC_CHECK_LIB([cutils],[property_get],[LIBS="$LIBS"],[AC_MSG_ERROR([Android library libcutils not found])],[])
-	AC_CHECK_HEADER([cutils/properties.h],,[AC_MSG_ERROR([Android header cutils/properties.h not found!])])
-	# we have to force the use of libdl here because the autodetection
-	# above does not work correctly when cross-compiling for android.
-	DLLIB="-ldl"
-	AC_SUBST(DLLIB)
-fi
-
 if test x$eap_sim_pcsc = xtrue; then
 	PKG_CHECK_MODULES(pcsclite, [libpcsclite])
 	AC_SUBST(pcsclite_CFLAGS)
@@ -1617,7 +1607,6 @@ ADD_PLUGIN([tnccs-dynamic],        [t charon])
 ADD_PLUGIN([dhcp],                 [c charon])
 ADD_PLUGIN([osx-attr],             [c charon cmd])
 ADD_PLUGIN([p-cscf],               [c charon cmd])
-ADD_PLUGIN([android-dns],          [c charon])
 ADD_PLUGIN([android-log],          [c charon])
 ADD_PLUGIN([ha],                   [c charon])
 ADD_PLUGIN([whitelist],            [c charon])
@@ -1723,7 +1712,6 @@ AM_CONDITIONAL(USE_STROKE, test x$stroke = xtrue)
 AM_CONDITIONAL(USE_VICI, test x$vici = xtrue)
 AM_CONDITIONAL(USE_OSX_ATTR, test x$osx_attr = xtrue)
 AM_CONDITIONAL(USE_P_CSCF, test x$p_cscf = xtrue)
-AM_CONDITIONAL(USE_ANDROID_DNS, test x$android_dns = xtrue)
 AM_CONDITIONAL(USE_ANDROID_LOG, test x$android_log = xtrue)
 AM_CONDITIONAL(USE_SQL, test x$sql = xtrue)
 AM_CONDITIONAL(USE_DNSCERT, test x$dnscert = xtrue)
@@ -2099,7 +2087,6 @@ AC_CONFIG_FILES([
 	src/libcharon/plugins/radattr/Makefile
 	src/libcharon/plugins/osx_attr/Makefile
 	src/libcharon/plugins/p_cscf/Makefile
-	src/libcharon/plugins/android_dns/Makefile
 	src/libcharon/plugins/android_log/Makefile
 	src/libcharon/plugins/stroke/Makefile
 	src/libcharon/plugins/vici/Makefile
