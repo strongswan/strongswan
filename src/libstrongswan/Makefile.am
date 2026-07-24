@@ -306,13 +306,6 @@ if MONOLITHIC
 endif
 endif
 
-if USE_BLOWFISH
-  SUBDIRS += plugins/blowfish
-if MONOLITHIC
-  libstrongswan_la_LIBADD += plugins/blowfish/libstrongswan-blowfish.la
-endif
-endif
-
 if USE_RC2
   SUBDIRS += plugins/rc2
 if MONOLITHIC

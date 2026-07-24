@@ -1,8 +1,0 @@
-moon::systemctl start strongswan
-carol::systemctl start strongswan
-dave::systemctl start strongswan
-moon::expect-connection rw
-carol::expect-connection home
-carol::swanctl --initiate --child home
-dave::expect-connection home
-dave::swanctl --initiate --child home

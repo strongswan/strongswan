@@ -1,3 +1,0 @@
-moon::systemctl stop strongswan
-carol::systemctl stop strongswan
-dave::systemctl stop strongswan

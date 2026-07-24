@@ -63,7 +63,6 @@ CONFIG_OPTS = \
 	--enable-attr-sql \
 	--enable-mediation \
 	--enable-botan \
-	--enable-blowfish \
 	--enable-kernel-pfkey \
 	--enable-integrity-test \
 	--enable-leak-detective \

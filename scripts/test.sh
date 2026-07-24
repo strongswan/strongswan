@@ -411,7 +411,7 @@ freebsd)
 	CONFIG="--enable-kernel-pfkey --enable-kernel-pfroute --disable-scripts
 			--disable-kernel-netlink --enable-openssl --enable-eap-identity
 			--enable-eap-md5 --enable-eap-tls --enable-eap-mschapv2
-			--enable-eap-peap --enable-eap-ttls --enable-md4 --enable-blowfish
+			--enable-eap-peap --enable-eap-ttls --enable-md4
 			--enable-addrblock --enable-whitelist --enable-cmd --enable-curl
 			--enable-eap-aka --enable-eap-aka-3gpp2 --enable-eap-dynamic
 			--enable-eap-radius --enable-eap-sim --enable-eap-sim-file
