@@ -288,7 +288,7 @@ ARG_ENABL_SET([cert-enroll],    [enable automatic certificate enrollment via EST
 # optional features
 ARG_ENABL_SET([bfd-backtraces], [use binutils libbfd to resolve backtraces for memory leaks and segfaults.])
 ARG_ENABL_SET([dbghelp-backtraces],[use dbghlp.dll on Windows to create and print backtraces for memory leaks and segfaults.])
-ARG_DISBL_SET([ikev1],          [disable IKEv1 protocol support in charon.])
+ARG_ENABL_SET([ikev1],          [enable deprecated IKEv1 protocol support in charon.])
 ARG_DISBL_SET([ikev2],          [disable IKEv2 protocol support in charon.])
 ARG_ENABL_SET([integrity-test], [enable integrity testing of libstrongswan and plugins.])
 ARG_DISBL_SET([load-warning],   [disable the charon plugin load option warning in starter.])
@@ -2108,3 +2108,10 @@ AC_MSG_RESULT([libcharon:    $c_plugins])
 AC_MSG_RESULT([libtnccs:     $t_plugins])
 AC_MSG_RESULT([libtpmtss:    $p_plugins])
 AC_MSG_RESULT([])
+
+if test x$ikev1 = xtrue; then
+	AC_MSG_WARN(m4_normalize([
+		The IKEv1 protocol is deprecated. Support will be removed soon (disable
+		this warning with --disable-ikev1)]))
+	AC_MSG_RESULT([])
+fi

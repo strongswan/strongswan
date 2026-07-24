@@ -22,6 +22,7 @@ CONFIG_OPTS = \
 	--with-strongswan-conf=/etc/strongswan.conf.testing \
 	--with-random-device=/dev/urandom \
 	--disable-load-warning \
+	--enable-ikev1 \
 	--enable-curl \
 	--enable-ldap \
 	--enable-eap-aka \
