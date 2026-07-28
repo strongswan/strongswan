@@ -110,6 +110,11 @@ static hashtable_t *threads;
 static spinlock_t *threads_lock;
 
 /**
+ * Lock for setting condvars on threads
+ */
+static spinlock_t *condvar_lock;
+
+/**
  * Counter to assign printable thread IDs
  */
 static u_int threads_ids = 0;
@@ -325,9 +330,9 @@ void thread_set_active_condvar(CONDITION_VARIABLE *condvar)
 
 	thread = get_current_thread();
 
-	threads_lock->lock(threads_lock);
+	condvar_lock->lock(condvar_lock);
 	thread->condvar = condvar;
-	threads_lock->unlock(threads_lock);
+	condvar_lock->unlock(condvar_lock);
 
 	/* this is a cancellation point, as condvar wait is one */
 	SleepEx(0, TRUE);
@@ -340,10 +345,6 @@ static void WINAPI docancel(ULONG_PTR dwParam)
 {
 	private_thread_t *this = (private_thread_t*)dwParam;
 
-	/* make sure cancel() does not access this anymore */
-	threads_lock->lock(threads_lock);
-	threads_lock->unlock(threads_lock);
-
 	end_thread(this);
 	ExitThread(0);
 }
@@ -351,20 +352,20 @@ static void WINAPI docancel(ULONG_PTR dwParam)
 METHOD(thread_t, cancel, void,
 	private_thread_t *this)
 {
-	this->canceled = TRUE;
-	if (this->cancelability)
+	atomic_set_bool(&this->canceled, TRUE);
+	if (atomic_get_bool(&this->cancelability) &&
+		cas_bool(&this->cancel_pending, FALSE, TRUE))
 	{
-		threads_lock->lock(threads_lock);
-		if (!this->cancel_pending)
+		CONDITION_VARIABLE *cv;
+
+		condvar_lock->lock(condvar_lock);
+		cv = this->condvar;
+		QueueUserAPC(docancel, this->handle, (uintptr_t)this);
+		if (cv)
 		{
-			this->cancel_pending = TRUE;
-			QueueUserAPC(docancel, this->handle, (uintptr_t)this);
-			if (this->condvar)
-			{
-				WakeAllConditionVariable(this->condvar);
-			}
+			WakeAllConditionVariable(cv);
 		}
-		threads_lock->unlock(threads_lock);
+		condvar_lock->unlock(condvar_lock);
 	}
 }
 
@@ -408,10 +409,10 @@ METHOD(thread_t, join, void*,
 static DWORD thread_cb(private_thread_t *this)
 {
 	/* Enable cancelability once the thread starts. We must check for any
-	 * pending cancellation request an queue the APC that gets executed
+	 * pending cancellation request and queue the APC that gets executed
 	 * at the first cancellation point. */
-	this->cancelability = TRUE;
-	if (this->canceled)
+	atomic_set_bool(&this->cancelability, TRUE);
+	if (atomic_get_bool(&this->canceled))
 	{
 		cancel(this);
 	}
@@ -579,10 +580,10 @@ bool thread_cancelability(bool enable)
 	bool old;
 
 	this = get_current_thread();
-	old = this->cancelability;
-	this->cancelability = enable;
+	old = atomic_get_bool(&this->cancelability);
+	atomic_set_bool(&this->cancelability, enable);
 
-	if (enable && !old && this->canceled)
+	if (enable && !old && atomic_get_bool(&this->canceled))
 	{
 		cancel(this);
 	}
@@ -664,6 +665,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
 void threads_init()
 {
 	threads_lock = spinlock_create();
+	condvar_lock = spinlock_create();
 	threads = hashtable_create(hashtable_hash_ptr, hashtable_equals_ptr, 4);
 
 	/* reset counter should we initialize more than once */
@@ -686,5 +688,7 @@ void threads_deinit()
 
 	threads_lock->destroy(threads_lock);
 	threads_lock = NULL;
+	condvar_lock->destroy(condvar_lock);
+	condvar_lock = NULL;
 	threads->destroy(threads);
 }
