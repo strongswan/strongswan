@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2014 Tobias Brunner
+ * Copyright (C) 2008-2026 Tobias Brunner
  * Copyright (C) 2005-2008 Martin Willi
  *
  * Copyright (C) secunet Security Networks AG
@@ -68,7 +68,7 @@ refcount_t ref_cur(refcount_t *ref)
 }
 
 /**
- * Spinlock for all compare and swap operations.
+ * Spinlock for all compare, swap and get/set operations.
  */
 static spinlock_t *cas_lock;
 
@@ -87,6 +87,23 @@ bool cas_##name(type *ptr, type oldval, type newval) \
 
 _cas_impl(bool, bool)
 _cas_impl(ptr, void*)
+
+bool atomic_get_bool(bool *ptr)
+{
+	bool val;
+
+	cas_lock->lock(cas_lock);
+	val = *ptr;
+	cas_lock->unlock(cas_lock);
+	return val;
+}
+
+void atomic_set_bool(bool *ptr, bool val)
+{
+	cas_lock->lock(cas_lock);
+	*ptr = val;
+	cas_lock->unlock(cas_lock);
+}
 
 #endif /* !HAVE_GCC_ATOMIC_OPERATIONS && !HAVE_GCC_SYNC_OPERATIONS */
 

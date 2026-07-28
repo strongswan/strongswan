@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2014 Tobias Brunner
+ * Copyright (C) 2008-2026 Tobias Brunner
  * Copyright (C) 2008 Martin Willi
  *
  * Copyright (C) secunet Security Networks AG
@@ -62,6 +62,9 @@ typedef u_int refcount_t;
 #define cas_bool(ptr, oldval, newval) _cas_impl(ptr, oldval, newval)
 #define cas_ptr(ptr, oldval, newval) _cas_impl(ptr, oldval, newval)
 
+#define atomic_get_bool(ptr) __atomic_load_n(ptr, __ATOMIC_ACQUIRE)
+#define atomic_set_bool(ptr, val) __atomic_store_n(ptr, val, __ATOMIC_RELEASE)
+
 #elif defined(HAVE_GCC_SYNC_OPERATIONS)
 
 #define ref_get(ref) __sync_add_and_fetch(ref, 1)
@@ -72,6 +75,9 @@ typedef u_int refcount_t;
 					(__sync_bool_compare_and_swap(ptr, oldval, newval))
 #define cas_ptr(ptr, oldval, newval) \
 					(__sync_bool_compare_and_swap(ptr, oldval, newval))
+
+#define atomic_get_bool(ptr) ({ bool _v = *(ptr); __sync_synchronize(); _v; })
+#define atomic_set_bool(ptr, val) (__sync_synchronize(), *(ptr) = (val))
 
 #else /* !HAVE_GCC_ATOMIC_OPERATIONS && !HAVE_GCC_SYNC_OPERATIONS */
 
@@ -123,6 +129,22 @@ bool cas_bool(bool *ptr, bool oldval, bool newval);
  * @return			TRUE if value equaled oldval and newval was written
  */
 bool cas_ptr(void **ptr, void *oldval, void *newval);
+
+/**
+ * Atomically read value of ptr.
+ *
+ * @param ptr		pointer to variable
+ * @return			current value
+ */
+bool atomic_get_bool(bool *ptr);
+
+/**
+ * Atomically set value of ptr to val.
+ *
+ * @param ptr		pointer to variable
+ * @param val		new value
+ */
+void atomic_set_bool(bool *ptr, bool val);
 
 #endif /* HAVE_GCC_ATOMIC_OPERATIONS */
 
