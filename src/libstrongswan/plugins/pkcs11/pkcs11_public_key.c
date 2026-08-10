@@ -24,7 +24,6 @@
 
 #include <asn1/oid.h>
 #include <asn1/asn1.h>
-#include <asn1/asn1_parser.h>
 #include <utils/debug.h>
 
 typedef struct private_pkcs11_public_key_t private_pkcs11_public_key_t;
@@ -117,74 +116,22 @@ static bool keylen_from_ecparams(chunk_t ecparams, size_t *keylen)
 }
 
 /**
- * ASN.1 definition of a subjectPublicKeyInfo structure when used with ECDSA
- * we currently only support named curves.
- */
-static const asn1Object_t pkinfoObjects[] = {
-	{ 0, "subjectPublicKeyInfo",	ASN1_SEQUENCE,		ASN1_NONE	}, /* 0 */
-	{ 1,   "algorithmIdentifier",	ASN1_SEQUENCE,		ASN1_NONE	}, /* 1 */
-	{ 2,     "algorithm",			ASN1_OID,			ASN1_BODY	}, /* 2 */
-	{ 2,     "namedCurve",			ASN1_OID,			ASN1_RAW	}, /* 3 */
-	{ 1,   "subjectPublicKey",		ASN1_BIT_STRING,	ASN1_BODY	}, /* 4 */
-	{ 0, "exit",					ASN1_EOC,			ASN1_EXIT	}
-};
-#define PKINFO_SUBJECT_PUBLIC_KEY_ALGORITHM		2
-#define PKINFO_SUBJECT_PUBLIC_KEY_NAMEDCURVE	3
-#define PKINFO_SUBJECT_PUBLIC_KEY				4
-
-/**
- * Extract the DER encoded Parameters and ECPoint from the given DER encoded
- * subjectPublicKeyInfo.
+ * Determine the key length from the parameters and prepare the ECPoint from
+ * the given input.
  * Memory for ecpoint is allocated.
  */
-static bool parse_ecdsa_public_key(chunk_t blob, chunk_t *ecparams,
+static bool parse_ecdsa_public_key(chunk_t blob, chunk_t params,
 								   chunk_t *ecpoint, size_t *keylen)
 {
-	asn1_parser_t *parser;
-	chunk_t object;
-	int objectID;
-	bool success = FALSE;
-
-	parser = asn1_parser_create(pkinfoObjects, blob);
-
-	while (parser->iterate(parser, &objectID, &object))
+	if (!blob.len || !params.len || !keylen_from_ecparams(params, keylen))
 	{
-		switch (objectID)
-		{
-			case PKINFO_SUBJECT_PUBLIC_KEY_ALGORITHM:
-			{
-				if (asn1_known_oid(object) != OID_EC_PUBLICKEY)
-				{
-					goto end;
-				}
-				break;
-			}
-			case PKINFO_SUBJECT_PUBLIC_KEY_NAMEDCURVE:
-			{
-				*ecparams = object;
-				if (!keylen_from_ecparams(object, keylen))
-				{
-					goto end;
-				}
-				break;
-			}
-			case PKINFO_SUBJECT_PUBLIC_KEY:
-			{
-				if (object.len > 0 && *object.ptr == 0x00)
-				{	/* skip initial bit string octet defining 0 unused bits */
-					object = chunk_skip(object, 1);
-				}
-				/* the correct way to encode an EC_POINT in PKCS#11 is as
-				 * ASN.1 octet string */
-				*ecpoint = asn1_wrap(ASN1_OCTET_STRING, "c", object);
-				break;
-			}
-		}
+		return FALSE;
 	}
-	success = parser->success(parser);
-end:
-	parser->destroy(parser);
-	return success;
+
+	/* the correct way to encode an EC_POINT in PKCS#11 is as
+	 * ASN.1 octet string */
+	*ecpoint = asn1_wrap(ASN1_OCTET_STRING, "c", blob);
+	return TRUE;
 }
 
 
@@ -248,6 +195,15 @@ METHOD(public_key_t, verify, bool,
 			memset(sig.ptr, 0, sig.len);
 			memcpy(sig.ptr + (len - r.len), r.ptr, r.len);
 			memcpy(sig.ptr + len + (len - s.len), s.ptr, s.len);
+			break;
+		case SIGN_ECDSA_WITH_NULL:
+		case SIGN_ECDSA_256:
+		case SIGN_ECDSA_384:
+		case SIGN_ECDSA_521:
+		case SIGN_ML_DSA_44:
+		case SIGN_ML_DSA_65:
+		case SIGN_ML_DSA_87:
+			/* don't skip zero-bytes for these */
 			break;
 		default:
 			sig = chunk_skip_zero(sig);
@@ -386,11 +342,8 @@ static bool encode_ecdsa(private_pkcs11_public_key_t *this,
 		chunk_t ecparams, ecpoint;
 		ecparams = chunk_create(attr[0].pValue, attr[0].ulValueLen);
 		ecpoint = chunk_create(attr[1].pValue, attr[1].ulValueLen);
-		/* encode as subjectPublicKeyInfo */
-		*encoding = asn1_wrap(ASN1_SEQUENCE, "mm",
-						asn1_wrap(ASN1_SEQUENCE, "mc",
-							asn1_build_known_oid(OID_EC_PUBLICKEY), ecparams),
-						asn1_bitstring("c", ecpoint));
+		*encoding = public_key_info_encode(ecpoint, OID_EC_PUBLICKEY,
+										   &ecparams);
 		success = TRUE;
 		if (type == PUBKEY_PEM)
 		{
@@ -406,10 +359,40 @@ static bool encode_ecdsa(private_pkcs11_public_key_t *this,
 }
 
 /**
- * Compute fingerprint of an ECDSA key
+ * Encode a public key stored in a CKA_VALUE using a given encoding type
  */
-static bool fingerprint_ecdsa(private_pkcs11_public_key_t *this,
-							  cred_encoding_type_t type, chunk_t *fp)
+static bool encode_cka_value(private_pkcs11_public_key_t *this,
+							 cred_encoding_type_t type, chunk_t *encoding)
+{
+	chunk_t pubkey, asn1;
+	bool success;
+
+	if (!this->lib->get_ck_attribute(this->lib, this->session, this->object,
+									 CKA_VALUE, &pubkey))
+	{
+		return FALSE;
+	}
+	asn1 = public_key_info_encode(pubkey, key_type_to_oid(this->type), NULL);
+	chunk_free(&pubkey);
+
+	if (type == PUBKEY_SPKI_ASN1_DER)
+	{
+		*encoding = asn1;
+		return TRUE;
+	}
+	success = lib->encoding->encode(lib->encoding, type, NULL, encoding,
+									CRED_PART_PUB_ASN1_DER, asn1,
+									CRED_PART_END);
+	chunk_free(&asn1);
+	return success;
+}
+
+/**
+ * Compute fingerprint of a key stored in the given attribute type
+ */
+static bool fingerprint_key(private_pkcs11_public_key_t *this,
+							CK_ATTRIBUTE_TYPE attr_type,
+							cred_encoding_type_t type, chunk_t *fp)
 {
 	hasher_t *hasher;
 	chunk_t asn1;
@@ -418,15 +401,28 @@ static bool fingerprint_ecdsa(private_pkcs11_public_key_t *this,
 	{
 		case KEYID_PUBKEY_SHA1:
 			if (!this->lib->get_ck_attribute(this->lib, this->session,
-						this->object, CKA_EC_POINT, &asn1))
+											 this->object, attr_type, &asn1))
 			{
 				return FALSE;
 			}
 			break;
 		case KEYID_PUBKEY_INFO_SHA1:
-			if (!encode_ecdsa(this, PUBKEY_SPKI_ASN1_DER, &asn1))
+			switch (attr_type)
 			{
-				return FALSE;
+				case CKA_EC_POINT:
+					if (!encode_ecdsa(this, PUBKEY_SPKI_ASN1_DER, &asn1))
+					{
+						return FALSE;
+					}
+					break;
+				case CKA_VALUE:
+					if (!encode_cka_value(this, PUBKEY_SPKI_ASN1_DER, &asn1))
+					{
+						return FALSE;
+					}
+					break;
+				default:
+					return FALSE;
 			}
 			break;
 		default:
@@ -492,6 +488,10 @@ METHOD(public_key_t, get_encoding, bool,
 			return encode_rsa(this, type, NULL, encoding);
 		case KEY_ECDSA:
 			return encode_ecdsa(this, type, encoding);
+		case KEY_ML_DSA_44:
+		case KEY_ML_DSA_65:
+		case KEY_ML_DSA_87:
+			return encode_cka_value(this, type, encoding);
 		default:
 			return FALSE;
 	}
@@ -509,7 +509,11 @@ METHOD(public_key_t, get_fingerprint, bool,
 		case KEY_RSA:
 			return encode_rsa(this, type, this, fp);
 		case KEY_ECDSA:
-			return fingerprint_ecdsa(this, type, fp);
+			return fingerprint_key(this, CKA_EC_POINT, type, fp);
+		case KEY_ML_DSA_44:
+		case KEY_ML_DSA_65:
+		case KEY_ML_DSA_87:
+			return fingerprint_key(this, CKA_VALUE, type, fp);
 		default:
 			return FALSE;
 	}
@@ -652,6 +656,24 @@ static private_pkcs11_public_key_t* find_ecdsa_key(chunk_t ecparams,
 }
 
 /**
+ * Find an ML-DSA key object
+ */
+static private_pkcs11_public_key_t* find_ml_dsa_key(key_type_t key_type,
+										CK_ML_DSA_PARAMETER_SET_TYPE param_set,
+										chunk_t value)
+{
+	CK_OBJECT_CLASS class = CKO_PUBLIC_KEY;
+	CK_KEY_TYPE type = CKK_ML_DSA;
+	CK_ATTRIBUTE tmpl[] = {
+		{CKA_CLASS, &class, sizeof(class)},
+		{CKA_KEY_TYPE, &type, sizeof(type)},
+		{CKA_PARAMETER_SET, &param_set, sizeof(param_set)},
+		{CKA_VALUE, value.ptr, value.len},
+	};
+	return find_key(key_type, value.len * 8, tmpl, countof(tmpl));
+}
+
+/**
  * Create a key object in a suitable token session
  */
 static private_pkcs11_public_key_t* create_key(key_type_t type, size_t keylen,
@@ -784,21 +806,53 @@ static private_pkcs11_public_key_t* create_ecdsa_key(chunk_t ecparams,
 }
 
 /**
+ * Create an ML-DSA key object in a suitable token session
+ */
+static private_pkcs11_public_key_t* create_ml_dsa_key(key_type_t key_type,
+										CK_ML_DSA_PARAMETER_SET_TYPE param_set,
+										chunk_t value)
+{
+	CK_OBJECT_CLASS class = CKO_PUBLIC_KEY;
+	CK_KEY_TYPE type = CKK_ML_DSA;
+	CK_ATTRIBUTE tmpl[] = {
+		{CKA_CLASS, &class, sizeof(class)},
+		{CKA_KEY_TYPE, &type, sizeof(type)},
+		{CKA_PARAMETER_SET, &param_set, sizeof(param_set)},
+		{CKA_VALUE, value.ptr, value.len},
+	};
+	CK_MECHANISM_TYPE mechs[] = {
+		CKM_ML_DSA,
+	};
+	return create_key(key_type, value.len * 8, mechs,
+					  countof(mechs), tmpl, countof(tmpl));
+}
+
+/**
  * See header
  */
 pkcs11_public_key_t *pkcs11_public_key_load(key_type_t type, va_list args)
 {
 	private_pkcs11_public_key_t *this;
-	chunk_t n, e, blob;
+	chunk_t n, e, blob, pkcs1, params;
+	key_type_t parsed;
 	size_t keylen = 0;
 
-	n = e = blob = chunk_empty;
+	n = e = blob = params = chunk_empty;
 	while (TRUE)
 	{
 		switch (va_arg(args, builder_part_t))
 		{
-			case BUILD_BLOB_ASN1_DER:
+			case BUILD_BLOB:
 				blob = va_arg(args, chunk_t);
+				continue;
+			case BUILD_BLOB_ASN1_DER:
+				pkcs1 = va_arg(args, chunk_t);
+				parsed = public_key_info_decode(pkcs1, &blob, &params);
+				if (type != KEY_ANY && parsed != type)
+				{
+					return NULL;
+				}
+				type = parsed;
 				continue;
 			case BUILD_RSA_MODULUS:
 				n = va_arg(args, chunk_t);
@@ -813,6 +867,7 @@ pkcs11_public_key_t *pkcs11_public_key_load(key_type_t type, va_list args)
 		}
 		break;
 	}
+
 	if (type == KEY_RSA && e.ptr && n.ptr)
 	{
 		if (n.len && n.ptr[0] == 0)
@@ -831,22 +886,65 @@ pkcs11_public_key_t *pkcs11_public_key_load(key_type_t type, va_list args)
 			return &this->public;
 		}
 	}
-	else if (type == KEY_ECDSA && blob.ptr)
+	else if (blob.ptr)
 	{
-		chunk_t ecparams, ecpoint;
-		ecparams = ecpoint = chunk_empty;
-		if (parse_ecdsa_public_key(blob, &ecparams, &ecpoint, &keylen))
+		switch (type)
 		{
-			this = find_ecdsa_key(ecparams, ecpoint, keylen);
-			if (!this)
+			case KEY_ECDSA:
 			{
-				this = create_ecdsa_key(ecparams, ecpoint, keylen);
+				chunk_t ecpoint = chunk_empty;
+
+				if (!lib->settings->get_bool(lib->settings,
+								"%s.plugins.pkcs11.use_ecc", FALSE, lib->ns))
+				{
+					return NULL;
+				}
+				if (parse_ecdsa_public_key(blob, params, &ecpoint, &keylen))
+				{
+					this = find_ecdsa_key(params, ecpoint, keylen);
+					if (!this)
+					{
+						this = create_ecdsa_key(params, ecpoint, keylen);
+					}
+					chunk_free(&ecpoint);
+					if (this)
+					{
+						return &this->public;
+					}
+				}
+				break;
 			}
-			chunk_free(&ecpoint);
-			if (this)
+			case KEY_ML_DSA_44:
+			case KEY_ML_DSA_65:
+			case KEY_ML_DSA_87:
 			{
-				return &this->public;
+				CK_ML_DSA_PARAMETER_SET_TYPE param_set = CKP_ML_DSA_44;
+
+				if (blob.len != get_public_key_size(type))
+				{
+					return NULL;
+				}
+				if (type == KEY_ML_DSA_65)
+				{
+					param_set = CKP_ML_DSA_65;
+				}
+				else if (type == KEY_ML_DSA_87)
+				{
+					param_set = CKP_ML_DSA_87;
+				}
+				this = find_ml_dsa_key(type, param_set, blob);
+				if (!this)
+				{
+					this = create_ml_dsa_key(type, param_set, blob);
+				}
+				if (this)
+				{
+					return &this->public;
+				}
+				break;
 			}
+			default:
+				break;
 		}
 	}
 	return NULL;
@@ -864,15 +962,16 @@ static private_pkcs11_public_key_t *find_key_by_keyid(pkcs11_library_t *p11,
 		{CKA_KEY_TYPE, &type, sizeof(type)},
 	};
 	CK_OBJECT_HANDLE object;
+	CK_ULONG param_set = 0;
 	CK_ATTRIBUTE attr[] = {
 		{CKA_KEY_TYPE, &type, sizeof(type)},
+		{CKA_PARAMETER_SET, &param_set, sizeof(param_set)},
 	};
 	CK_SESSION_HANDLE session;
 	CK_RV rv;
 	enumerator_t *enumerator;
 	int count = countof(tmpl);
-	bool found = FALSE;
-	size_t keylen;
+	size_t keylen = 0;
 
 	switch (key_type)
 	{
@@ -881,6 +980,11 @@ static private_pkcs11_public_key_t *find_key_by_keyid(pkcs11_library_t *p11,
 			break;
 		case KEY_ECDSA:
 			type = CKK_ECDSA;
+			break;
+		case KEY_ML_DSA_44:
+		case KEY_ML_DSA_65:
+		case KEY_ML_DSA_87:
+			type = CKK_ML_DSA;
 			break;
 		default:
 			/* don't specify key type on KEY_ANY */
@@ -907,12 +1011,13 @@ static private_pkcs11_public_key_t *find_key_by_keyid(pkcs11_library_t *p11,
 			{
 				chunk_t ecparams;
 				if (p11->get_ck_attribute(p11, session, object, CKA_EC_PARAMS,
-										  &ecparams) &&
-					keylen_from_ecparams(ecparams, &keylen))
+										  &ecparams))
 				{
+					if (keylen_from_ecparams(ecparams, &keylen))
+					{
+						key_type = KEY_ECDSA;
+					}
 					chunk_free(&ecparams);
-					key_type = KEY_ECDSA;
-					found = TRUE;
 				}
 				break;
 			}
@@ -925,7 +1030,28 @@ static private_pkcs11_public_key_t *find_key_by_keyid(pkcs11_library_t *p11,
 					keylen = n.len * 8;
 					chunk_free(&n);
 					key_type = KEY_RSA;
-					found = TRUE;
+				}
+				break;
+			}
+			case CKK_ML_DSA:
+			{
+				if (attr[1].ulValueLen != CK_UNAVAILABLE_INFORMATION)
+				{
+					switch (param_set)
+					{
+						case CKP_ML_DSA_44:
+							key_type = KEY_ML_DSA_44;
+							keylen = get_public_key_size(key_type) * 8;
+							break;
+						case CKP_ML_DSA_65:
+							key_type = KEY_ML_DSA_65;
+							keylen = get_public_key_size(key_type) * 8;
+							break;
+						case CKP_ML_DSA_87:
+							key_type = KEY_ML_DSA_87;
+							keylen = get_public_key_size(key_type) * 8;
+							break;
+					}
 				}
 				break;
 			}
@@ -936,7 +1062,7 @@ static private_pkcs11_public_key_t *find_key_by_keyid(pkcs11_library_t *p11,
 	}
 	enumerator->destroy(enumerator);
 
-	if (found)
+	if (keylen)
 	{
 		return create(key_type, keylen, p11, slot, session, object);
 	}
