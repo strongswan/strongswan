@@ -510,6 +510,56 @@ METHOD(public_key_t, get_fingerprint, bool,
 			return encode_rsa(this, type, this, fp);
 		case KEY_ECDSA:
 			return fingerprint_ecdsa(this, type, fp);
+		case KEY_ML_DSA_44:
+		case KEY_ML_DSA_65:
+		case KEY_ML_DSA_87:
+		{
+			hasher_t *hasher;
+			chunk_t asn1, key_bytes;
+			int oid;
+
+			switch (this->type)
+			{
+				case KEY_ML_DSA_44:
+					oid = OID_ML_DSA_44;
+					break;
+				case KEY_ML_DSA_65:
+					oid = OID_ML_DSA_65;
+					break;
+				default:
+					oid = OID_ML_DSA_87;
+					break;
+			}
+			if (!this->lib->get_ck_attribute(this->lib, this->session,
+						this->object, CKA_VALUE, &key_bytes))
+			{
+				return FALSE;
+			}
+			switch (type)
+			{
+				case KEYID_PUBKEY_SHA1:
+					asn1 = key_bytes;
+					break;
+				case KEYID_PUBKEY_INFO_SHA1:
+					asn1 = public_key_info_encode(key_bytes, oid);
+					chunk_free(&key_bytes);
+					break;
+				default:
+					chunk_free(&key_bytes);
+					return FALSE;
+			}
+			hasher = lib->crypto->create_hasher(lib->crypto, HASH_SHA1);
+			if (!hasher || !hasher->allocate_hash(hasher, asn1, fp))
+			{
+				DESTROY_IF(hasher);
+				chunk_clear(&asn1);
+				return FALSE;
+			}
+			hasher->destroy(hasher);
+			chunk_clear(&asn1);
+			lib->encoding->cache(lib->encoding, type, this, fp);
+			return TRUE;
+		}
 		default:
 			return FALSE;
 	}
@@ -926,6 +976,32 @@ static private_pkcs11_public_key_t *find_key_by_keyid(pkcs11_library_t *p11,
 					chunk_free(&n);
 					key_type = KEY_RSA;
 					found = TRUE;
+				}
+				break;
+			}
+			case CKK_ML_DSA:
+			{
+				CK_ULONG param_set = 0;
+				CK_ATTRIBUTE ps_attr[] = {
+					{CKA_PARAMETER_SET, &param_set, sizeof(param_set)},
+				};
+				if (p11->f->C_GetAttributeValue(session, object, ps_attr, 1) == CKR_OK)
+				{
+					switch (param_set)
+					{
+						case CKP_ML_DSA_44:
+							key_type = KEY_ML_DSA_44;
+							found = TRUE;
+							break;
+						case CKP_ML_DSA_65:
+							key_type = KEY_ML_DSA_65;
+							found = TRUE;
+							break;
+						case CKP_ML_DSA_87:
+							key_type = KEY_ML_DSA_87;
+							found = TRUE;
+							break;
+					}
 				}
 				break;
 			}
