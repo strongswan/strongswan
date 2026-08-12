@@ -24,7 +24,7 @@
 #include <collections/linked_list.h>
 
 #ifdef WIN32
-static char *path = "C:\\Windows\\Temp\\strongswan-settings-test";
+static char *path = "strongswan-settings-test";
 #else
 static char *path = "/tmp/strongswan-settings-test";
 #endif
@@ -558,10 +558,10 @@ START_TEST(test_key_value_enumerator)
 END_TEST
 
 #ifdef WIN32
-# define include1 "C:\\Windows\\Temp\\strongswan-settings-test-include1"
-# define include1_str "C:\\\\Windows\\\\Temp\\\\strongswan-settings-test-include1"
-# define include2 "C:\\Windows\\Temp\\strongswan-settings-test-include2"
-# define include2_str "C:\\\\Windows\\\\Temp\\\\strongswan-settings-test-include2"
+# define include1 "strongswan-settings-test-include1"
+# define include1_str include1
+# define include2 "strongswan-settings-test-include2"
+# define include2_str include2
 #else
 # define include1 "/tmp/strongswan-settings-test-include1"
 # define include1_str include1
