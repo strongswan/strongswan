@@ -645,9 +645,8 @@ METHOD(stroke_list_t, status, void,
 
 	half_open = charon->ike_sa_manager->get_half_open_count(
 										charon->ike_sa_manager, NULL, FALSE);
-	fprintf(out, "Security Associations (%u up, %u connecting):\n",
-		charon->ike_sa_manager->get_count(charon->ike_sa_manager) - half_open,
-		half_open);
+	fprintf(out, "Security Associations (%u total, %u connecting):\n",
+		charon->ike_sa_manager->get_count(charon->ike_sa_manager), half_open);
 	enumerator = charon->controller->create_ike_sa_enumerator(
 													charon->controller, wait);
 	while (enumerator->enumerate(enumerator, &ike_sa) && ferror(out) == 0)
