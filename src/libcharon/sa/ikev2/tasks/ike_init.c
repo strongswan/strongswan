@@ -674,6 +674,15 @@ static void process_payloads(private_ike_init_t *this, message_t *message)
 			{
 				nonce_payload_t *nonce_payload = (nonce_payload_t*)payload;
 
+				/**
+				 * If there was a nonce payload already processed, make sure to
+				 * free the old one. Just use the last nonce payload in the message
+				 */
+				if (this->other_nonce.ptr != NULL)
+				{
+					chunk_free(&this->other_nonce);
+				}
+
 				this->other_nonce = nonce_payload->get_nonce(nonce_payload);
 				break;
 			}
