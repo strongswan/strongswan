@@ -211,6 +211,11 @@ static void update_sensitive (StrongswanPluginUiWidgetPrivate *priv)
 			update_pass_field (priv, TRUE);
 			update_cert_fields (priv, FALSE);
 			break;
+		case 4:
+			update_user_field (priv, TRUE);
+			update_pass_field (priv, TRUE);
+			update_cert_fields (priv, FALSE);
+			break;
 	}
 
 }
@@ -434,6 +439,7 @@ init_plugin_ui (StrongswanPluginUiWidget *self, NMConnection *connection, GError
 	gtk_combo_box_text_append_text (GTK_COMBO_BOX_TEXT (widget), _("Certificate"));
 	gtk_combo_box_text_append_text (GTK_COMBO_BOX_TEXT (widget), _("EAP-TLS"));
 	gtk_combo_box_text_append_text (GTK_COMBO_BOX_TEXT (widget), _("Pre-shared key"));
+	gtk_combo_box_text_append_text (GTK_COMBO_BOX_TEXT (widget), _("EAP-TTLS"));
 	if (method) {
 		if (g_strcmp0 (method, "eap") == 0) {
 			gtk_combo_box_set_active (GTK_COMBO_BOX (widget), 0);
@@ -450,6 +456,9 @@ init_plugin_ui (StrongswanPluginUiWidget *self, NMConnection *connection, GError
 		}
 		if (g_strcmp0 (method, "psk") == 0) {
 			gtk_combo_box_set_active (GTK_COMBO_BOX (widget), 3);
+		}
+		if (g_strcmp0 (method, "eap-ttls") == 0) {
+			gtk_combo_box_set_active (GTK_COMBO_BOX (widget), 4);
 		}
 	}
 	if (gtk_combo_box_get_active (GTK_COMBO_BOX (widget)) == -1)
@@ -716,6 +725,11 @@ update_connection (NMVpnEditor *iface,
 			save_entry (settings, priv->builder, "user-entry", "user");
 			save_password_and_flags (settings, priv->builder, "passwd-entry", "password");
 			str = "psk";
+			break;
+		case 4:
+			save_entry (settings, priv->builder, "user-entry", "user");
+			save_password_and_flags (settings, priv->builder, "passwd-entry", "password");
+			str = "eap-ttls";
 			break;
 	}
 	nm_setting_vpn_add_data_item (settings, "method", str);
