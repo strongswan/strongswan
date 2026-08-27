@@ -61,54 +61,57 @@ extern enum_name_t *key_type_names;
  * EMSA-PKCS1 signatures are defined in PKCS#1 standard.
  * A prepended ASN.1 encoded digestInfo field contains the
  * OID of the used hash algorithm.
+ *
+ * These identifiers have an explicit value so they can be mapped in
+ * charon-tkm.
  */
 enum signature_scheme_t {
 	/** Unknown signature scheme                                       */
-	SIGN_UNKNOWN,
+	SIGN_UNKNOWN = 0,
 	/** EMSA-PKCS1_v1.5 signature over digest without digestInfo       */
-	SIGN_RSA_EMSA_PKCS1_NULL,
+	SIGN_RSA_EMSA_PKCS1_NULL = 1,
 	/** EMSA-PKCS1_v1.5 signature as in PKCS#1 using RSA and MD5       */
-	SIGN_RSA_EMSA_PKCS1_MD5,
+	SIGN_RSA_EMSA_PKCS1_MD5 = 2,
 	/** EMSA-PKCS1_v1.5 signature as in PKCS#1 using RSA and SHA-1     */
-	SIGN_RSA_EMSA_PKCS1_SHA1,
+	SIGN_RSA_EMSA_PKCS1_SHA1 = 3,
 	/** EMSA-PKCS1_v1.5 signature as in PKCS#1 using RSA and SHA-2_224 */
-	SIGN_RSA_EMSA_PKCS1_SHA2_224,
+	SIGN_RSA_EMSA_PKCS1_SHA2_224 = 4,
 	/** EMSA-PKCS1_v1.5 signature as in PKCS#1 using RSA and SHA-2_256 */
-	SIGN_RSA_EMSA_PKCS1_SHA2_256,
+	SIGN_RSA_EMSA_PKCS1_SHA2_256 = 5,
 	/** EMSA-PKCS1_v1.5 signature as in PKCS#1 using RSA and SHA-2_384 */
-	SIGN_RSA_EMSA_PKCS1_SHA2_384,
+	SIGN_RSA_EMSA_PKCS1_SHA2_384 = 6,
 	/** EMSA-PKCS1_v1.5 signature as in PKCS#1 using RSA and SHA-2_512 */
-	SIGN_RSA_EMSA_PKCS1_SHA2_512,
+	SIGN_RSA_EMSA_PKCS1_SHA2_512 = 7,
 	/** EMSA-PKCS1_v1.5 signature as in PKCS#1 using RSA and SHA-3_224 */
-	SIGN_RSA_EMSA_PKCS1_SHA3_224,
+	SIGN_RSA_EMSA_PKCS1_SHA3_224 = 8,
 	/** EMSA-PKCS1_v1.5 signature as in PKCS#1 using RSA and SHA-3_256 */
-	SIGN_RSA_EMSA_PKCS1_SHA3_256,
+	SIGN_RSA_EMSA_PKCS1_SHA3_256 = 9,
 	/** EMSA-PKCS1_v1.5 signature as in PKCS#1 using RSA and SHA-3_384 */
-	SIGN_RSA_EMSA_PKCS1_SHA3_384,
+	SIGN_RSA_EMSA_PKCS1_SHA3_384 = 10,
 	/** EMSA-PKCS1_v1.5 signature as in PKCS#1 using RSA and SHA-3_512 */
-	SIGN_RSA_EMSA_PKCS1_SHA3_512,
+	SIGN_RSA_EMSA_PKCS1_SHA3_512 = 11,
 	/** EMSA-PSS signature as in PKCS#1 using RSA                      */
-	SIGN_RSA_EMSA_PSS,
+	SIGN_RSA_EMSA_PSS = 12,
 	/** ECDSA with SHA-1 using DER encoding as in RFC 3279             */
-	SIGN_ECDSA_WITH_SHA1_DER,
+	SIGN_ECDSA_WITH_SHA1_DER = 13,
 	/** ECDSA with SHA-256 using DER encoding as in RFC 3279           */
-	SIGN_ECDSA_WITH_SHA256_DER,
+	SIGN_ECDSA_WITH_SHA256_DER = 14,
 	/** ECDSA with SHA-384 using DER encoding as in RFC 3279           */
-	SIGN_ECDSA_WITH_SHA384_DER,
+	SIGN_ECDSA_WITH_SHA384_DER = 15,
 	/** ECDSA with SHA-1 using DER encoding as in RFC 3279             */
-	SIGN_ECDSA_WITH_SHA512_DER,
+	SIGN_ECDSA_WITH_SHA512_DER = 16,
 	/** ECDSA over precomputed digest, signature as in RFC 4754        */
-	SIGN_ECDSA_WITH_NULL,
+	SIGN_ECDSA_WITH_NULL = 17,
 	/** ECDSA on the P-256 curve with SHA-256 as in RFC 4754           */
-	SIGN_ECDSA_256,
+	SIGN_ECDSA_256 = 18,
 	/** ECDSA on the P-384 curve with SHA-384 as in RFC 4754           */
-	SIGN_ECDSA_384,
+	SIGN_ECDSA_384 = 19,
 	/** ECDSA on the P-521 curve with SHA-512 as in RFC 4754           */
-	SIGN_ECDSA_521,
+	SIGN_ECDSA_521 = 20,
 	/** PureEdDSA on Curve25519 as in RFC 8410                         */
-	SIGN_ED25519,
+	SIGN_ED25519 = 21,
 	/** PureEdDSA on Curve448 as in RFC 8410                           */
-	SIGN_ED448,
+	SIGN_ED448 = 22,
 };
 
 /**
