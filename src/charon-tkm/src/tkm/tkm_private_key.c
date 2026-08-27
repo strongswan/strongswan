@@ -20,6 +20,7 @@
 #include <tkm/constants.h>
 #include <tkm/client.h>
 
+#include "tkm.h"
 #include "tkm_utils.h"
 #include "tkm_types.h"
 #include "tkm_private_key.h"
@@ -64,29 +65,41 @@ METHOD(private_key_t, sign, bool,
 	chunk_t data, chunk_t *signature)
 {
 	signature_type sig;
-	init_message_type msg;
+	blob_id_type msg_id;
 	sign_info_t sign;
 	isa_id_type isa_id;
+	bool success = FALSE;
 
 	if (data.ptr == NULL)
 	{
 		DBG1(DBG_LIB, "unable to get signature information");
 		return FALSE;
 	}
-	sign = *(sign_info_t *)(data.ptr);
+	sign = *(sign_info_t*)(data.ptr);
 
-	chunk_to_sequence(&sign.init_message, &msg, sizeof(init_message_type));
-	isa_id = sign.isa_id;
-	chunk_free(&sign.init_message);
-
-	if (ike_isa_sign(isa_id, 1, msg, &sig) != TKM_OK)
+	msg_id = tkm->idmgr->acquire_id(tkm->idmgr, TKM_CTX_BLOB);
+	if (!msg_id)
 	{
-		DBG1(DBG_LIB, "signature operation failed");
+		DBG1(DBG_IKE, "unable to acquire blob context id for init message");
+		chunk_free(&sign.init_message);
 		return FALSE;
 	}
 
-	sequence_to_chunk(sig.data, sig.size, signature);
-	return TRUE;
+	isa_id = sign.isa_id;
+	if (chunk_to_blob(msg_id, &sign.init_message) &&
+		ike_isa_sign(isa_id, 1, msg_id, 1, &sig) == TKM_OK)
+	{
+		sequence_to_chunk(sig.data, sig.size, signature);
+		success = TRUE;
+	}
+	else
+	{
+		DBG1(DBG_LIB, "signature operation failed");
+	}
+
+	tkm->idmgr->release_id(tkm->idmgr, TKM_CTX_BLOB, msg_id);
+	chunk_free(&sign.init_message);
+	return success;
 }
 
 METHOD(private_key_t, decrypt, bool,
