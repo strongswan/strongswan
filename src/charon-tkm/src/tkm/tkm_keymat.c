@@ -177,25 +177,28 @@ METHOD(keymat_v2_t, derive_ike_keys, bool,
 	block_len_type block_len;
 	icv_len_type icv_len;
 	iv_len_type iv_len;
+	isa_flags_type flags;
 
 	if (!concat_ke_ids(kes, &ke_ids))
 	{
 		return FALSE;
 	}
 
-	nonce = this->initiator ? &nonce_i : &nonce_r;
-
 	if (this->initiator)
 	{
+		nonce = &nonce_i;
 		chunk_to_sequence(&nonce_r, &nonce_rem, sizeof(nonce_type));
 		spi_loc = id->get_initiator_spi(id);
 		spi_rem = id->get_responder_spi(id);
+		flags = TKM_ISA_INITIATOR;
 	}
 	else
 	{
+		nonce = &nonce_r;
 		chunk_to_sequence(&nonce_i, &nonce_rem, sizeof(nonce_type));
 		spi_loc = id->get_responder_spi(id);
 		spi_rem = id->get_initiator_spi(id);
+		flags = 0;
 	}
 
 	ia_id = get_proposal_id(proposal);
@@ -225,7 +228,7 @@ METHOD(keymat_v2_t, derive_ike_keys, bool,
 			 "spi_loc: %llx, spi_rem: %llx)", nc_id, ia_id, ke_ids.data[0],
 			 spi_loc, spi_rem);
 		res = ike_isa_create(this->isa_ctx_id, this->ae_ctx_id, ia_id,
-							 ke_ids.data[0], nc_id, nonce_rem, this->initiator,
+							 ke_ids.data[0], nc_id, nonce_rem, flags,
 							 spi_loc, spi_rem, &block_len, &icv_len, &iv_len);
 	}
 	else
@@ -269,7 +272,7 @@ METHOD(keymat_v2_t, derive_ike_keys, bool,
 			this->ae_ctx_id = isa_info.ae_id;
 			res = ike_isa_create_child(this->isa_ctx_id, isa_info.parent_isa_id,
 									   ia_id, ke_ids, nc_id, nonce_rem,
-									   this->initiator, spi_loc, spi_rem,
+									   flags, spi_loc, spi_rem,
 									   &block_len, &icv_len, &iv_len);
 		}
 
