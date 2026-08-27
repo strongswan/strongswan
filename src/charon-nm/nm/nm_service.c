@@ -789,6 +789,10 @@ static bool add_auth_cfg_pw(NMStrongswanPluginPrivate *priv,
 	auth = auth_cfg_create();
 	auth->add(auth, AUTH_RULE_AUTH_CLASS,
 			  streq(method, "psk") ? AUTH_CLASS_PSK : AUTH_CLASS_EAP);
+	if (streq(method, "eap-ttls"))
+	{
+		auth->add(auth, AUTH_RULE_EAP_TYPE, EAP_TTLS);
+	}
 	/* in case EAP-PEAP or EAP-TTLS is used we currently accept any identity */
 	auth->add(auth, AUTH_RULE_AAA_IDENTITY,
 			  identification_create_from_string("%any"));
@@ -1044,6 +1048,7 @@ static gboolean connect_(NMVpnServicePlugin *plugin, NMConnection *connection,
 		}
 	}
 	else if (streq(method, "eap") ||
+			 streq(method, "eap-ttls") ||
 			 streq(method, "psk"))
 	{
 		if (!add_auth_cfg_pw(priv, vpn, peer_cfg, err))
@@ -1248,6 +1253,7 @@ static gboolean need_secrets(NMVpnServicePlugin *plugin, NMConnection *connectio
 			}
 		}
 		else if (streq(method, "eap") ||
+				 streq(method, "eap-ttls") ||
 				 streq(method, "psk"))
 		{
 			need_secret = !nm_setting_vpn_get_secret(settings, "password");
