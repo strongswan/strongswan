@@ -283,7 +283,7 @@ METHOD(listener_t, authorize, bool,
 	cc_id_type cc_id;
 	chunk_t *auth, *other_init_msg;
 	signature_type signature;
-	init_message_type init_msg;
+	blob_id_type init_message_id = 0;
 
 	if (!final)
 	{
@@ -322,10 +322,21 @@ METHOD(listener_t, authorize, bool,
 		goto cc_reset;
 	}
 
-	chunk_to_sequence(auth, &signature, sizeof(signature_type));
-	chunk_to_sequence(other_init_msg, &init_msg, sizeof(init_message_type));
+	init_message_id = tkm->idmgr->acquire_id(tkm->idmgr, TKM_CTX_BLOB);
+	if (!init_message_id)
+	{
+		DBG1(DBG_IKE, "unable to acquire blob context id for peer's init message");
+		goto cc_reset;
+	}
 
-	if (ike_isa_auth(isa_id, cc_id, init_msg, signature) != TKM_OK)
+	if (!chunk_to_blob(init_message_id, other_init_msg))
+	{
+		DBG1(DBG_IKE, "unable to convert peer's init message to blob");
+		goto cc_reset;
+	}
+
+	chunk_to_sequence(auth, &signature, sizeof(signature_type));
+	if (ike_isa_auth(isa_id, cc_id, init_message_id, 1, signature) != TKM_OK)
 	{
 		DBG1(DBG_IKE, "TKM based authentication failed"
 			 " for ISA context %llu", isa_id);
@@ -344,6 +355,10 @@ cc_reset:
 		DBG1(DBG_IKE, "unable to reset CC context %llu", cc_id);
 	}
 	tkm->idmgr->release_id(tkm->idmgr, TKM_CTX_CC, cc_id);
+	if (init_message_id)
+	{
+		tkm->idmgr->release_id(tkm->idmgr, TKM_CTX_BLOB, init_message_id);
+	}
 	return TRUE; /* stay registered */
 }
 
