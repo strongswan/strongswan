@@ -342,6 +342,13 @@ int main(int argc, char *argv[])
 		goto deinit;
 	}
 
+	if (!register_sig_mapping())
+	{
+		DBG1(DBG_DMN, "no signature scheme mapping defined - aborting %s",
+			 dmn_name);
+		goto deinit;
+	}
+
 	if (!register_ke_mapping())
 	{
 		DBG1(DBG_DMN, "no KE group mapping defined - aborting %s", dmn_name);
@@ -435,6 +442,7 @@ int main(int argc, char *argv[])
 
 deinit:
 	destroy_proposal_mapping();
+	destroy_sig_mapping();
 	destroy_ke_mapping();
 	destroy_ca_mapping();
 	libcharon_deinit();
