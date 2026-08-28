@@ -67,6 +67,11 @@ struct private_tkm_keymat_t {
 	ae_id_type ae_ctx_id;
 
 	/**
+	 * Authentication method from AUTH payload.
+	 */
+	auth_method_t auth_method;
+
+	/**
 	 * AUTH payload chunk.
 	 */
 	chunk_t auth_payload;
@@ -498,15 +503,21 @@ METHOD(tkm_keymat_t, get_isa_id, isa_id_type,
 }
 
 METHOD(tkm_keymat_t, set_auth_payload, void,
-	private_tkm_keymat_t *this, const chunk_t * const payload)
+	private_tkm_keymat_t *this, const auth_method_t method,
+	const chunk_t * const payload)
 {
+	this->auth_method = method;
 	this->auth_payload = chunk_clone(*payload);
 }
 
-METHOD(tkm_keymat_t, get_auth_payload, chunk_t*,
-	private_tkm_keymat_t *this)
+METHOD(tkm_keymat_t, get_auth_payload, chunk_t,
+	private_tkm_keymat_t *this, auth_method_t *method)
 {
-	return &this->auth_payload;
+	if (method)
+	{
+		*method = this->auth_method;
+	}
+	return this->auth_payload;
 }
 
 METHOD(tkm_keymat_t, get_peer_init_msg, chunk_t*,

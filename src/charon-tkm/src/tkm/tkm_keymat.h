@@ -24,6 +24,7 @@
 #ifndef TKM_KEYMAT_H_
 #define TKM_KEYMAT_H_
 
+#include <sa/authenticator.h>
 #include <sa/ikev2/keymat_v2.h>
 
 typedef struct tkm_keymat_t tkm_keymat_t;
@@ -46,18 +47,22 @@ struct tkm_keymat_t {
 	isa_id_type (*get_isa_id)(tkm_keymat_t * const this);
 
 	/**
-	 * Set IKE AUTH payload.
+	 * Set IKE AUTH payload method and data.
 	 *
+	 * @param method		authentication method
 	 * @param payload		AUTH payload
 	 */
-	void (*set_auth_payload)(tkm_keymat_t *this, const chunk_t * const payload);
+	void (*set_auth_payload)(tkm_keymat_t *this, const auth_method_t method,
+							 const chunk_t * const payload);
 
 	/**
 	 * Get IKE AUTH payload.
 	 *
+	 * @param[out] method	authentication method
 	 * @return				AUTH payload if set, chunk_empty otherwise
 	 */
-	chunk_t* (*get_auth_payload)(tkm_keymat_t * const this);
+	chunk_t (*get_auth_payload)(tkm_keymat_t * const this,
+								auth_method_t *method);
 
 	/**
 	 * Get IKE init message of peer.

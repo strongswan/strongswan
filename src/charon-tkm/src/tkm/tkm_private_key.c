@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2026 Tobias Brunner
  * Copyright (C) 2012-2013 Reto Buerki
  * Copyright (C) 2012-2013 Adrian-Ken Rueegsegger
  *
@@ -23,6 +24,7 @@
 #include "tkm.h"
 #include "tkm_utils.h"
 #include "tkm_types.h"
+#include "tkm_keymat.h"
 #include "tkm_private_key.h"
 
 typedef struct private_tkm_private_key_t private_tkm_private_key_t;
@@ -68,6 +70,7 @@ METHOD(private_key_t, sign, bool,
 	blob_id_type msg_id;
 	sign_info_t sign;
 	isa_id_type isa_id;
+	siga_id_type siga_id;
 	bool success = FALSE;
 
 	if (data.ptr == NULL)
@@ -76,6 +79,15 @@ METHOD(private_key_t, sign, bool,
 		return FALSE;
 	}
 	sign = *(sign_info_t*)(data.ptr);
+
+	siga_id = siga_from_signature_scheme(scheme);
+	if (!siga_id)
+	{
+		DBG1(DBG_IKE, "unable to map signature scheme %N to SigA context id",
+			 signature_scheme_names, scheme);
+		chunk_free(&sign.init_message);
+		return FALSE;
+	}
 
 	msg_id = tkm->idmgr->acquire_id(tkm->idmgr, TKM_CTX_BLOB);
 	if (!msg_id)
@@ -87,7 +99,7 @@ METHOD(private_key_t, sign, bool,
 
 	isa_id = sign.isa_id;
 	if (chunk_to_blob(msg_id, &sign.init_message) &&
-		ike_isa_sign(isa_id, 1, msg_id, 1, &sig) == TKM_OK)
+		ike_isa_sign(isa_id, 1, msg_id, siga_id, &sig) == TKM_OK)
 	{
 		sequence_to_chunk(sig.data, sig.size, signature);
 		success = TRUE;
