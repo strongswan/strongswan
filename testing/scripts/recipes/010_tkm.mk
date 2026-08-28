@@ -3,7 +3,7 @@
 PKG = tkm
 SRC = https://git.codelabs.ch/git/$(PKG).git
 ifeq (,$(filter $(BASEIMG),bullseye bookworm))
-REV = 85d49c9255360663c344ccf3175092524dc66eae
+REV = d1f002db4182f8f09ee5c8ef5d7ddb187cf837fe
 else
 REV = v0.3
 endif

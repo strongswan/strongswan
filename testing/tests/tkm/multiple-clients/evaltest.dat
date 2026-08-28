@@ -8,6 +8,10 @@ carol::tcpdump::IP carol.strongswan.org > sun.strongswan.org: ESP::YES
 carol::tcpdump::IP sun.strongswan.org > carol.strongswan.org: ESP::YES
 dave::tcpdump::IP dave.strongswan.org > sun.strongswan.org: ESP::YES
 dave::tcpdump::IP sun.strongswan.org > dave.strongswan.org: ESP::YES
+sun::cat /var/log/daemon.log::authentication of 'carol@strongswan.org' with RSA_EMSA_PKCS1_SHA2_256 successful::YES
+sun::cat /var/log/daemon.log::authentication of 'sun.strongswan.org' (myself) with RSA_EMSA_PKCS1_SHA2_256 successful::YES
+sun::cat /var/log/daemon.log::authentication of 'dave@strongswan.org' with RSA signature successful::YES
+sun::cat /var/log/daemon.log::authentication of 'sun.strongswan.org' (myself) with RSA signature successful::YES
 sun::cat /tmp/tkm.log::RSA private key '/etc/tkm/sunKey.der' loaded::YES
 sun::cat /tmp/tkm.log::Adding policy \[ 1, 192.168.0.2 <-> 192.168.0.100 \]::YES
 sun::cat /tmp/tkm.log::Adding policy \[ 2, 192.168.0.2 <-> 192.168.0.200 \]::YES
