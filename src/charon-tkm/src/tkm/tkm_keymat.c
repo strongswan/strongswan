@@ -470,6 +470,34 @@ METHOD(keymat_v2_t, add_hash_algorithm, void,
 	this->hash_algorithms->add(this->hash_algorithms, hash);
 }
 
+CALLBACK(hash_algorithm_filter, bool,
+	void *ctx, enumerator_t *orig, va_list args)
+{
+	signature_scheme_t *scheme_ptr;
+	hash_algorithm_t hash, *out;
+
+	VA_ARGS_VGET(args, out);
+
+	while (orig->enumerate(orig, &scheme_ptr, NULL))
+	{
+		hash = hasher_from_signature_scheme(*scheme_ptr, NULL);
+		if (hasher_algorithm_for_ikev2(hash))
+		{
+			*out = hash;
+			return TRUE;
+		}
+	}
+	return FALSE;
+}
+
+METHOD(keymat_v2_t, hash_algorithm_enumerator_create, enumerator_t*,
+	private_tkm_keymat_t *this)
+{
+	return enumerator_create_filter(
+							scheme_map->create_enumerator(scheme_map),
+							hash_algorithm_filter, NULL, NULL);
+}
+
 METHOD(keymat_t, destroy, void,
 	private_tkm_keymat_t *this)
 {
@@ -712,7 +740,7 @@ tkm_keymat_t *tkm_keymat_create(bool initiator)
 				.get_psk_sig = _get_psk_sig,
 				.add_hash_algorithm = _add_hash_algorithm,
 				.hash_algorithm_supported = _hash_algorithm_supported,
-				.hash_algorithm_enumerator_create = (void*)enumerator_create_empty,
+				.hash_algorithm_enumerator_create = _hash_algorithm_enumerator_create,
 			},
 			.get_isa_id = _get_isa_id,
 			.set_auth_payload = _set_auth_payload,
