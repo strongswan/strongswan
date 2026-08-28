@@ -129,6 +129,8 @@ struct kernel_ipsec_add_sa_t {
  * Data required to update the hosts of an SA in the kernel
  */
 struct kernel_ipsec_update_sa_t {
+	/** Mode (tunnel, transport...) */
+	ipsec_mode_t mode;
 	/** CPI in case IPComp is used */
 	uint16_t cpi;
 	/** New source address */
@@ -139,8 +141,20 @@ struct kernel_ipsec_update_sa_t {
 	bool encap;
 	/** TRUE to enable UDP encapsulation */
 	bool new_encap;
-	/** New reqid, or 0 if unchanged */
+	/** Old reqid */
+	uint32_t old_reqid;
+	/** New reqid, might be the same as old_reqid */
 	uint32_t new_reqid;
+	/** HW offload mode */
+	hw_offload_t hw_offload;
+	/** List of updated source traffic selectors */
+	linked_list_t *src_ts;
+	/** List of updated destination traffic selectors */
+	linked_list_t *dst_ts;
+	/** Network interface restricting policy */
+	char *interface;
+	/** TRUE if this is an inbound SA */
+	bool inbound;
 };
 
 /**
