@@ -806,6 +806,33 @@ METHOD(keymat_v2_t, add_hash_algorithm, void,
 	this->hash_algorithms->add(this->hash_algorithms, hash);
 }
 
+CALLBACK(hash_algorithm_filter, bool,
+	void *ctx, enumerator_t *orig, va_list args)
+{
+	hash_algorithm_t hash, *out;
+	char *plugin_name;
+
+	VA_ARGS_VGET(args, out);
+
+	while (orig->enumerate(orig, &hash, &plugin_name))
+	{
+		if (hasher_algorithm_for_ikev2(hash))
+		{
+			*out = hash;
+			return TRUE;
+		}
+	}
+	return FALSE;
+}
+
+METHOD(keymat_v2_t, hash_algorithm_enumerator_create, enumerator_t*,
+	private_keymat_v2_t *this)
+{
+	return enumerator_create_filter(
+							lib->crypto->create_hasher_enumerator(lib->crypto),
+							hash_algorithm_filter, NULL, NULL);
+}
+
 METHOD(keymat_t, destroy, void,
 	private_keymat_v2_t *this)
 {
@@ -844,6 +871,7 @@ keymat_v2_t *keymat_v2_create(bool initiator)
 			.get_psk_sig = _get_psk_sig,
 			.add_hash_algorithm = _add_hash_algorithm,
 			.hash_algorithm_supported = _hash_algorithm_supported,
+			.hash_algorithm_enumerator_create = _hash_algorithm_enumerator_create,
 
 		},
 		.initiator = initiator,

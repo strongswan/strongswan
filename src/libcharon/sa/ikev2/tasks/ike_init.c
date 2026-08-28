@@ -192,7 +192,6 @@ static void send_supported_hash_algorithms(private_ike_init_t *this,
 	size_t len = BUF_LEN;
 	char buf[len];
 	char *pos = buf;
-	char *plugin_name;
 
 	algos = hash_algorithm_set_create();
 	peer = this->ike_sa->get_peer_cfg(this->ike_sa);
@@ -221,13 +220,10 @@ static void send_supported_hash_algorithms(private_ike_init_t *this,
 
 	if (!algos->count(algos))
 	{
-		enumerator = lib->crypto->create_hasher_enumerator(lib->crypto);
-		while (enumerator->enumerate(enumerator, &hash, &plugin_name))
+		enumerator = this->keymat->hash_algorithm_enumerator_create(this->keymat);
+		while (enumerator->enumerate(enumerator, &hash))
 		{
-			if (hasher_algorithm_for_ikev2(hash))
-			{
-				algos->add(algos, hash);
-			}
+			algos->add(algos, hash);
 		}
 		enumerator->destroy(enumerator);
 	}
