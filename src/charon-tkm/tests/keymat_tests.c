@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2013-2026 Tobias Brunner
  * Copyright (C) 2012 Reto Buerki
  * Copyright (C) 2012 Adrian-Ken Rueegsegger
  *
@@ -27,6 +28,13 @@
 #include "tkm_key_exchange.h"
 #include "tkm_keymat.h"
 #include "tkm_types.h"
+
+START_TEST(test_siga_from_signature_scheme)
+{
+	ck_assert_int_eq((uint64_t)1, siga_from_signature_scheme(SIGN_RSA_EMSA_PKCS1_SHA1));
+	ck_assert_int_eq((uint64_t)2, siga_from_signature_scheme(SIGN_RSA_EMSA_PKCS1_SHA2_256));
+}
+END_TEST
 
 START_TEST(test_derive_ike_keys)
 {
@@ -349,6 +357,10 @@ Suite *make_keymat_tests()
 	TCase *tc;
 
 	s = suite_create("keymat");
+
+	tc = tcase_create("sig mapping");
+	tcase_add_test(tc, test_siga_from_signature_scheme);
+	suite_add_tcase(s, tc);
 
 	tc = tcase_create("derive IKE keys");
 	tcase_add_test(tc, test_derive_ike_keys);

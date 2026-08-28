@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2022 Tobias Brunner
+ * Copyright (C) 2015-2026 Tobias Brunner
  * Copyright (C) 2012 Reto Buerki
  * Copyright (C) 2012 Adrian-Ken Rueegsegger
  *
@@ -20,6 +20,7 @@
 #include <tkm/constants.h>
 #include <tkm/client.h>
 #include <collections/array.h>
+#include <collections/hashtable.h>
 #include <crypto/hashers/hash_algorithm_set.h>
 
 #include "tkm.h"
@@ -33,6 +34,7 @@ typedef struct private_tkm_keymat_t private_tkm_keymat_t;
 
 static array_t *ike_proposal_map = NULL;
 static array_t *esp_proposal_map = NULL;
+static hashtable_t *scheme_map = NULL;
 
 /**
  * Private data of a keymat_t object.
@@ -586,6 +588,124 @@ void destroy_proposal_mapping()
 	destroy_proposal_map(esp_proposal_map);
 	ike_proposal_map = NULL;
 	esp_proposal_map = NULL;
+}
+
+static u_int hash(void *key)
+{
+	signature_scheme_t s = *(signature_scheme_t*)key;
+	return chunk_hash(chunk_from_thing(s));
+}
+
+static bool equals(void *key, void *other_key)
+{
+	return *(signature_scheme_t*)key == *(signature_scheme_t*)other_key;
+}
+
+/**
+ * Destroy a mapping hashtable and all its key/value pairs
+ */
+static void destroy_map(hashtable_t *map)
+{
+	enumerator_t *enumerator;
+	char *key, *value;
+
+	enumerator = map->create_enumerator(map);
+	while (enumerator->enumerate(enumerator, &key, &value))
+	{
+		free(key);
+		free(value);
+	}
+	enumerator->destroy(enumerator);
+	map->destroy(map);
+}
+
+/*
+ * Described in header
+ */
+uint64_t siga_from_signature_scheme(signature_scheme_t scheme)
+{
+	uint64_t *siga_id_ptr = NULL;
+
+	if (scheme_map)
+	{
+		siga_id_ptr = scheme_map->get(scheme_map, &scheme);
+	}
+	return siga_id_ptr ? *siga_id_ptr : 0;
+}
+
+/*
+ * Described in header
+ */
+int register_sig_mapping()
+{
+	int count;
+	char *sig_id_str, *tkm_id_str;
+	signature_scheme_t scheme, *sig_id;
+	uint64_t id, *tkm_id;
+	hashtable_t *map;
+	enumerator_t *enumerator;
+	bool valid = TRUE;
+
+	map = hashtable_create((hashtable_hash_t)hash,
+						   (hashtable_equals_t)equals, 16);
+
+	enumerator = lib->settings->create_key_value_enumerator(lib->settings,
+															"%s.sig_mapping",
+															lib->ns);
+
+	while (enumerator->enumerate(enumerator, &sig_id_str, &tkm_id_str))
+	{
+		if (!enum_from_name(signature_scheme_names, sig_id_str, &scheme))
+		{
+			DBG1(DBG_CFG, "unknown signature scheme: '%s'", sig_id_str);
+			valid = FALSE;
+			break;
+		}
+		if (map->get(map, &scheme))
+		{
+			DBG1(DBG_CFG, "duplicate signature scheme mapping for %N",
+				 signature_scheme_names, scheme);
+			valid = FALSE;
+			break;
+		}
+		id = settings_value_as_uint64(tkm_id_str, 0);
+		if (!id)
+		{
+			DBG1(DBG_CFG, "invalid TKM signature identifier: '%s'", tkm_id_str);
+			valid = FALSE;
+			break;
+		}
+
+		sig_id = malloc_thing(signature_scheme_t);
+		*sig_id = scheme;
+		tkm_id = malloc_thing(uint64_t);
+		*tkm_id = id;
+
+		map->put(map, sig_id, tkm_id);
+	}
+	enumerator->destroy(enumerator);
+
+	count = map->get_count(map);
+
+	if (valid && count > 0)
+	{
+		scheme_map = map;
+		return count;
+	}
+	destroy_map(map);
+	return 0;
+}
+
+/*
+ * Described in header
+ */
+void destroy_sig_mapping()
+{
+	if (scheme_map)
+	{
+		destroy_map(scheme_map);
+		scheme_map = NULL;
+	}
 }
 
 /*
