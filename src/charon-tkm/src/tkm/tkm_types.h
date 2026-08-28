@@ -125,10 +125,9 @@ struct sign_info_t {
 	isa_id_type isa_id;
 
 	/**
-	 * Init message.
+	 * Actual init message data.
 	 */
-	chunk_t init_message;
-
+	u_char init_message_data[];
 };
 
 #endif /** TKM_TYPES_H_ @}*/

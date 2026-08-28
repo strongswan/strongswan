@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2026 Tobias Brunner
  * Copyright (C) 2012 Reto Buerki
  * Copyright (C) 2012 Adrian-Ken Rueegsegger
  *
@@ -22,6 +23,7 @@
 #include <collections/array.h>
 #include <collections/hashtable.h>
 #include <encoding/payloads/auth_payload.h>
+#include <sa/ikev2/authenticators/pubkey_authenticator.h>
 #include <utils/chunk.h>
 #include <tkm/types.h>
 #include <tkm/constants.h>
@@ -281,7 +283,10 @@ METHOD(listener_t, authorize, bool,
 	tkm_keymat_t *keymat;
 	isa_id_type isa_id;
 	cc_id_type cc_id;
-	chunk_t *auth, *other_init_msg;
+	chunk_t auth, *other_init_msg;
+	auth_method_t method;
+	signature_params_t *params = NULL;
+	siga_id_type siga_id;
 	signature_type signature;
 	blob_id_type init_message_id = 0;
 
@@ -308,10 +313,25 @@ METHOD(listener_t, authorize, bool,
 		goto cc_reset;
 	}
 
-	auth = keymat->get_auth_payload(keymat);
-	if (!auth->ptr)
+	auth = keymat->get_auth_payload(keymat, &method);
+	if (!auth.ptr)
 	{
 		DBG1(DBG_IKE, "no AUTHENTICATION data available");
+		goto cc_reset;
+	}
+
+	params = pubkey_authenticator_parse_auth_data(method, NULL, &auth);
+	if (!params)
+	{
+		DBG1(DBG_IKE, "authentication method not supported or payload invalid");
+		goto cc_reset;
+	}
+
+	siga_id = siga_from_signature_scheme(params->scheme);
+	if (!siga_id)
+	{
+		DBG1(DBG_IKE, "unable to map signature scheme %N to SigA context id",
+			 signature_scheme_names, params->scheme);
 		goto cc_reset;
 	}
 
@@ -335,8 +355,9 @@ METHOD(listener_t, authorize, bool,
 		goto cc_reset;
 	}
 
-	chunk_to_sequence(auth, &signature, sizeof(signature_type));
-	if (ike_isa_auth(isa_id, cc_id, init_message_id, 1, signature) != TKM_OK)
+	chunk_to_sequence(&auth, &signature, sizeof(signature_type));
+	if (ike_isa_auth(isa_id, cc_id, init_message_id, siga_id,
+					 signature) != TKM_OK)
 	{
 		DBG1(DBG_IKE, "TKM based authentication failed"
 			 " for ISA context %llu", isa_id);
@@ -359,6 +380,7 @@ cc_reset:
 	{
 		tkm->idmgr->release_id(tkm->idmgr, TKM_CTX_BLOB, init_message_id);
 	}
+	signature_params_destroy(params);
 	return TRUE; /* stay registered */
 }
 
@@ -384,10 +406,12 @@ METHOD(listener_t, message, bool,
 														 PLV2_AUTH);
 	if (auth_payload)
 	{
+		auth_method_t method;
 		chunk_t auth_data;
 
+		method = auth_payload->get_auth_method(auth_payload);
 		auth_data = auth_payload->get_data(auth_payload);
-		keymat->set_auth_payload(keymat, &auth_data);
+		keymat->set_auth_payload(keymat, method, &auth_data);
 	}
 	else
 	{
