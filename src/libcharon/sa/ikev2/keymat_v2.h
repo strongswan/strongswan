@@ -179,6 +179,13 @@ struct keymat_v2_t {
 	 * @return				TRUE if supported, FALSE otherwise
 	 */
 	bool (*hash_algorithm_supported)(keymat_v2_t *this, hash_algorithm_t hash);
+
+	/**
+	 * Get supported hash algorithms for signature authentication.
+	 *
+	 * @return				enumerator over supported hash_algorithm_t
+	 */
+	enumerator_t *(*hash_algorithm_enumerator_create)(keymat_v2_t *this);
 };
 
 /**
