@@ -712,6 +712,7 @@ tkm_keymat_t *tkm_keymat_create(bool initiator)
 				.get_psk_sig = _get_psk_sig,
 				.add_hash_algorithm = _add_hash_algorithm,
 				.hash_algorithm_supported = _hash_algorithm_supported,
+				.hash_algorithm_enumerator_create = (void*)enumerator_create_empty,
 			},
 			.get_isa_id = _get_isa_id,
 			.set_auth_payload = _set_auth_payload,
