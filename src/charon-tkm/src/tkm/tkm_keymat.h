@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2022-2026 Tobias Brunner
  * Copyright (C) 2012 Reto Buerki
  * Copyright (C) 2012 Adrian-Ken Rueegsegger
  *
@@ -78,6 +79,26 @@ int register_proposal_mapping();
  * Destroy IKE/ESP proposal to TKM id mapping.
  */
 void destroy_proposal_mapping();
+
+/**
+ * Map a signature scheme to a TKM id.
+ *
+ * @param scheme	signature scheme to map
+ * @return			mapped TKM id, 0 if not supported
+ */
+uint64_t siga_from_signature_scheme(signature_scheme_t scheme);
+
+/**
+ * Loads signature scheme identifier to TKM id mapping from config.
+ *
+ * @return          number of registered mappings
+ */
+int register_sig_mapping();
+
+/**
+ * Destroy signature scheme identifier to TKM id mapping.
+ */
+void destroy_sig_mapping();
 
 /**
  * Create TKM keymat instance.
