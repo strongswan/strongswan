@@ -1,7 +1,7 @@
 #!/usr/bin/make
 
 PKG = xfrm-proxy
-SRC = https://git.codelabs.ch/git/$(PKG).git
+SRC = https://git.codelabs.ch/$(PKG).git
 REV = v0.1
 
 export ADA_PROJECT_PATH=/usr/local/ada/lib/gnat

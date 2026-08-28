@@ -1,9 +1,9 @@
 #!/usr/bin/make
 
 PKG = tkm
-SRC = https://git.codelabs.ch/git/$(PKG).git
+SRC = https://git.codelabs.ch/$(PKG).git
 ifeq (,$(filter $(BASEIMG),bullseye bookworm))
-REV = 85d49c9255360663c344ccf3175092524dc66eae
+REV = f188a901f43890c58beb030c50cc953c3b47c3a7
 else
 REV = v0.3
 endif
