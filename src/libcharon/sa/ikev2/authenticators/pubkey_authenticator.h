@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008 Tobias Brunner
+ * Copyright (C) 2008-2026 Tobias Brunner
  * Copyright (C) 2006-2009 Martin Willi
  *
  * Copyright (C) secunet Security Networks AG
@@ -37,6 +37,23 @@ struct pubkey_authenticator_t {
 	 */
 	authenticator_t authenticator;
 };
+
+/**
+ * Determine the signature scheme and key type and parse the authentication data
+ * if necessary.
+ *
+ * @note The \p data pointer might get modified so it points into the original
+ * data.
+ *
+ * @param method			authentication method from AUTH payload
+ * @param[out] type			key type determined from the method/data
+ * @param[in,out] data		authentication data from AUTH payload
+ * @return					allocated signature parameters, NULL if not
+ *							supported or an error occurred
+ */
+signature_params_t *pubkey_authenticator_parse_auth_data(auth_method_t method,
+														 key_type_t *type,
+														 chunk_t *data);
 
 /**
  * Create an authenticator to build public key signatures.

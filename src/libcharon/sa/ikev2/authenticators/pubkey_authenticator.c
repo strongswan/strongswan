@@ -97,6 +97,46 @@ static bool parse_signature_auth_data(chunk_t *auth_data, key_type_t *key_type,
 	return TRUE;
 }
 
+/*
+ * Described in header
+ */
+signature_params_t *pubkey_authenticator_parse_auth_data(auth_method_t method,
+														 key_type_t *key_type,
+														 chunk_t *data)
+{
+	signature_params_t *params;
+
+	*key_type = KEY_ECDSA;
+
+	INIT(params);
+	switch (method)
+	{
+		case AUTH_RSA:
+			params->scheme = SIGN_RSA_EMSA_PKCS1_SHA1;
+			*key_type = KEY_RSA;
+			break;
+		case AUTH_ECDSA_256:
+			params->scheme = SIGN_ECDSA_256;
+			break;
+		case AUTH_ECDSA_384:
+			params->scheme = SIGN_ECDSA_384;
+			break;
+		case AUTH_ECDSA_521:
+			params->scheme = SIGN_ECDSA_521;
+			break;
+		case AUTH_DS:
+			if (parse_signature_auth_data(data, key_type, params))
+			{
+				break;
+			}
+			/* fall-through */
+		default:
+			signature_params_destroy(params);
+			return NULL;
+	}
+	return params;
+}
+
 /**
  * Build authentication data used for Signature Authentication as per RFC 7427
  */
@@ -579,7 +619,7 @@ METHOD(authenticator_t, process, status_t,
 	identification_t *id;
 	auth_cfg_t *auth, *current_auth;
 	enumerator_t *enumerator;
-	key_type_t key_type = KEY_ECDSA;
+	key_type_t key_type;
 	signature_params_t *params;
 	status_t status = NOT_FOUND;
 	const char *reason DBG_UNUSED = "unsupported";
@@ -604,35 +644,19 @@ METHOD(authenticator_t, process, status_t,
 		}
 	}
 
-	INIT(params);
-	switch (auth_method)
+	params = pubkey_authenticator_parse_auth_data(auth_method, &key_type,
+												  &auth_data);
+	if (!params)
 	{
-		case AUTH_RSA:
-			key_type = KEY_RSA;
-			params->scheme = SIGN_RSA_EMSA_PKCS1_SHA1;
-			break;
-		case AUTH_ECDSA_256:
-			params->scheme = SIGN_ECDSA_256;
-			break;
-		case AUTH_ECDSA_384:
-			params->scheme = SIGN_ECDSA_384;
-			break;
-		case AUTH_ECDSA_521:
-			params->scheme = SIGN_ECDSA_521;
-			break;
-		case AUTH_DS:
-			if (parse_signature_auth_data(&auth_data, &key_type, params))
-			{
-				break;
-			}
+		if (auth_method == AUTH_DS)
+		{
 			reason = "payload invalid";
-			/* fall-through */
-		default:
-			DBG1(DBG_IKE, "%N authentication %s", auth_method_names,
-				 auth_method, reason);
-			signature_params_destroy(params);
-			return FAILED;
+		}
+		DBG1(DBG_IKE, "%N authentication %s", auth_method_names,
+			 auth_method, reason);
+		return FAILED;
 	}
+
 	id = this->ike_sa->get_other_id(this->ike_sa);
 	if (!get_auth_octets_scheme(this, TRUE, id, this->ppk, &octets, &params))
 	{
