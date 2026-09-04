@@ -1,3 +1,15 @@
+strongswan-6.1.0
+----------------
+
+- IKEv1 is now disabled by default. Support will be removed in a future release.
+
+- Added support for XFRM_MSG_MIGRATE_STATE on Linux 7.2+.
+
+- Removed the following plugins and components: af-alg, android-dns, blowfish,
+  charon-xpc, duplicheck, gcrypt, keychain, led, libfast, manager,
+  medsrv/medcli, padlock, smp, soup, tnc-ifmap, tnccs-11, tnccs-dynamic.
+
+
 strongswan-6.0.7
 ----------------
 
