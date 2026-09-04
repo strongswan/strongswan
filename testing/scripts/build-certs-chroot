@@ -92,6 +92,18 @@ MONSTER_CDP="http://crl.strongswan.org/strongswan_monster.crl"
 MONSTER_CA_RSA_SIZE="8192"
 MONSTER_EE_RSA_SIZE="4096"
 #
+TLS_FRAG_DIR="${CA_DIR}/tls_frag"
+TLS_FRAG_KEY_A="${TLS_FRAG_DIR}/ca_A_key.der"
+TLS_FRAG_KEY_B="${TLS_FRAG_DIR}/ca_B_key.der"
+TLS_FRAG_KEY_C="${TLS_FRAG_DIR}/ca_C_key.der"
+TLS_FRAG_KEY_D="${TLS_FRAG_DIR}/ca_D_key.der"
+TLS_FRAG_CERT_A="${TLS_FRAG_DIR}/ca_A_cert.der"
+TLS_FRAG_CERT_B="${TLS_FRAG_DIR}/ca_B_cert.der"
+TLS_FRAG_CERT_C="${TLS_FRAG_DIR}/ca_C_cert.der"
+TLS_FRAG_CERT_D="${TLS_FRAG_DIR}/ca_D_cert.der"
+TLS_FRAG_CA_RSA_SIZE="16384"
+TLS_FRAG_EE_RSA_SIZE="8192"
+#
 RSA_SIZE="3072"
 IPSEC_DIR="etc/ipsec.d"
 SWANCTL_DIR="etc/swanctl"
@@ -1620,6 +1632,81 @@ pki --issue --cakey ${MONSTER_KEY} --cacert ${MONSTER_CERT} --type rsa \
     --serial ${SERIAL} --dn "C=CH, O=${PROJECT}, OU=Monster, CN=${CN}" \
     --crl ${MONSTER_CDP} --outform pem > ${TEST_CERT}
 cp ${TEST_CERT} ${MONSTER_DIR}/certs/${SERIAL}.pem
+
+################################################################################
+# strongSwan TLS Frag Root CA                                                  #
+################################################################################
+
+# Generate strongSwan TLS Frag Root CA A
+pki --gen  --type rsa --size ${TLS_FRAG_CA_RSA_SIZE} > ${TLS_FRAG_KEY_A}
+pki --self --type rsa --in ${TLS_FRAG_KEY_A} \
+    --not-before "${START}" --not-after "${CA_END}" --ca \
+    --dn "C=CH, O=${PROJECT}, CN=strongSwan A Root CA" \
+    --san ca.a.strongswan.org --san admin@a.strongswan.org \
+    --outform der > ${TLS_FRAG_CERT_A}
+
+# Put a copy in the ikev2/rw-eap-tls-fragments scenario
+TEST="${TEST_DIR}/ikev2/rw-eap-tls-fragments"
+mkdir -p ${TEST}/hosts/moon/${SWANCTL_DIR}/x509ca
+mkdir -p ${TEST}/hosts/carol/${SWANCTL_DIR}/x509ca
+cp ${TLS_FRAG_CERT_A} ${TEST}/hosts/moon/${SWANCTL_DIR}/x509ca
+cp ${TLS_FRAG_CERT_A} ${TEST}/hosts/carol/${SWANCTL_DIR}/x509ca
+
+# Generate strongSwan TLS Frag Intermediate CA B
+pki --gen  --type rsa --size ${TLS_FRAG_CA_RSA_SIZE} > ${TLS_FRAG_KEY_B}
+pki --issue --cakey ${TLS_FRAG_KEY_A} --cacert ${TLS_FRAG_CERT_A} --type rsa \
+    --in ${TLS_FRAG_KEY_B}  \
+    --not-before "${START}" --not-after "${CA_END}" --ca \
+    --dn "C=CH, O=${PROJECT}, CN=strongSwan B Intermediate CA" \
+    --san ca.b.strongswan.org --san admin@b.strongswan.org \
+    --outform der > ${TLS_FRAG_CERT_B}
+cp ${TLS_FRAG_CERT_B} ${TEST}/hosts/moon/${SWANCTL_DIR}/x509ca
+
+# Generate strongSwan TLS Frag Intermediate CA C
+pki --gen  --type rsa --size ${TLS_FRAG_CA_RSA_SIZE} > ${TLS_FRAG_KEY_C}
+pki --issue --cakey ${TLS_FRAG_KEY_B} --cacert ${TLS_FRAG_CERT_B} --type rsa \
+    --in ${TLS_FRAG_KEY_C}  \
+    --not-before "${START}" --not-after "${CA_END}" --ca \
+    --dn "C=CH, O=${PROJECT}, CN=strongSwan C Intermediate CA" \
+    --san ca.c.strongswan.org --san admin@c.strongswan.org \
+    --outform der > ${TLS_FRAG_CERT_C}
+cp ${TLS_FRAG_CERT_C} ${TEST}/hosts/moon/${SWANCTL_DIR}/x509ca
+
+# Generate strongSwan TLS Frag Intermediate CA D
+pki --gen  --type rsa --size ${TLS_FRAG_CA_RSA_SIZE} > ${TLS_FRAG_KEY_D}
+pki --issue --cakey ${TLS_FRAG_KEY_C} --cacert ${TLS_FRAG_CERT_C} --type rsa \
+    --in ${TLS_FRAG_KEY_D}  \
+    --not-before "${START}" --not-after "${CA_END}" --ca \
+    --dn "C=CH, O=${PROJECT}, CN=strongSwan D Intermediate CA" \
+    --san ca.d.strongswan.org --san admin@d.strongswan.org \
+    --outform der > ${TLS_FRAG_CERT_D}
+cp ${TLS_FRAG_CERT_D} ${TEST}/hosts/moon/${SWANCTL_DIR}/x509ca
+
+# Generate a moon TLS FRAG certificate
+TEST_KEY="${TEST}/hosts/moon/${SWANCTL_DIR}/rsa/moon_key.der"
+TEST_CERT="${TEST}/hosts/moon/${SWANCTL_DIR}/x509/moon_D_cert.der"
+CN="moon.d.strongswan.org"
+mkdir -p ${TEST}/hosts/moon/${SWANCTL_DIR}/rsa
+mkdir -p ${TEST}/hosts/moon/${SWANCTL_DIR}/x509
+pki --gen --type rsa --size ${TLS_FRAG_EE_RSA_SIZE}  > ${TEST_KEY}
+pki --issue --cakey ${TLS_FRAG_KEY_D} --cacert ${TLS_FRAG_CERT_D} --type rsa \
+    --in ${TEST_KEY} --san ${CN} \
+    --not-before "${START}" --not-after "${EE_END}" \
+    --dn "C=CH, O=${PROJECT}, CN=${CN}" \
+    --outform der > ${TEST_CERT}
+
+# Generate a carol TLS FRAG certificate
+TEST_KEY="${TEST}/hosts/carol/${SWANCTL_DIR}/rsa/carol_key.der"
+TEST_CERT="${TEST}/hosts/carol/${SWANCTL_DIR}/x509/carol_D_cert.der"
+CN="carol@d.strongswan.org"
+mkdir -p ${TEST}/hosts/carol/${SWANCTL_DIR}/rsa
+mkdir -p ${TEST}/hosts/carol/${SWANCTL_DIR}/x509
+pki --gen --type rsa --size ${TLS_FRAG_EE_RSA_SIZE} > ${TEST_KEY}
+pki --issue --cakey ${TLS_FRAG_KEY_D} --cacert ${TLS_FRAG_CERT_D} --type rsa \
+    --in ${TEST_KEY} --san ${CN} \
+    --not-before "${START}" --not-after "${EE_END}" \
+    --dn "C=CH, O=${PROJECT}, CN=${CN}" \
+    --outform der > ${TEST_CERT}
 
 ################################################################################
 # SQL Data                                                                     #
