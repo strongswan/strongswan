@@ -276,12 +276,14 @@ static bool is_known_vid(chunk_t data, int i)
 static void build(private_isakmp_vendor_t *this, message_t *message)
 {
 	vendor_id_payload_t *vid_payload;
-	bool strongswan, cisco_unity, fragmentation;
+	bool strongswan, cisco_unity, fragmentation, send_natt;
 	ike_cfg_t *ike_cfg;
 	int i;
 
 	strongswan = lib->settings->get_bool(lib->settings,
 										 "%s.send_vendor_id", FALSE, lib->ns);
+	send_natt = lib->settings->get_bool(lib->settings,
+										 "%s.send_vendor_natt_ids", FALSE, lib->ns);
 	cisco_unity = lib->settings->get_bool(lib->settings,
 										 "%s.cisco_unity", FALSE, lib->ns);
 	ike_cfg = this->ike_sa->get_ike_cfg(this->ike_sa);
@@ -306,8 +308,8 @@ static void build(private_isakmp_vendor_t *this, message_t *message)
 	}
 	for (i = 0; i < countof(vendor_natt_ids); i++)
 	{
-		if ((this->initiator && vendor_natt_ids[i].send) ||
-			this->best_natt_ext == i)
+		if (send_natt && ((this->initiator && vendor_natt_ids[i].send) ||
+			this->best_natt_ext == i))
 		{
 			DBG2(DBG_IKE, "sending %s vendor ID", vendor_natt_ids[i].desc);
 			vid_payload = vendor_id_payload_create_data(PLV1_VENDOR_ID,
