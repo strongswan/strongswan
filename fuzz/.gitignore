@@ -10,6 +10,10 @@ fuzz_ocsp_rsp_cus
 fuzz_ocsp_rsp_def
 fuzz_pa_tnc
 fuzz_pb_tnc
+fuzz_pubkey_cus
+fuzz_pubkey_def
 fuzz_radius
 fuzz_tls
+fuzz_trusted_pubkey_cus
+fuzz_trusted_pubkey_def
 fuzz_vici
