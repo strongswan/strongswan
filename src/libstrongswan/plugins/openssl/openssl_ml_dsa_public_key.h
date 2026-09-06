@@ -1,0 +1,47 @@
+/*
+ * Copyright (C) 2025 Andreas Steffen
+ *
+ * Copyright (C) secunet Security Networks AG
+ *
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by the
+ * Free Software Foundation; either version 2 of the License, or (at your
+ * option) any later version.  See <http://www.fsf.org/copyleft/gpl.txt>.
+ *
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+ * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * for more details.
+ */
+
+/**
+ * @defgroup openssl_ml_dsa_public_key openssl_ml_dsa_public_key
+ * @{ @ingroup openssl_p
+ */
+
+#ifndef OPENSSL_ML_DSA_PUBLIC_KEY_H_
+#define OPENSSL_ML_DSA_PUBLIC_KEY_H_
+
+#include <credentials/builder.h>
+#include <credentials/keys/public_key.h>
+
+/**
+ * Load an ML-DSA public key using OpenSSL.
+ *
+ * Accepts a BUILD_BLOB_ASN1_DER argument.
+ *
+ * @param type		type of the key, must be ML_DSA_44, ML_DSA_65 or ML_DSA_87
+ * @param args		builder_part_t argument list
+ * @return 			loaded key, NULL on failure
+ */
+public_key_t *openssl_ml_dsa_public_key_load(key_type_t type, va_list args);
+
+/**
+ * Wrap an EVP_PKEY object of type ML-DSA-44/64/87.
+ *
+ * @param key		EVP_PKEY object (adopted)
+ * @return 			generated key, NULL on failure
+ */
+public_key_t *openssl_ml_dsa_public_key_create(EVP_PKEY *key);
+
+#endif /** OPENSSL_ML_DSA_PUBLIC_KEY_H_ @}*/

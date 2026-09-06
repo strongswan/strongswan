@@ -22,7 +22,8 @@
 #ifndef ML_UTILS_H_
 #define ML_UTILS_H_
 
-#include "ml_params.h"
+#include "ml_kem_params.h"
+#include "ml_dsa_params.h"
 
 /**
  * Returns a mod q for a in [0,2*q) in constant time.
@@ -36,6 +37,21 @@ static inline uint16_t ml_reduce_modq(uint16_t a)
 	uint16_t mask = 0 - (diff >> 15);
 
 	return (mask & a) | (~mask & diff);
+}
+
+/**
+ * Computes a * 2^-32 mod q montgomery reduction
+ *
+ * Algorithm 49 in FIPS 204.
+ */
+static inline int32_t ml_montgomery_reduce(int64_t a)
+{
+	int32_t r;
+
+	r = (int64_t)(int32_t)a * ML_DSA_QINV;
+	r = (a - (int64_t)r * ML_DSA_Q) >> 32;
+
+	return r;
 }
 
 /**
@@ -65,5 +81,42 @@ uint32_t ml_read_bytes_le(uint8_t *buf, size_t len);
  * @param val		value to write
  */
 void ml_write_bytes_le(uint8_t *buf, size_t len, uint32_t val);
+
+/**
+ * Decompose a into (a1, a0) such that a ≡ a1 * (2 * gamma2) + a0 mod q.
+ *
+ * Algorithm 36 of FIPS 204.
+ *
+ * @param a			input value to be decomposed
+ * @param a0		low  bits of a
+ * @param a1		high bits of a
+ * @param gamma2	parameter gamma2
+ */
+void ml_decompose(int32_t a, int32_t *a0, int32_t *a1, int32_t gamma2);
+
+/**
+ * Return the high bits a1 of a adjusted according to hint h.
+ *
+ * Algorithm 40 of FIPS 204.
+ *
+ * @param a			input value to be adjusted
+ * @param hint		hint (0 or 1)
+ * @param gamma2	parameter gamma2
+ * @return			adjusted high bits of a
+ */
+int32_t ml_use_hint(int32_t a, int32_t hint, int32_t gamma2);
+
+/**
+ * Compute a hint bit indicating whether the low bits a0 of the
+ * input element overflow into the high bits a1.
+ *
+ * Algorithm 39 in FIPS 204.
+ *
+ * @param a0		low bits
+ * @param a1		high bits
+ * @param gamma2	parameter gamma2
+ * @return			hint bit (0 or 1)
+ */
+int32_t ml_make_hint(int32_t a0, int32_t a1, int32_t gamma2);
 
 #endif /** ML_UTILS_H_ @}*/
