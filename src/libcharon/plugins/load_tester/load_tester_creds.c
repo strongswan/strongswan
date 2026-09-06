@@ -221,7 +221,7 @@ static private_key_t *load_issuer_key()
 					BUILD_END);
 	}
 	DBG1(DBG_CFG, "loading load-tester private key from '%s'", path);
-	return lib->creds->create(lib->creds, CRED_PRIVATE_KEY, KEY_RSA,
+	return lib->creds->create(lib->creds, CRED_PRIVATE_KEY, KEY_ANY,
 					BUILD_FROM_FILE, path, BUILD_END);
 }
 
@@ -290,7 +290,7 @@ METHOD(credential_set_t, create_private_enumerator, enumerator_t*,
 	{
 		return NULL;
 	}
-	if (type != KEY_ANY && type != KEY_RSA)
+	if (type != KEY_ANY && type != KEY_RSA && type != KEY_ECDSA)
 	{
 		return NULL;
 	}
@@ -325,7 +325,7 @@ METHOD(credential_set_t, create_cert_enumerator, enumerator_t*,
 	{
 		return NULL;
 	}
-	if (key != KEY_ANY && key != KEY_RSA)
+	if (key != KEY_ANY && key != KEY_RSA && key != KEY_ECDSA)
 	{
 		return NULL;
 	}
