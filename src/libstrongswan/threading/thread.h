@@ -51,6 +51,10 @@ struct thread_t {
 
 	/**
 	 * Cancel this thread.
+	 *
+	 * @warning On Windows, this blocks until the thread has left a condvar
+	 * wait, so it must not be called while holding the same mutex/rwlock the
+	 * thread might be waiting on in cancelable state.
 	 */
 	void (*cancel)(thread_t *this);
 

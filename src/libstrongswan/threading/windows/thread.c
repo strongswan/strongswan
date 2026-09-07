@@ -339,11 +339,35 @@ void thread_set_active_condvar(CONDITION_VARIABLE *condvar)
 }
 
 /**
+ * Wake the thread waiting on the condvar and return whether there
+ * currently is an active condvar.
+ */
+static bool wake_active_condvar(private_thread_t *this)
+{
+	CONDITION_VARIABLE *cv;
+
+	condvar_lock->lock(condvar_lock);
+	cv = this->condvar;
+	if (cv)
+	{
+		WakeAllConditionVariable(cv);
+	}
+	condvar_lock->unlock(condvar_lock);
+	return cv != NULL;
+}
+
+/**
  * APC to cancel a thread
  */
 static void WINAPI docancel(ULONG_PTR dwParam)
 {
 	private_thread_t *this = (private_thread_t*)dwParam;
+
+	/* if canceled in thread_set_active_condvar() before waiting on the condvar,
+	 * we clear this so cancel() doesn't wait for it */
+	condvar_lock->lock(condvar_lock);
+	this->condvar = NULL;
+	condvar_lock->unlock(condvar_lock);
 
 	end_thread(this);
 	ExitThread(0);
@@ -356,16 +380,27 @@ METHOD(thread_t, cancel, void,
 	if (atomic_get_bool(&this->cancelability) &&
 		cas_bool(&this->cancel_pending, FALSE, TRUE))
 	{
-		CONDITION_VARIABLE *cv;
-
-		condvar_lock->lock(condvar_lock);
-		cv = this->condvar;
 		QueueUserAPC(docancel, this->handle, (uintptr_t)this);
-		if (cv)
+
+		/* SleepConditionVariableCS() is not alertable, so the APC can only be
+		 * delivered after the thread returns from the wait. waking the condvar
+		 * normally achieves that, but the wake may get lost if it races with
+		 * the thread entering the wait (after setting the condvar).  so we keep
+		 * waking it until the thread cleared the pointer when leaving the wait
+		 * (docancel() does the same if the thread is canceled before actually
+		 * waiting).  however, because the target thread can only clear the
+		 * condvar by leaving the wait and reacquiring the mutex/rwlock,
+		 * cancel() can't be called while holding the same lock as that would
+		 * prevent that.  on the other hand, there wouldn't be a lost wake as
+		 * the target is definitely waiting on the condvar if we hold the lock.
+		 * unfortunately, we can't determine whether the calling thread holds
+		 * the same lock, so doing this must be avoided.  note that it's safe to
+		 * access `this` as calling cancel() on a detached thread doesn't make
+		 * sense as the thread object could get destroyed at any moment */
+		while (wake_active_condvar(this))
 		{
-			WakeAllConditionVariable(cv);
+			Sleep(1);
 		}
-		condvar_lock->unlock(condvar_lock);
 	}
 }
 
