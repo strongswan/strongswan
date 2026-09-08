@@ -811,14 +811,23 @@ dispose (GObject *object)
 	StrongswanPluginUiWidgetPrivate *priv = STRONGSWAN_PLUGIN_UI_WIDGET_GET_PRIVATE (plugin);
 	GtkWidget *widget;
 
-	widget = GTK_WIDGET (gtk_builder_get_object (priv->builder, "passwd-entry"));
-	g_signal_handlers_disconnect_by_func (G_OBJECT (widget), G_CALLBACK (password_storage_changed_cb), plugin);
+	if (priv->builder)
+	{
+		widget = GTK_WIDGET (gtk_builder_get_object (priv->builder, "passwd-entry"));
+		g_signal_handlers_disconnect_by_func (G_OBJECT (widget), G_CALLBACK (password_storage_changed_cb), plugin);
+	}
 
 	if (priv->widget)
+	{
 		g_object_unref (priv->widget);
+		priv->widget = NULL;
+	}
 
 	if (priv->builder)
+	{
 		g_object_unref (priv->builder);
+		priv->builder = NULL;
+	}
 
 	G_OBJECT_CLASS (strongswan_plugin_ui_widget_parent_class)->dispose (object);
 }
