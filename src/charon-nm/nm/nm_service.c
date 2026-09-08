@@ -1005,6 +1005,8 @@ static gboolean connect_(NMVpnServicePlugin *plugin, NMConnection *connection,
 	ike.force_encap = streq(str, "yes");
 	str = nm_setting_vpn_get_data_item(vpn, "ipcomp");
 	child.options |= streq(str, "yes") ? OPT_IPCOMP : 0;
+	str = nm_setting_vpn_get_data_item(vpn, "dpd-delay");
+	peer.dpd = settings_value_as_time((char*)str, 0);
 
 	/**
 	 * Register credentials
