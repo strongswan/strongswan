@@ -53,7 +53,7 @@ struct vici_builder_t {
 	 * @param fmt	value format string
 	 * @param ...	arguments to value format string
 	 */
-	void (*add_kv)(vici_builder_t *this, char *key, char *fmt, ...);
+	void (*add_kv)(vici_builder_t *this, char *key, const char *fmt, ...);
 
 	/**
 	 * Append a message element using a format string and va_list.
@@ -66,7 +66,8 @@ struct vici_builder_t {
 	 * @param fmt	value format string
 	 * @param args	arguments to value format string
 	 */
-	void (*vadd_kv)(vici_builder_t *this, char *key, char *fmt, va_list args);
+	void (*vadd_kv)(vici_builder_t *this, char *key, const char *fmt,
+					va_list args);
 
 	/**
 	 * Append a list item element using a format string.
@@ -77,7 +78,7 @@ struct vici_builder_t {
 	 * @param fmt	value format string
 	 * @param ...	arguments to value format string
 	 */
-	void (*add_li)(vici_builder_t *this, char *fmt, ...);
+	void (*add_li)(vici_builder_t *this, const char *fmt, ...);
 
 	/**
 	 * Append a list item element using a format string and va_list.
@@ -88,7 +89,7 @@ struct vici_builder_t {
 	 * @param fmt	value format string
 	 * @param args	arguments to value format string
 	 */
-	void (*vadd_li)(vici_builder_t *this, char *fmt, va_list args);
+	void (*vadd_li)(vici_builder_t *this, const char *fmt, va_list args);
 
 	/**
 	 * Begin a new section.

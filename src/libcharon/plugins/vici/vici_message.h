@@ -223,6 +223,14 @@ struct vici_message_t {
 };
 
 /**
+ * Create a (error) reply message.
+ *
+ * @param fmt		error format-string, NULL for generic success reply
+ * @param ...		variable argument for \p fmt
+ */
+vici_message_t *vici_create_reply(const char *fmt, ...);
+
+/**
  * Create a vici_message from encoded data.
  *
  * @param data			message encoding

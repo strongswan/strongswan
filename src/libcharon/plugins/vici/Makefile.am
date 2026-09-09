@@ -20,6 +20,7 @@ libstrongswan_vici_la_SOURCES = \
 	vici_message.h vici_message.c \
 	vici_builder.h vici_builder.c \
 	vici_dispatcher.h vici_dispatcher.c \
+	vici_parse_utils.h vici_parse_utils.c \
 	vici_cert_info.h vici_cert_info.c \
 	vici_query.h vici_query.c \
 	vici_control.h vici_control.c \

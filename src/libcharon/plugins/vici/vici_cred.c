@@ -20,6 +20,7 @@
 #include "vici_cred.h"
 #include "vici_builder.h"
 #include "vici_cert_info.h"
+#include "vici_parse_utils.h"
 
 #include <credentials/sets/mem_cred.h>
 #include <credentials/certificates/ac.h>
@@ -112,25 +113,6 @@ METHOD(credential_set_t, cache_cert, void,
 	}
 }
 
-/**
- * Create a (error) reply message
- */
-static vici_message_t* create_reply(char *fmt, ...)
-{
-	vici_builder_t *builder;
-	va_list args;
-
-	builder = vici_builder_create();
-	builder->add_kv(builder, "success", fmt ? "no" : "yes");
-	if (fmt)
-	{
-		va_start(args, fmt);
-		builder->vadd_kv(builder, "errmsg", fmt, args);
-		va_end(args);
-	}
-	return builder->finalize(builder);
-}
-
 CALLBACK(load_cert, vici_message_t*,
 	private_vici_cred_t *this, char *name, u_int id, vici_message_t *message)
 {
@@ -144,7 +126,7 @@ CALLBACK(load_cert, vici_message_t*,
 	str = message->get_str(message, NULL, "type");
 	if (!str)
 	{
-		return create_reply("certificate type missing");
+		return vici_create_reply("certificate type missing");
 	}
 	if (enum_from_name(certificate_type_names, str, &type))
 	{
@@ -153,19 +135,19 @@ CALLBACK(load_cert, vici_message_t*,
 			str = message->get_str(message, "NONE", "flag");
 			if (!enum_from_name(x509_flag_names, str, &flag))
 			{
-				return create_reply("invalid certificate flag '%s'", str);
+				return vici_create_reply("invalid certificate flag '%s'", str);
 			}
 		}
 	}
 	else if	(!vici_cert_info_from_str(str, &type, &flag))
 	{
-		return create_reply("invalid certificate type '%s'", str);
+		return vici_create_reply("invalid certificate type '%s'", str);
 	}
 
 	data = message->get_value(message, chunk_empty, "data");
 	if (!data.len)
 	{
-		return create_reply("certificate data missing");
+		return vici_create_reply("certificate data missing");
 	}
 
 	/* do not set CA flag externally */
@@ -177,7 +159,7 @@ CALLBACK(load_cert, vici_message_t*,
 							  BUILD_END);
 	if (!cert)
 	{
-		return create_reply("parsing %N certificate failed",
+		return vici_create_reply("parsing %N certificate failed",
 							certificate_type_names, type);
 	}
 	DBG1(DBG_CFG, "loaded certificate '%Y'", cert->get_subject(cert));
@@ -189,14 +171,14 @@ CALLBACK(load_cert, vici_message_t*,
 		{
 			cert = this->authority->add_ca_cert(this->authority, cert);
 			cert->destroy(cert);
-			return create_reply(NULL);
+			return vici_create_reply(NULL);
 		}
 		else if (flag & X509_CA)
 		{
 			char msg[] = "ca certificate lacks CA basic constraint, rejected";
 			cert->destroy(cert);
 			DBG1(DBG_CFG, "  %s", msg);
-			return create_reply(msg);
+			return vici_create_reply(msg);
 		}
 	}
 
@@ -208,7 +190,7 @@ CALLBACK(load_cert, vici_message_t*,
 	{
 		this->creds->add_cert(this->creds, type != CERT_X509_AC, cert);
 	}
-	return create_reply(NULL);
+	return vici_create_reply(NULL);
 }
 
 CALLBACK(load_key, vici_message_t*,
@@ -223,27 +205,27 @@ CALLBACK(load_key, vici_message_t*,
 	str = message->get_str(message, NULL, "type");
 	if (!str)
 	{
-		return create_reply("key type missing");
+		return vici_create_reply("key type missing");
 	}
 	if (!enum_from_name(key_type_names, str, &type))
 	{
-		return create_reply("invalid key type: %s", str);
+		return vici_create_reply("invalid key type: %s", str);
 	}
 	data = message->get_value(message, chunk_empty, "data");
 	if (!data.len)
 	{
-		return create_reply("key data missing");
+		return vici_create_reply("key data missing");
 	}
 	key = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, type,
 							 BUILD_BLOB_PEM, data, BUILD_END);
 	if (!key)
 	{
-		return create_reply("parsing %N private key failed",
+		return vici_create_reply("parsing %N private key failed",
 							key_type_names, type);
 	}
 	if (!key->get_fingerprint(key, KEYID_PUBKEY_SHA1, &fp))
 	{
-		return create_reply("failed to get key id");
+		return vici_create_reply("failed to get key id");
 	}
 
 	DBG1(DBG_CFG, "loaded %N private key", key_type_names, type);
@@ -265,7 +247,7 @@ CALLBACK(unload_key, vici_message_t*,
 	hex = message->get_str(message, NULL, "id");
 	if (!hex)
 	{
-		return create_reply("key id missing");
+		return vici_create_reply("key id missing");
 	}
 	keyid = chunk_from_hex(chunk_from_str(hex), NULL);
 	snprintf(buf, sizeof(buf), "%+B", &keyid);
@@ -279,7 +261,7 @@ CALLBACK(unload_key, vici_message_t*,
 		msg = "key not found";
 	}
 	chunk_free(&keyid);
-	return create_reply(msg);
+	return vici_create_reply(msg);
 }
 
 CALLBACK(get_keys, vici_message_t*,
@@ -323,7 +305,7 @@ CALLBACK(load_token, vici_message_t*,
 	hex = message->get_str(message, NULL, "handle");
 	if (!hex)
 	{
-		return create_reply("keyid missing");
+		return vici_create_reply("keyid missing");
 	}
 	handle = chunk_from_hex(chunk_from_str(hex), NULL);
 	slot = message->get_int(message, -1, "slot");
@@ -362,7 +344,7 @@ CALLBACK(load_token, vici_message_t*,
 	{
 		chunk_free(&handle);
 		DESTROY_IF(shared);
-		return create_reply("loading private key from token failed");
+		return vici_create_reply("loading private key from token failed");
 	}
 	builder = vici_builder_create();
 	builder->add_kv(builder, "success", "yes");
@@ -423,7 +405,7 @@ CALLBACK(load_shared, vici_message_t*,
 	str = message->get_str(message, NULL, "type");
 	if (!str)
 	{
-		return create_reply("shared key type missing");
+		return vici_create_reply("shared key type missing");
 	}
 	if (strcaseeq(str, "ike"))
 	{
@@ -443,19 +425,19 @@ CALLBACK(load_shared, vici_message_t*,
 	}
 	else
 	{
-		return create_reply("invalid shared key type: %s", str);
+		return vici_create_reply("invalid shared key type: %s", str);
 	}
 	data = message->get_value(message, chunk_empty, "data");
 	if (!data.len)
 	{
-		return create_reply("shared key data missing");
+		return vici_create_reply("shared key data missing");
 	}
 
 	owners = linked_list_create();
 	if (!message->parse(message, NULL, NULL, NULL, shared_owners, owners))
 	{
 		owners->destroy_offset(owners, offsetof(identification_t, destroy));
-		return create_reply("parsing shared key owners failed");
+		return vici_create_reply("parsing shared key owners failed");
 	}
 	if (owners->get_count(owners) == 0)
 	{
@@ -488,7 +470,7 @@ CALLBACK(load_shared, vici_message_t*,
 	this->creds->add_shared_unique(this->creds, unique,
 						shared_key_create(type, chunk_clone(data)), owners);
 
-	return create_reply(NULL);
+	return vici_create_reply(NULL);
 }
 
 CALLBACK(unload_shared, vici_message_t*,
@@ -499,11 +481,11 @@ CALLBACK(unload_shared, vici_message_t*,
 	unique = message->get_str(message, NULL, "id");
 	if (!unique)
 	{
-		return create_reply("unique identifier missing");
+		return vici_create_reply("unique identifier missing");
 	}
 	DBG1(DBG_CFG, "unloaded shared key with id '%s'", unique);
 	this->creds->remove_shared_unique(this->creds, unique);
-	return create_reply(NULL);
+	return vici_create_reply(NULL);
 }
 
 CALLBACK(get_shared, vici_message_t*,
@@ -535,7 +517,7 @@ CALLBACK(clear_creds, vici_message_t*,
 	this->authority->clear_ca_certs(this->authority);
 	lib->credmgr->flush_cache(lib->credmgr, CERT_ANY);
 
-	return create_reply(NULL);
+	return vici_create_reply(NULL);
 }
 
 CALLBACK(flush_certs, vici_message_t*,
@@ -549,11 +531,11 @@ CALLBACK(flush_certs, vici_message_t*,
 	if (str && !enum_from_name(certificate_type_names, str, &type) &&
 			   !vici_cert_info_from_str(str, &type, &flag))
 	{
-		return create_reply("invalid certificate type '%s'", str);
+		return vici_create_reply("invalid certificate type '%s'", str);
 	}
 	lib->credmgr->flush_cache(lib->credmgr, type);
 
-	return create_reply(NULL);
+	return vici_create_reply(NULL);
 }
 
 static void manage_command(private_vici_cred_t *this,

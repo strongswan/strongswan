@@ -668,6 +668,25 @@ METHOD(vici_message_t, destroy, void,
 /**
  * See header
  */
+vici_message_t* vici_create_reply(const char *fmt, ...)
+{
+	vici_builder_t *builder;
+	va_list args;
+
+	builder = vici_builder_create();
+	builder->add_kv(builder, "success", fmt ? "no" : "yes");
+	if (fmt)
+	{
+		va_start(args, fmt);
+		builder->vadd_kv(builder, "errmsg", fmt, args);
+		va_end(args);
+	}
+	return builder->finalize(builder);
+}
+
+/**
+ * See header
+ */
 vici_message_t *vici_message_create_from_data(chunk_t data, bool cleanup)
 {
 	private_vici_message_t *this;

@@ -138,7 +138,7 @@ METHOD(vici_builder_t, add, void,
  * Add a list item or a key/value, if key given
  */
 static void vadd_kv_or_li(private_vici_builder_t *this, char *key,
-						  char *fmt, va_list args)
+						  const char *fmt, va_list args)
 {
 	u_char buf[512];
 	chunk_t value;
@@ -182,13 +182,13 @@ static void vadd_kv_or_li(private_vici_builder_t *this, char *key,
 }
 
 METHOD(vici_builder_t, vadd_kv, void,
-	private_vici_builder_t *this, char *key, char *fmt, va_list args)
+	private_vici_builder_t *this, char *key, const char *fmt, va_list args)
 {
 	vadd_kv_or_li(this, key, fmt, args);
 }
 
 METHOD(vici_builder_t, add_kv, void,
-	private_vici_builder_t *this, char *key, char *fmt, ...)
+	private_vici_builder_t *this, char *key, const char *fmt, ...)
 {
 	va_list args;
 
@@ -198,13 +198,13 @@ METHOD(vici_builder_t, add_kv, void,
 }
 
 METHOD(vici_builder_t, vadd_li, void,
-	private_vici_builder_t *this, char *fmt, va_list args)
+	private_vici_builder_t *this, const char *fmt, va_list args)
 {
 	vadd_kv_or_li(this, NULL, fmt, args);
 }
 
 METHOD(vici_builder_t, add_li, void,
-	private_vici_builder_t *this, char *fmt, ...)
+	private_vici_builder_t *this, const char *fmt, ...)
 {
 	va_list args;
 

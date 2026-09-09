@@ -353,25 +353,6 @@ static bool merge_pool(private_vici_attribute_t *this, pool_t *new)
 }
 
 /**
- * Create a (error) reply message
- */
-static vici_message_t* create_reply(char *fmt, ...)
-{
-	vici_builder_t *builder;
-	va_list args;
-
-	builder = vici_builder_create();
-	builder->add_kv(builder, "success", fmt ? "no" : "yes");
-	if (fmt)
-	{
-		va_start(args, fmt);
-		builder->vadd_kv(builder, "errmsg", fmt, args);
-		va_end(args);
-	}
-	return builder->finalize(builder);
-}
-
-/**
  * Parse a range definition of an address pool
  */
 static mem_pool_t *create_pool_range(char *name, char *buf)
@@ -444,7 +425,8 @@ CALLBACK(pool_li, bool,
 		type = atoi(name);
 		if (!type)
 		{
-			data->request->reply = create_reply("invalid attribute: %s", name);
+			data->request->reply = vici_create_reply("invalid attribute: %s",
+													 name);
 			return FALSE;
 		}
 	}
@@ -505,8 +487,8 @@ CALLBACK(pool_li, bool,
 	{
 		if (index != -1)
 		{
-			data->request->reply = create_reply("invalid attribute value "
-												"for %s", name);
+			data->request->reply = vici_create_reply("invalid attribute value "
+													 "for %s", name);
 			return FALSE;
 		}
 		/* use raw binary data for numbered attributes */
@@ -532,12 +514,12 @@ CALLBACK(pool_kv, bool,
 
 		if (data->pool->vips)
 		{
-			data->request->reply = create_reply("multiple addrs defined");
+			data->request->reply = vici_create_reply("multiple addrs defined");
 			return FALSE;
 		}
 		if (!vici_stringify(value, buf, sizeof(buf)))
 		{
-			data->request->reply = create_reply("invalid addrs value");
+			data->request->reply = vici_create_reply("invalid addrs value");
 			return FALSE;
 		}
 		pool = create_pool_range(data->name, buf);
@@ -552,13 +534,14 @@ CALLBACK(pool_kv, bool,
 		}
 		if (!pool)
 		{
-			data->request->reply = create_reply("invalid addrs value: %s", buf);
+			data->request->reply = vici_create_reply("invalid addrs value: %s",
+													 buf);
 			return FALSE;
 		}
 		data->pool->vips = pool;
 		return TRUE;
 	}
-	data->request->reply = create_reply("invalid attribute: %s", name);
+	data->request->reply = vici_create_reply("invalid attribute: %s", name);
 	return FALSE;
 }
 
@@ -582,7 +565,7 @@ CALLBACK(pool_sn, bool,
 
 	if (!data.pool->vips)
 	{
-		request->reply = create_reply("missing addrs for pool '%s'", name);
+		request->reply = vici_create_reply("missing addrs for pool '%s'", name);
 		pool_destroy(data.pool);
 		return FALSE;
 	}
@@ -593,8 +576,8 @@ CALLBACK(pool_sn, bool,
 
 	if (!merged)
 	{
-		request->reply = create_reply("vici pool %s has online leases, "
-									  "unable to replace", name);
+		request->reply = vici_create_reply("vici pool %s has online leases, "
+										   "unable to replace", name);
 		pool_destroy(data.pool);
 	}
 	return merged;
@@ -614,9 +597,9 @@ CALLBACK(load_pool, vici_message_t*,
 		{
 			return request.reply;
 		}
-		return create_reply("parsing request failed");
+		return vici_create_reply("parsing request failed");
 	}
-	return create_reply(NULL);
+	return vici_create_reply(NULL);
 }
 
 CALLBACK(unload_pool, vici_message_t*,
@@ -630,7 +613,7 @@ CALLBACK(unload_pool, vici_message_t*,
 	name = message->get_str(message, NULL, "name");
 	if (!name)
 	{
-		return create_reply("missing pool name to unload");
+		return vici_create_reply("missing pool name to unload");
 	}
 
 	this->lock->write_lock(this->lock);
@@ -643,19 +626,20 @@ CALLBACK(unload_pool, vici_message_t*,
 		{
 			DBG1(DBG_CFG, "vici pool %s has %u online leases, unable to unload",
 				 name, online);
-			reply = create_reply("%s has online leases, unable to unload", name);
+			reply = vici_create_reply("%s has online leases, unable to unload",
+									  name);
 			this->pools->put(this->pools, pool->vips->get_name(pool->vips), pool);
 		}
 		else
 		{
 			DBG1(DBG_CFG, "unloaded vici pool %s", name);
-			reply = create_reply(NULL);
+			reply = vici_create_reply(NULL);
 			pool_destroy(pool);
 		}
 	}
 	else
 	{
-		reply = create_reply("%s not found", name);
+		reply = vici_create_reply("%s not found", name);
 	}
 
 	this->lock->unlock(this->lock);
