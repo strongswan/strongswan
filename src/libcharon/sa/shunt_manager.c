@@ -457,7 +457,7 @@ METHOD(shunt_manager_t, flush, void,
 METHOD(shunt_manager_t, destroy, void,
 	private_shunt_manager_t *this)
 {
-	this->shunts->destroy_offset(this->shunts, offsetof(child_cfg_t, destroy));
+	this->shunts->destroy_function(this->shunts, (void*)entry_destroy);
 	this->lock->destroy(this->lock);
 	this->condvar->destroy(this->condvar);
 	free(this);
