@@ -384,7 +384,7 @@ METHOD(trap_manager_t, install, bool,
 	this->lock->write_lock(this->lock);
 	/* do this at the end, so entries created temporarily are also destroyed */
 	this->installing--;
-	this->condvar->signal(this->condvar);
+	this->condvar->broadcast(this->condvar);
 	this->lock->unlock(this->lock);
 	return result;
 }
@@ -398,6 +398,11 @@ METHOD(trap_manager_t, uninstall, bool,
 	this->lock->write_lock(this->lock);
 	while (this->installing)
 	{
+		if (this->installing == INSTALL_DISABLED)
+		{	/* flush() has been called, policy is already uninstalled */
+			this->lock->unlock(this->lock);
+			return TRUE;
+		}
 		this->condvar->wait(this->condvar, this->lock);
 	}
 	enumerator = this->traps->create_enumerator(this->traps);
@@ -850,6 +855,11 @@ METHOD(trap_manager_t, flush, void,
 	private_trap_manager_t *this)
 {
 	this->lock->write_lock(this->lock);
+	if (this->installing == INSTALL_DISABLED)
+	{
+		this->lock->unlock(this->lock);
+		return;
+	}
 	while (this->installing)
 	{
 		this->condvar->wait(this->condvar, this->lock);
