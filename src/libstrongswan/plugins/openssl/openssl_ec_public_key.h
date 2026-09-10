@@ -15,6 +15,8 @@
  */
 
 /**
+ * public_key_t implementation of ECDSA using OpenSSL
+ *
  * @defgroup openssl_ec_public_key openssl_ec_public_key
  * @{ @ingroup openssl_p
  */
@@ -22,21 +24,9 @@
 #ifndef OPENSSL_EC_PUBLIC_KEY_H_
 #define OPENSSL_EC_PUBLIC_KEY_H_
 
-typedef struct openssl_ec_public_key_t openssl_ec_public_key_t;
+#include <openssl/evp.h>
 
-#include <credentials/builder.h>
 #include <credentials/keys/public_key.h>
-
-/**
- * public_key_t implementation of ECDSA using OpenSSL.
- */
-struct openssl_ec_public_key_t {
-
-	/**
-	 * Implements the public_key_t interface
-	 */
-	public_key_t key;
-};
 
 /**
  * Load a ECDSA public key using OpenSSL.
@@ -47,7 +37,14 @@ struct openssl_ec_public_key_t {
  * @param args		builder_part_t argument list
  * @return 			loaded key, NULL on failure
  */
-openssl_ec_public_key_t *openssl_ec_public_key_load(key_type_t type,
-													va_list args);
+public_key_t *openssl_ec_public_key_load(key_type_t type, va_list args);
+
+/**
+ * Wrap an EVP_PKEY object of type ECDSA.
+ *
+ * @param key		EVP_PKEY object (adopted)
+ * @return 			generated key, NULL on failure
+ */
+public_key_t *openssl_ec_public_key_create(EVP_PKEY *key);
 
 #endif /** OPENSSL_EC_PUBLIC_KEY_H_ @}*/

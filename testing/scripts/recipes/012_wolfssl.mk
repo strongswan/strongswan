@@ -26,10 +26,12 @@ CONFIG_OPTS = \
 	--enable-ed25519 \
 	--enable-ed448 \
 	--enable-keygen \
+	--enable-mldsa \
 	--enable-mlkem \
 	--enable-rsapss \
 	--enable-sha3 \
 	--enable-shake256 \
+	--enable-dilithium \
 	--with-max-rsa-bits=8192
 
 all: install
