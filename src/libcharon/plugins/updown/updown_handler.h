@@ -45,6 +45,14 @@ struct updown_handler_t {
 	enumerator_t* (*create_dns_enumerator)(updown_handler_t *this, u_int id);
 
 	/**
+	 * Create an enumerator over received DNS search domains.
+	 *
+	 * @param id		unique IKE_SA identifier to get attributes for
+	 * @return			enumerator over char*
+	 */
+	enumerator_t* (*create_domain_enumerator)(updown_handler_t *this, u_int id);
+
+	/**
 	 * Destroy a updown_handler_t.
 	 */
 	void (*destroy)(updown_handler_t *this);

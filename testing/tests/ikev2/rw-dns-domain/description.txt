@@ -1,0 +1,7 @@
+The roadwarrior <b>carol</b> sets up a connection to gateway <b>moon</b>, requesting a
+<b>virtual IP</b> via the IKEv2 configuration payload. Gateway <b>moon</b> assigns an
+address from pool <b>rw_pool</b> and, via the <b>attr</b> plugin, pushes a DNS server
+(<b>INTERNAL_IP4_DNS</b>) plus two DNS search domains (<b>INTERNAL_DNS_DOMAIN</b>):
+<b>strongswan.org</b> and <b>example.com</b>. The <b>resolve</b> plugin on <b>carol</b>
+installs the nameserver and writes a single <b>search</b> line listing both domains to
+<b>/etc/resolv.conf</b>.
