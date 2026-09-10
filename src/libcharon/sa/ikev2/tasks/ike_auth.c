@@ -232,6 +232,23 @@ static void prepare_packet_data(private_ike_auth_t *this)
 }
 
 /**
+ * Check whether the config requires that a full transcript is used.
+ */
+static bool check_full_transcript_required(private_ike_auth_t *this)
+{
+	if (this->peer_cfg->has_option(this->peer_cfg,
+								   OPT_FULL_TRANSCRIPT_AUTH_REQUIRED) &&
+		!this->ike_sa->supports_extension(this->ike_sa,
+										  EXT_FULL_TRANSCRIPT_AUTH))
+	{
+		DBG1(DBG_CFG, "full transcript required for downgrade prevention, "
+			 "but it's either disabled or the peer doesn't support it");
+		return FALSE;
+	}
+	return TRUE;
+}
+
+/**
  * Collect IntAuth data for IKE_INTERMEDIATE exchanges.
  */
 static status_t collect_int_auth_data(private_ike_auth_t *this, bool verify,
@@ -870,6 +887,11 @@ METHOD(task_t, build_i, status_t,
 			charon->bus->alert(charon->bus, ALERT_LOCAL_AUTH_FAILED);
 			return FAILED;
 		}
+		if (!check_full_transcript_required(this))
+		{
+			charon->bus->alert(charon->bus, ALERT_LOCAL_AUTH_FAILED);
+			return FAILED;
+		}
 		/* set MID in IntAuth data if used */
 		set_ike_auth_mid(this, message);
 		/* prepare packet data if full transcript is used */
@@ -1378,6 +1400,10 @@ METHOD(task_t, build_r, status_t,
 		return NEED_MORE;
 	}
 
+	if (!check_full_transcript_required(this))
+	{
+		goto peer_auth_failed;
+	}
 	if (charon->ike_sa_manager->check_uniqueness(charon->ike_sa_manager,
 										this->ike_sa, this->initial_contact))
 	{

@@ -440,6 +440,8 @@ static void log_peer_data(peer_data_t *data)
 	DBG2(DBG_CFG, "  ocsp = %N", ocsp_policy_names, data->ocsp);
 	DBG2(DBG_CFG, "  ppk_id = %Y",  data->ppk_id);
 	DBG2(DBG_CFG, "  ppk_required = %u", has_opt(data, OPT_PPK_REQUIRED));
+	DBG2(DBG_CFG, "  full_transcript_required = %u",
+		 has_opt(data, OPT_FULL_TRANSCRIPT_AUTH_REQUIRED));
 	DBG2(DBG_CFG, "  mobike = %u", !has_opt(data, OPT_NO_MOBIKE));
 	DBG2(DBG_CFG, "  aggressive = %u", has_opt(data, OPT_IKEV1_AGGRESSIVE));
 	DBG2(DBG_CFG, "  pull = %u", !has_opt(data, OPT_IKEV1_PUSH_MODE));
@@ -981,6 +983,15 @@ CALLBACK(parse_opt_ppk_req, bool,
 	peer_cfg_option_t *out, chunk_t v)
 {
 	return parse_peer_option(out, OPT_PPK_REQUIRED, v, TRUE);
+}
+
+/**
+ * Parse OPT_FULL_TRANSCRIPT_AUTH_REQUIRED option
+ */
+CALLBACK(parse_opt_ft_req, bool,
+	peer_cfg_option_t *out, chunk_t v)
+{
+	return parse_peer_option(out, OPT_FULL_TRANSCRIPT_AUTH_REQUIRED, v, TRUE);
 }
 
 /**
@@ -2050,6 +2061,8 @@ CALLBACK(peer_kv, bool,
 		{ "rand_time",		parse_time,			&peer->rand_time			},
 		{ "ppk_id",			parse_peer_id,		&peer->ppk_id				},
 		{ "ppk_required",	parse_opt_ppk_req,	&peer->options				},
+		{ "full_transcript_required",
+							parse_opt_ft_req,	&peer->options				},
 		{ "if_id_in",		parse_if_id,		&peer->if_id_in				},
 		{ "if_id_out",		parse_if_id,		&peer->if_id_out			},
 #ifdef ME

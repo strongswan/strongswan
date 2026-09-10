@@ -223,6 +223,18 @@ connections.<conn>.ocsp = reply
 	certificate request payloads to be sent whenever certificate authentication
 	is used, _both_ combines _reply_ and _request_.
 
+connections.<conn>.full_transcript_required = no
+	Whether a full transcript of the IKE_SA_INIT messages is required during the
+	authentication of this connection (authentication will fail if the peer
+	does not support this extension or it's disabled locally).
+
+	Whether a full transcript of the IKE_SA_INIT messages is required during the
+	authentication of this connection. By default, IKEv2 only uses the sender's
+	IKE_SA_INIT message in their AUTH payload. If this extension is supported,
+	both messages are used in order to prevent some downgrade attacks.
+	Authentication will fail if the peer does not support the extension or it is
+	disabled in **strongswan.conf**(5).
+
 connections.<conn>.ppk_id =
 	String identifying the Postquantum Preshared Key (PPK) to be used.
 

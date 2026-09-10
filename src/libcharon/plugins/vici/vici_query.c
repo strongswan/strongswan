@@ -1106,6 +1106,10 @@ CALLBACK(list_conns, vici_message_t*,
 		{
 			b->add_kv(b, "ppk_required", "yes");
 		}
+		if (peer_cfg->has_option(peer_cfg, OPT_FULL_TRANSCRIPT_AUTH_REQUIRED))
+		{
+			b->add_kv(b, "full_transcript_required", "yes");
+		}
 
 		build_auth_cfgs(peer_cfg, TRUE, b);
 		build_auth_cfgs(peer_cfg, FALSE, b);

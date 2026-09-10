@@ -415,6 +415,9 @@ enum peer_cfg_option_t {
 
 	/** Require a PPK (otherwise, it's optional) */
 	OPT_PPK_REQUIRED = (1<<3),
+
+	/** Require full auth transcript (otherwise, it's optional) */
+	OPT_FULL_TRANSCRIPT_AUTH_REQUIRED = (1<<4),
 };
 
 /**

@@ -168,6 +168,7 @@ CALLBACK(conn_sn, int,
 	{
 		hashtable_t *auth;
 		char *class;
+		bool local = strpfx(name, "local");
 
 		auth = hashtable_create(hashtable_hash_str, hashtable_equals_str, 1);
 		ret = vici_parse_cb(res, NULL, values, list, auth);
@@ -178,8 +179,9 @@ CALLBACK(conn_sn, int,
 			{
 				class = auth->get(auth, "eap-type") ?: class;
 			}
-			printf("  %s %s authentication:\n",
-				strpfx(name, "local") ? "local" : "remote", class);
+			printf("  %s %s authentication%s:\n", local ? "local" : "remote",
+				   class, !local && ike->get(ike, "full_transcript_required") ?
+				   ", full transcript required" : "");
 			if (auth->get(auth, "id"))
 			{
 				printf("    id: %s\n", auth->get(auth, "id"));
@@ -246,7 +248,7 @@ CALLBACK(conns, int,
 {
 	int ret;
 	char *version, *reauth_time, *rekey_time, *dpd_delay, *ppk_id, *ppk_req;
-	char *local_port, *remote_port;
+	char *local_port, *remote_port, *ft_required;
 	hashtable_t *ike;
 
 	version     = vici_find_str(res, "", "%s.version", name);
@@ -255,11 +257,13 @@ CALLBACK(conns, int,
 	dpd_delay   = vici_find_str(res, "0", "%s.dpd_delay", name);
 	local_port  = vici_find_str(res, "0", "%s.local_port", name);
 	remote_port = vici_find_str(res, "0", "%s.remote_port", name);
+	ft_required = vici_find_str(res, NULL, "%s.full_transcript_required", name);
 
 	ike = hashtable_create(hashtable_hash_str, hashtable_equals_str, 1);
 	free(ike->put(ike,"dpd_delay", strdup(dpd_delay)));
 	free(ike->put(ike,"local_port", strdup(local_port)));
 	free(ike->put(ike,"remote_port", strdup(remote_port)));
+	free(ike->put(ike,"full_transcript_required", strdupnull(ft_required)));
 
 	printf("%s: %s, ", name, version);
 	if (streq(version, "IKEv1"))
