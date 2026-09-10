@@ -1404,6 +1404,11 @@ METHOD(task_t, build_r, status_t,
 	{
 		goto peer_auth_failed;
 	}
+	if (!charon->bus->authorize(charon->bus, TRUE))
+	{
+		DBG1(DBG_IKE, "final authorization hook forbids IKE_SA, canceling");
+		goto peer_auth_failed;
+	}
 	if (charon->ike_sa_manager->check_uniqueness(charon->ike_sa_manager,
 										this->ike_sa, this->initial_contact))
 	{
@@ -1412,11 +1417,6 @@ METHOD(task_t, build_r, status_t,
 		message->add_notify(message, TRUE, AUTHENTICATION_FAILED,
 							chunk_empty);
 		return FAILED;
-	}
-	if (!charon->bus->authorize(charon->bus, TRUE))
-	{
-		DBG1(DBG_IKE, "final authorization hook forbids IKE_SA, canceling");
-		goto peer_auth_failed;
 	}
 	if (this->ike_sa->supports_extension(this->ike_sa, EXT_IKE_REDIRECTION) &&
 		charon->redirect->redirect_on_auth(charon->redirect, this->ike_sa,
