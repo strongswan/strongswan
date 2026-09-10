@@ -921,6 +921,12 @@ static host_t *get_matching_address(private_kernel_netlink_net_t *this,
 	iface_entry_t *iface;
 	addr_entry_t *addr, *best = NULL;
 	bool candidate_matched = FALSE;
+	u_char scope_dest = 0;
+
+	if (dest)
+	{
+		scope_dest = get_scope(dest);
+	}
 
 	ifaces = this->ifaces->create_enumerator(this->ifaces);
 	while (ifaces->enumerate(ifaces, &iface))
@@ -933,6 +939,12 @@ static host_t *get_matching_address(private_kernel_netlink_net_t *this,
 				if (addr->refcount ||
 					addr->ip->get_family(addr->ip) != family)
 				{	/* ignore virtual IP addresses and ensure family matches */
+					continue;
+				}
+				if (dest && get_scope(addr->ip) < scope_dest)
+				{	/* ignore addresses of a smaller scope than the destination,
+					 * e.g. link-local addresses for global destinations, which
+					 * the kernel wouldn't use as source address either */
 					continue;
 				}
 				if (net.ptr && !host_in_subnet(addr->ip, net, mask))
