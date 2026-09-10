@@ -72,14 +72,12 @@ struct private_ike_auth_t {
 	chunk_t ppk;
 
 	/**
-	 * IKE_SA_INIT message sent by us (will be prefixed with zero and other's
-	 * message if full transcript is used)
+	 * IKE_SA_INIT message sent by us
 	 */
 	chunk_t my_packet_data;
 
 	/**
-	 * IKE_SA_INIT message sent by peer (will be prefixed with zero and our
-	 * message if full transcript is used)
+	 * IKE_SA_INIT message sent by peer
 	 */
 	chunk_t other_packet_data;
 
@@ -208,27 +206,6 @@ static status_t collect_other_init_data(private_ike_auth_t *this,
 	/* keep a copy of the received packet */
 	this->other_packet_data = chunk_clone(message->get_packet_data(message));
 	return NEED_MORE;
-}
-
-/**
- * Combine packet data if full transcript is used.
- */
-static void prepare_packet_data(private_ike_auth_t *this)
-{
-	chunk_t my_data, other_data;
-	uint64_t zero_prefix = 0;
-
-	if (!this->ike_sa->supports_extension(this->ike_sa,
-										  EXT_FULL_TRANSCRIPT_AUTH))
-	{
-		return;
-	}
-	my_data = this->my_packet_data;
-	other_data = this->other_packet_data;
-	this->my_packet_data = chunk_cat("ccc", chunk_from_thing(zero_prefix),
-									 other_data, my_data);
-	this->other_packet_data = chunk_cat("cmm", chunk_from_thing(zero_prefix),
-										my_data, other_data);
 }
 
 /**
@@ -894,8 +871,6 @@ METHOD(task_t, build_i, status_t,
 		}
 		/* set MID in IntAuth data if used */
 		set_ike_auth_mid(this, message);
-		/* prepare packet data if full transcript is used */
-		prepare_packet_data(this);
 	}
 
 	if (!this->do_another_auth && !this->my_auth)
@@ -1084,8 +1059,6 @@ METHOD(task_t, process_r, status_t,
 		}
 		/* set MID in IntAuth data if used */
 		set_ike_auth_mid(this, message);
-		/* prepare packet data if full transcript is used */
-		prepare_packet_data(this);
 		this->first_auth = TRUE;
 	}
 

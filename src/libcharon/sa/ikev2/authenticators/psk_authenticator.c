@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 Tobias Brunner
+ * Copyright (C) 2018-2026 Tobias Brunner
  * Copyright (C) 2005-2009 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  *
@@ -45,9 +45,14 @@ struct private_psk_authenticator_t {
 	chunk_t nonce;
 
 	/**
-	 * IKE_SA_INIT message data to include in AUTH calculation
+	 * Other's IKE_SA_INIT message data to include in AUTH calculation
 	 */
-	chunk_t ike_sa_init;
+	chunk_t received_init;
+
+	/**
+	 * Our IKE_SA_INIT message data to include in AUTH calculation
+	 */
+	chunk_t sent_init;
 
 	/**
 	 * IntAuth data to include in AUTH calculation
@@ -76,8 +81,10 @@ METHOD(authenticator_t, build, status_t,
 	identification_t *my_id, *other_id;
 	auth_payload_t *auth_payload;
 	shared_key_t *key;
-	chunk_t auth_data;
+	chunk_t init, auth_data;
 	keymat_v2_t *keymat;
+	status_t status = FAILED;
+	bool free_init;
 
 	keymat = (keymat_v2_t*)this->ike_sa->get_keymat(this->ike_sa);
 	my_id = this->ike_sa->get_my_id(this->ike_sa);
@@ -90,12 +97,13 @@ METHOD(authenticator_t, build, status_t,
 		DBG1(DBG_IKE, "no shared key found for '%Y' - '%Y'", my_id, other_id);
 		return NOT_FOUND;
 	}
-	if (!keymat->get_psk_sig(keymat, FALSE, this->ike_sa_init, this->nonce,
+	init = authenticator_get_init_message(this->ike_sa, this->sent_init,
+										this->received_init, FALSE, &free_init);
+	if (!keymat->get_psk_sig(keymat, FALSE, init, this->nonce,
 							 this->int_auth, key->get_key(key), this->ppk,
 							 my_id, this->reserved, &auth_data))
 	{
-		key->destroy(key);
-		return FAILED;
+		goto out;
 	}
 
 	DBG2(DBG_IKE, "successfully created shared key MAC");
@@ -107,33 +115,39 @@ METHOD(authenticator_t, build, status_t,
 
 	if (this->no_ppk_auth)
 	{
-		if (!keymat->get_psk_sig(keymat, FALSE, this->ike_sa_init, this->nonce,
+		if (!keymat->get_psk_sig(keymat, FALSE, init, this->nonce,
 							 this->int_auth, key->get_key(key), chunk_empty,
 							 my_id, this->reserved, &auth_data))
 		{
 			DBG1(DBG_IKE, "failed adding NO_PPK_AUTH notify");
-			key->destroy(key);
-			return SUCCESS;
+			goto out;
 		}
 		DBG2(DBG_IKE, "successfully created shared key MAC without PPK");
 		message->add_notify(message, FALSE, NO_PPK_AUTH, auth_data);
 		chunk_free(&auth_data);
 	}
+	status = SUCCESS;
+
+out:
 	key->destroy(key);
-	return SUCCESS;
+	if (free_init)
+	{
+		chunk_free(&init);
+	}
+	return status;
 }
 
 METHOD(authenticator_t, process, status_t,
 	private_psk_authenticator_t *this, message_t *message)
 {
-	chunk_t auth_data, recv_auth_data;
+	chunk_t init, auth_data, recv_auth_data;
 	identification_t *my_id, *other_id;
 	auth_payload_t *auth_payload;
 	notify_payload_t *notify;
 	auth_cfg_t *auth;
 	shared_key_t *key;
 	enumerator_t *enumerator;
-	bool authenticated = FALSE;
+	bool authenticated = FALSE, free_init;
 	int keys_found = 0;
 	keymat_v2_t *keymat;
 
@@ -155,6 +169,9 @@ METHOD(authenticator_t, process, status_t,
 		}
 	}
 
+	init = authenticator_get_init_message(this->ike_sa, this->sent_init,
+										this->received_init, TRUE, &free_init);
+
 	keymat = (keymat_v2_t*)this->ike_sa->get_keymat(this->ike_sa);
 	my_id = this->ike_sa->get_my_id(this->ike_sa);
 	other_id = this->ike_sa->get_other_id(this->ike_sa);
@@ -164,7 +181,7 @@ METHOD(authenticator_t, process, status_t,
 	{
 		keys_found++;
 
-		if (!keymat->get_psk_sig(keymat, TRUE, this->ike_sa_init, this->nonce,
+		if (!keymat->get_psk_sig(keymat, TRUE, init, this->nonce,
 								 this->int_auth, key->get_key(key), this->ppk,
 								 other_id, this->reserved, &auth_data))
 		{
@@ -180,6 +197,10 @@ METHOD(authenticator_t, process, status_t,
 	}
 	enumerator->destroy(enumerator);
 
+	if (free_init)
+	{
+		chunk_free(&init);
+	}
 	if (!authenticated)
 	{
 		if (keys_found == 0)
@@ -220,8 +241,8 @@ METHOD(authenticator_t, destroy, void,
  * Described in header.
  */
 psk_authenticator_t *psk_authenticator_create_builder(ike_sa_t *ike_sa,
-									chunk_t received_nonce, chunk_t sent_init,
-									char reserved[3])
+								chunk_t received_nonce, chunk_t received_init,
+								chunk_t sent_init, char reserved[3])
 {
 	private_psk_authenticator_t *this;
 
@@ -237,7 +258,8 @@ psk_authenticator_t *psk_authenticator_create_builder(ike_sa_t *ike_sa,
 			},
 		},
 		.ike_sa = ike_sa,
-		.ike_sa_init = sent_init,
+		.received_init = received_init,
+		.sent_init = sent_init,
 		.nonce = received_nonce,
 	);
 	memcpy(this->reserved, reserved, sizeof(this->reserved));
@@ -250,7 +272,7 @@ psk_authenticator_t *psk_authenticator_create_builder(ike_sa_t *ike_sa,
  */
 psk_authenticator_t *psk_authenticator_create_verifier(ike_sa_t *ike_sa,
 									chunk_t sent_nonce, chunk_t received_init,
-									char reserved[3])
+									chunk_t sent_init, char reserved[3])
 {
 	private_psk_authenticator_t *this;
 
@@ -266,7 +288,8 @@ psk_authenticator_t *psk_authenticator_create_verifier(ike_sa_t *ike_sa,
 			},
 		},
 		.ike_sa = ike_sa,
-		.ike_sa_init = received_init,
+		.received_init = received_init,
+		.sent_init = sent_init,
 		.nonce = sent_nonce,
 	);
 	memcpy(this->reserved, reserved, sizeof(this->reserved));

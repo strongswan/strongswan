@@ -1,6 +1,6 @@
 /*
+ * Copyright (C) 2008-2026 Tobias Brunner
  * Copyright (C) 2006-2009 Martin Willi
- * Copyright (C) 2008 Tobias Brunner
  *
  * Copyright (C) secunet Security Networks AG
  *
@@ -65,10 +65,12 @@ authenticator_t *authenticator_create_builder(ike_sa_t *ike_sa, auth_cfg_t *cfg,
 			/* defaults to PUBKEY */
 		case AUTH_CLASS_PUBKEY:
 			return (authenticator_t*)pubkey_authenticator_create_builder(ike_sa,
-										received_nonce, sent_init, reserved);
+										received_nonce, received_init,
+										sent_init, reserved);
 		case AUTH_CLASS_PSK:
 			return (authenticator_t*)psk_authenticator_create_builder(ike_sa,
-										received_nonce, sent_init, reserved);
+										received_nonce, received_init,
+										sent_init, reserved);
 		case AUTH_CLASS_EAP:
 			return (authenticator_t*)eap_authenticator_create_builder(ike_sa,
 										received_nonce, sent_nonce,
@@ -104,13 +106,43 @@ authenticator_t *authenticator_create_verifier(
 		case AUTH_ECDSA_521:
 		case AUTH_DS:
 			return (authenticator_t*)pubkey_authenticator_create_verifier(ike_sa,
-										sent_nonce, received_init, reserved);
+										sent_nonce, received_init, sent_init,
+										reserved);
 		case AUTH_PSK:
 			return (authenticator_t*)psk_authenticator_create_verifier(ike_sa,
-										sent_nonce, received_init, reserved);
+										sent_nonce, received_init, sent_init,
+										reserved);
 		default:
 			return NULL;
 	}
+}
+
+/*
+ * Described in header
+ */
+chunk_t authenticator_get_init_message(ike_sa_t *ike_sa, chunk_t sent_init,
+									   chunk_t received_init, bool verify,
+									   bool *allocated)
+{
+	uint64_t zero_prefix = 0;
+
+	if (!ike_sa->supports_extension(ike_sa, EXT_FULL_TRANSCRIPT_AUTH))
+	{
+		*allocated = FALSE;
+		return verify ? received_init : sent_init;
+	}
+	/* InitiatorSignedOctets = ZeroPrefix | RealMessage2
+	 *                         | RealMessage1 | NonceRData | MACedIDForI
+	 *
+	 * ResponderSignedOctets = ZeroPrefix | RealMessage1
+	 *                         | RealMessage2 | NonceIData | MACedIDForR
+	 * so when verifying, both peers use the sent message first and vice-versa
+	 * when signing
+	 */
+	*allocated = TRUE;
+	return chunk_cat("ccc", chunk_from_thing(zero_prefix),
+					 verify ? sent_init : received_init,
+					 verify ? received_init : sent_init);
 }
 
 #endif /* USE_IKEV2 */

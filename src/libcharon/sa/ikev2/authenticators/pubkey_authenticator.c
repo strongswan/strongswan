@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2018 Tobias Brunner
+ * Copyright (C) 2008-2026 Tobias Brunner
  * Copyright (C) 2005-2009 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  *
@@ -49,9 +49,14 @@ struct private_pubkey_authenticator_t {
 	chunk_t nonce;
 
 	/**
-	 * IKE_SA_INIT message data to include in AUTH calculation
+	 * Other's IKE_SA_INIT message data to include in AUTH calculation
 	 */
-	chunk_t ike_sa_init;
+	chunk_t received_init;
+
+	/**
+	 * Our IKE_SA_INIT message data to include in AUTH calculation
+	 */
+	chunk_t sent_init;
 
 	/**
 	 * IntAuth data to include in AUTH calculation
@@ -316,8 +321,9 @@ static status_t sign_signature_auth(private_pubkey_authenticator_t *this,
 	keymat_v2_t *keymat;
 	signature_params_t *params = NULL;
 	array_t *schemes;
-	chunk_t octets = chunk_empty, auth_data;
+	chunk_t init, octets = chunk_empty, auth_data;
 	status_t status = FAILED;
+	bool free_init;
 
 	keymat = (keymat_v2_t*)this->ike_sa->get_keymat(this->ike_sa);
 	schemes = select_signature_schemes(keymat, auth, private);
@@ -329,7 +335,10 @@ static status_t sign_signature_auth(private_pubkey_authenticator_t *this,
 		return FAILED;
 	}
 
-	if (keymat->get_auth_octets(keymat, FALSE, this->ike_sa_init, this->nonce,
+	init = authenticator_get_init_message(this->ike_sa, this->sent_init,
+										this->received_init, FALSE, &free_init);
+
+	if (keymat->get_auth_octets(keymat, FALSE, init, this->nonce,
 								this->int_auth, this->ppk, id, this->reserved,
 								&octets, schemes))
 	{
@@ -352,7 +361,7 @@ static status_t sign_signature_auth(private_pubkey_authenticator_t *this,
 			{
 				chunk_free(&octets);
 
-				if (keymat->get_auth_octets(keymat, FALSE, this->ike_sa_init,
+				if (keymat->get_auth_octets(keymat, FALSE, init,
 											this->nonce, this->int_auth,
 											chunk_empty, id, this->reserved,
 											&octets, schemes) &&
@@ -399,6 +408,10 @@ static status_t sign_signature_auth(private_pubkey_authenticator_t *this,
 	}
 	array_destroy_function(schemes, destroy_scheme, NULL);
 	chunk_free(&octets);
+	if (free_init)
+	{
+		chunk_free(&init);
+	}
 	return status;
 }
 
@@ -412,13 +425,17 @@ static bool get_auth_octets_scheme(private_pubkey_authenticator_t *this,
 {
 	keymat_v2_t *keymat;
 	array_t *schemes;
-	bool success = FALSE;
+	chunk_t init;
+	bool success = FALSE, free_init;
+
+	init = authenticator_get_init_message(this->ike_sa, this->sent_init,
+									this->received_init, verify, &free_init);
 
 	schemes = array_create(0, 0);
 	array_insert(schemes, ARRAY_TAIL, *scheme);
 
 	keymat = (keymat_v2_t*)this->ike_sa->get_keymat(this->ike_sa);
-	if (keymat->get_auth_octets(keymat, verify, this->ike_sa_init, this->nonce,
+	if (keymat->get_auth_octets(keymat, verify, init, this->nonce,
 								this->int_auth, ppk, id, this->reserved, octets,
 								schemes) &&
 		array_remove(schemes, 0, scheme))
@@ -430,6 +447,10 @@ static bool get_auth_octets_scheme(private_pubkey_authenticator_t *this,
 		*scheme = NULL;
 	}
 	array_destroy_function(schemes, destroy_scheme, NULL);
+	if (free_init)
+	{
+		chunk_free(&init);
+	}
 	return success;
 }
 
@@ -719,8 +740,8 @@ METHOD(authenticator_t, destroy, void,
  * Described in header.
  */
 pubkey_authenticator_t *pubkey_authenticator_create_builder(ike_sa_t *ike_sa,
-									chunk_t received_nonce, chunk_t sent_init,
-									char reserved[3])
+								chunk_t received_nonce, chunk_t received_init,
+								chunk_t sent_init, char reserved[3])
 {
 	private_pubkey_authenticator_t *this;
 
@@ -736,7 +757,8 @@ pubkey_authenticator_t *pubkey_authenticator_create_builder(ike_sa_t *ike_sa,
 			},
 		},
 		.ike_sa = ike_sa,
-		.ike_sa_init = sent_init,
+		.received_init = received_init,
+		.sent_init = sent_init,
 		.nonce = received_nonce,
 	);
 	memcpy(this->reserved, reserved, sizeof(this->reserved));
@@ -748,8 +770,8 @@ pubkey_authenticator_t *pubkey_authenticator_create_builder(ike_sa_t *ike_sa,
  * Described in header.
  */
 pubkey_authenticator_t *pubkey_authenticator_create_verifier(ike_sa_t *ike_sa,
-									chunk_t sent_nonce, chunk_t received_init,
-									char reserved[3])
+								chunk_t sent_nonce, chunk_t received_init,
+								chunk_t sent_init, char reserved[3])
 {
 	private_pubkey_authenticator_t *this;
 
@@ -765,7 +787,8 @@ pubkey_authenticator_t *pubkey_authenticator_create_verifier(ike_sa_t *ike_sa,
 			},
 		},
 		.ike_sa = ike_sa,
-		.ike_sa_init = received_init,
+		.received_init = received_init,
+		.sent_init = sent_init,
 		.nonce = sent_nonce,
 	);
 	memcpy(this->reserved, reserved, sizeof(this->reserved));

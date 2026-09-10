@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2018 Tobias Brunner
+ * Copyright (C) 2008-2026 Tobias Brunner
  * Copyright (C) 2005-2009 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  *
@@ -230,6 +230,25 @@ authenticator_t *authenticator_create_verifier(
 									chunk_t received_nonce, chunk_t sent_nonce,
 									chunk_t received_init, chunk_t sent_init,
 									char reserved[3]);
+
+/**
+ * Get the IKE_SA_INIT message data to be used for the AUTH calculation.
+ *
+ * If the downgrade prevention extension is active, both messages will be
+ * concatenated into a newly allocated buffer as indicated by \p allocated.
+ * Otherwise, one of the passed messages is returned directly.
+ *
+ * @param ike_sa			IKE_SA to authenticate
+ * @param sent_init			IKE_SA_INIT message we sent
+ * @param received_init		IKE_SA_INIT message we received
+ * @param verify			whether we verify or sign
+ * @param[out] allocated	whether the chunk was allocated
+ * @return					IKE_SA_INIT message data, has to be freed if
+ *							\p allocated is TRUE
+ */
+chunk_t authenticator_get_init_message(ike_sa_t *ike_sa, chunk_t sent_init,
+									   chunk_t received_init, bool verify,
+									   bool *allocated);
 
 /**
  * Create an IKEv1 authenticator to build and verify signatures or hash

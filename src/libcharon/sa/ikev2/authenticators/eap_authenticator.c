@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2018 Tobias Brunner
+ * Copyright (C) 2012-2026 Tobias Brunner
  * Copyright (C) 2006-2009 Martin Willi
  *
  * Copyright (C) secunet Security Networks AG
@@ -483,16 +483,17 @@ static eap_payload_t* client_process_eap(private_eap_authenticator_t *this,
  * Verify AUTH payload
  */
 static bool verify_auth(private_eap_authenticator_t *this, message_t *message,
-						chunk_t nonce, chunk_t init)
+						chunk_t nonce)
 {
 	auth_payload_t *auth_payload;
 	notify_payload_t *notify;
-	chunk_t auth_data, recv_auth_data;
+	chunk_t init, auth_data, recv_auth_data;
 	identification_t *other_id;
 	auth_cfg_t *auth;
 	keymat_v2_t *keymat;
 	eap_type_t type;
 	pen_t vendor;
+	bool success = FALSE, free_init;
 
 	auth_payload = (auth_payload_t*)message->get_payload(message,
 														 PLV2_AUTH);
@@ -514,20 +515,23 @@ static bool verify_auth(private_eap_authenticator_t *this, message_t *message,
 		}
 	}
 
+	init = authenticator_get_init_message(this->ike_sa, this->sent_init,
+										this->received_init, TRUE, &free_init);
+
 	other_id = this->ike_sa->get_other_id(this->ike_sa);
 	keymat = (keymat_v2_t*)this->ike_sa->get_keymat(this->ike_sa);
 	if (!keymat->get_psk_sig(keymat, TRUE, init, nonce, this->int_auth,
 							 this->msk, this->ppk, other_id, this->reserved,
 							 &auth_data))
 	{
-		return FALSE;
+		goto out;
 	}
 	if (!auth_data.len || !chunk_equals_const(auth_data, recv_auth_data))
 	{
 		DBG1(DBG_IKE, "verification of AUTH payload with%s EAP MSK failed",
 			 this->msk.ptr ? "" : "out");
 		chunk_free(&auth_data);
-		return FALSE;
+		goto out;
 	}
 	chunk_free(&auth_data);
 
@@ -543,19 +547,27 @@ static bool verify_auth(private_eap_authenticator_t *this, message_t *message,
 	{
 		auth->add(auth, AUTH_RULE_EAP_VENDOR, vendor);
 	}
-	return TRUE;
+	success = TRUE;
+
+out:
+	if (free_init)
+	{
+		chunk_free(&init);
+	}
+	return success;
 }
 
 /**
  * Build AUTH payload
  */
 static bool build_auth(private_eap_authenticator_t *this, message_t *message,
-					   chunk_t nonce, chunk_t init)
+					   chunk_t nonce)
 {
 	auth_payload_t *auth_payload;
 	identification_t *my_id;
-	chunk_t auth_data;
+	chunk_t init, auth_data;
 	keymat_v2_t *keymat;
+	bool success = FALSE, free_init;
 
 	my_id = this->ike_sa->get_my_id(this->ike_sa);
 	keymat = (keymat_v2_t*)this->ike_sa->get_keymat(this->ike_sa);
@@ -563,11 +575,14 @@ static bool build_auth(private_eap_authenticator_t *this, message_t *message,
 	DBG1(DBG_IKE, "authentication of '%Y' (myself) with %N",
 		 my_id, auth_class_names, AUTH_CLASS_EAP);
 
+	init = authenticator_get_init_message(this->ike_sa, this->sent_init,
+										this->received_init, FALSE, &free_init);
+
 	if (!keymat->get_psk_sig(keymat, FALSE, init, nonce, this->int_auth,
 							 this->msk, this->ppk, my_id, this->reserved,
 							 &auth_data))
 	{
-		return FALSE;
+		goto out;
 	}
 	auth_payload = auth_payload_create();
 	auth_payload->set_auth_method(auth_payload, AUTH_PSK);
@@ -582,12 +597,19 @@ static bool build_auth(private_eap_authenticator_t *this, message_t *message,
 								 &auth_data))
 		{
 			DBG1(DBG_IKE, "failed adding NO_PPK_AUTH notify");
-			return FALSE;
+			goto out;
 		}
 		message->add_notify(message, FALSE, NO_PPK_AUTH, auth_data);
 		chunk_free(&auth_data);
 	}
-	return TRUE;
+	success = TRUE;
+
+out:
+	if (free_init)
+	{
+		chunk_free(&init);
+	}
+	return success;
 }
 
 METHOD(authenticator_t, process_server, status_t,
@@ -597,7 +619,7 @@ METHOD(authenticator_t, process_server, status_t,
 
 	if (this->eap_complete)
 	{
-		if (!verify_auth(this, message, this->sent_nonce, this->received_init))
+		if (!verify_auth(this, message, this->sent_nonce))
 		{
 			return FAILED;
 		}
@@ -651,7 +673,7 @@ METHOD(authenticator_t, build_server, status_t,
 		return NEED_MORE;
 	}
 	if (this->eap_complete && this->auth_complete &&
-		build_auth(this, message, this->received_nonce, this->sent_init))
+		build_auth(this, message, this->received_nonce))
 	{
 		return SUCCESS;
 	}
@@ -665,7 +687,7 @@ METHOD(authenticator_t, process_client, status_t,
 
 	if (this->eap_complete)
 	{
-		if (!verify_auth(this, message, this->sent_nonce, this->received_init))
+		if (!verify_auth(this, message, this->sent_nonce))
 		{
 			return FAILED;
 		}
@@ -765,7 +787,7 @@ METHOD(authenticator_t, build_client, status_t,
 		return NEED_MORE;
 	}
 	if (this->eap_complete &&
-		build_auth(this, message, this->received_nonce, this->sent_init))
+		build_auth(this, message, this->received_nonce))
 	{
 		return NEED_MORE;
 	}
