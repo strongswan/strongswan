@@ -97,11 +97,17 @@ TLS_FRAG_KEY_A="${TLS_FRAG_DIR}/ca_A_key.der"
 TLS_FRAG_KEY_B="${TLS_FRAG_DIR}/ca_B_key.der"
 TLS_FRAG_KEY_C="${TLS_FRAG_DIR}/ca_C_key.der"
 TLS_FRAG_KEY_D="${TLS_FRAG_DIR}/ca_D_key.der"
+TLS_FRAG_KEY_E="${TLS_FRAG_DIR}/ca_E_key.der"
+TLS_FRAG_KEY_F="${TLS_FRAG_DIR}/ca_F_key.der"
+TLS_FRAG_KEY_G="${TLS_FRAG_DIR}/ca_G_key.der"
 TLS_FRAG_CERT_A="${TLS_FRAG_DIR}/ca_A_cert.der"
 TLS_FRAG_CERT_B="${TLS_FRAG_DIR}/ca_B_cert.der"
 TLS_FRAG_CERT_C="${TLS_FRAG_DIR}/ca_C_cert.der"
 TLS_FRAG_CERT_D="${TLS_FRAG_DIR}/ca_D_cert.der"
-TLS_FRAG_CA_RSA_SIZE="16384"
+TLS_FRAG_CERT_E="${TLS_FRAG_DIR}/ca_E_cert.der"
+TLS_FRAG_CERT_F="${TLS_FRAG_DIR}/ca_F_cert.der"
+TLS_FRAG_CERT_G="${TLS_FRAG_DIR}/ca_G_cert.der"
+TLS_FRAG_CA_RSA_SIZE="8192"
 TLS_FRAG_EE_RSA_SIZE="8192"
 #
 RSA_SIZE="3072"
@@ -1683,14 +1689,44 @@ pki --issue --cakey ${TLS_FRAG_KEY_C} --cacert ${TLS_FRAG_CERT_C} --type rsa \
     --outform der > ${TLS_FRAG_CERT_D}
 cp ${TLS_FRAG_CERT_D} ${TEST}/hosts/moon/${SWANCTL_DIR}/x509ca
 
+# Generate strongSwan TLS Frag Intermediate CA E
+pki --gen  --type rsa --size ${TLS_FRAG_CA_RSA_SIZE} > ${TLS_FRAG_KEY_E}
+pki --issue --cakey ${TLS_FRAG_KEY_D} --cacert ${TLS_FRAG_CERT_D} --type rsa \
+    --in ${TLS_FRAG_KEY_E}  \
+    --not-before "${START}" --not-after "${CA_END}" --ca \
+    --dn "C=CH, O=${PROJECT}, CN=strongSwan E Intermediate CA" \
+    --san ca.e.strongswan.org --san admin@e.strongswan.org \
+    --outform der > ${TLS_FRAG_CERT_E}
+cp ${TLS_FRAG_CERT_E} ${TEST}/hosts/moon/${SWANCTL_DIR}/x509ca
+
+# Generate strongSwan TLS Frag Intermediate CA F
+pki --gen  --type rsa --size ${TLS_FRAG_CA_RSA_SIZE} > ${TLS_FRAG_KEY_F}
+pki --issue --cakey ${TLS_FRAG_KEY_E} --cacert ${TLS_FRAG_CERT_E} --type rsa \
+    --in ${TLS_FRAG_KEY_F}  \
+    --not-before "${START}" --not-after "${CA_END}" --ca \
+    --dn "C=CH, O=${PROJECT}, CN=strongSwan F Intermediate CA" \
+    --san ca.f.strongswan.org --san admin@f.strongswan.org \
+    --outform der > ${TLS_FRAG_CERT_F}
+cp ${TLS_FRAG_CERT_F} ${TEST}/hosts/moon/${SWANCTL_DIR}/x509ca
+
+# Generate strongSwan TLS Frag Intermediate CA G
+pki --gen  --type rsa --size ${TLS_FRAG_CA_RSA_SIZE} > ${TLS_FRAG_KEY_G}
+pki --issue --cakey ${TLS_FRAG_KEY_F} --cacert ${TLS_FRAG_CERT_F} --type rsa \
+    --in ${TLS_FRAG_KEY_G}  \
+    --not-before "${START}" --not-after "${CA_END}" --ca \
+    --dn "C=CH, O=${PROJECT}, CN=strongSwan G Intermediate CA" \
+    --san ca.g.strongswan.org --san admin@g.strongswan.org \
+    --outform der > ${TLS_FRAG_CERT_G}
+cp ${TLS_FRAG_CERT_G} ${TEST}/hosts/moon/${SWANCTL_DIR}/x509ca
+
 # Generate a moon TLS FRAG certificate
 TEST_KEY="${TEST}/hosts/moon/${SWANCTL_DIR}/rsa/moon_key.der"
-TEST_CERT="${TEST}/hosts/moon/${SWANCTL_DIR}/x509/moon_D_cert.der"
-CN="moon.d.strongswan.org"
+TEST_CERT="${TEST}/hosts/moon/${SWANCTL_DIR}/x509/moon_G_cert.der"
+CN="moon.g.strongswan.org"
 mkdir -p ${TEST}/hosts/moon/${SWANCTL_DIR}/rsa
 mkdir -p ${TEST}/hosts/moon/${SWANCTL_DIR}/x509
 pki --gen --type rsa --size ${TLS_FRAG_EE_RSA_SIZE}  > ${TEST_KEY}
-pki --issue --cakey ${TLS_FRAG_KEY_D} --cacert ${TLS_FRAG_CERT_D} --type rsa \
+pki --issue --cakey ${TLS_FRAG_KEY_G} --cacert ${TLS_FRAG_CERT_G} --type rsa \
     --in ${TEST_KEY} --san ${CN} \
     --not-before "${START}" --not-after "${EE_END}" \
     --dn "C=CH, O=${PROJECT}, CN=${CN}" \
@@ -1698,12 +1734,12 @@ pki --issue --cakey ${TLS_FRAG_KEY_D} --cacert ${TLS_FRAG_CERT_D} --type rsa \
 
 # Generate a carol TLS FRAG certificate
 TEST_KEY="${TEST}/hosts/carol/${SWANCTL_DIR}/rsa/carol_key.der"
-TEST_CERT="${TEST}/hosts/carol/${SWANCTL_DIR}/x509/carol_D_cert.der"
-CN="carol@d.strongswan.org"
+TEST_CERT="${TEST}/hosts/carol/${SWANCTL_DIR}/x509/carol_G_cert.der"
+CN="carol@g.strongswan.org"
 mkdir -p ${TEST}/hosts/carol/${SWANCTL_DIR}/rsa
 mkdir -p ${TEST}/hosts/carol/${SWANCTL_DIR}/x509
 pki --gen --type rsa --size ${TLS_FRAG_EE_RSA_SIZE} > ${TEST_KEY}
-pki --issue --cakey ${TLS_FRAG_KEY_D} --cacert ${TLS_FRAG_CERT_D} --type rsa \
+pki --issue --cakey ${TLS_FRAG_KEY_G} --cacert ${TLS_FRAG_CERT_G} --type rsa \
     --in ${TEST_KEY} --san ${CN} \
     --not-before "${START}" --not-after "${EE_END}" \
     --dn "C=CH, O=${PROJECT}, CN=${CN}" \
