@@ -547,7 +547,7 @@ static void process_sa_payload(private_ike_init_t *this, message_t *message,
 		else
 		{
 			charon->bus->alert(charon->bus, ALERT_PROPOSAL_MISMATCH_IKE,
-							   proposal_list);
+							   TRUE, proposal_list);
 		}
 	}
 	proposal_list->destroy_offset(proposal_list,
@@ -1218,7 +1218,8 @@ static void raise_alerts(private_ike_init_t *this, notify_type_t type)
 		case NO_PROPOSAL_CHOSEN:
 			ike_cfg = this->ike_sa->get_ike_cfg(this->ike_sa);
 			list = ike_cfg->get_proposals(ike_cfg, FALSE);
-			charon->bus->alert(charon->bus, ALERT_PROPOSAL_MISMATCH_IKE, list);
+			charon->bus->alert(charon->bus, ALERT_PROPOSAL_MISMATCH_IKE,
+							   FALSE, list);
 			list->destroy_offset(list, offsetof(proposal_t, destroy));
 			break;
 		default:

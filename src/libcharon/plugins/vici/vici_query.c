@@ -2082,6 +2082,8 @@ METHOD(listener_t, alert, bool,
 	private_vici_query_t *this, ike_sa_t *ike_sa, alert_t alert, va_list args)
 {
 	vici_builder_t *b;
+	linked_list_t *proposals;
+	bool received;
 
 	if (!this->dispatcher->has_event_listeners(this->dispatcher, "alert"))
 	{
@@ -2090,6 +2092,16 @@ METHOD(listener_t, alert, bool,
 
 	b = vici_builder_create();
 	b->add_kv(b, "type", "%N", alert_names, alert);
+	if (alert == ALERT_PROPOSAL_MISMATCH_IKE)
+	{
+		received = va_arg(args, int);
+		proposals = va_arg(args, linked_list_t*);
+		if (received)
+		{
+			list_proposals(b, proposals,
+						   "received-proposals", PROTO_IKE);
+		}
+	}
 	if (ike_sa)
 	{
 		b->begin_section(b, "ike-sa");

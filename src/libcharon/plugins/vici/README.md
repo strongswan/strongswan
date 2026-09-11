@@ -1065,12 +1065,22 @@ _ike-sa_ property.
 
 	{
 		type = <alert type>
+		received-proposals = {
+			<IKE proposal number> = {
+				<same proposal data as in the list-conns response>
+			}
+		}
 		ike-sa = {
 			<IKE_SA config name> = {
 				<same data as in list-sas event, but without child-sas section>
 			}
 		}
 	}
+
+The optional _received-proposals_ section is included with
+_proposal-mismatch-ike_ alerts when the local peer received the IKE_SA_INIT
+request. It contains the proposals received from the peer that did not match
+the local configuration.
 
 The _type_ property currently has one of the following fixed string values:
 
