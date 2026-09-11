@@ -2092,14 +2092,22 @@ METHOD(listener_t, alert, bool,
 
 	b = vici_builder_create();
 	b->add_kv(b, "type", "%N", alert_names, alert);
-	if (alert == ALERT_PROPOSAL_MISMATCH_IKE)
+	if (alert == ALERT_PROPOSAL_MISMATCH_IKE ||
+		alert == ALERT_PROPOSAL_MISMATCH_CHILD)
 	{
 		received = va_arg(args, int);
 		proposals = va_arg(args, linked_list_t*);
 		if (received)
 		{
-			list_proposals(b, proposals,
-						   "received-proposals", PROTO_IKE);
+			if (alert == ALERT_PROPOSAL_MISMATCH_IKE)
+			{
+				list_proposals(b, proposals, "received-proposals", PROTO_IKE);
+			}
+			else
+			{
+				list_proposals(b, proposals, "received-esp-proposals", PROTO_ESP);
+				list_proposals(b, proposals, "received-ah-proposals", PROTO_AH);
+			}
 		}
 	}
 	if (ike_sa)

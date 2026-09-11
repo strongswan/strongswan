@@ -919,7 +919,7 @@ static bool select_proposal(private_child_create_t *this, bool no_ke)
 	{
 		DBG1(DBG_IKE, "no acceptable proposal found");
 		charon->bus->alert(charon->bus, ALERT_PROPOSAL_MISMATCH_CHILD,
-						   this->proposals);
+						   TRUE, this->proposals);
 		return FALSE;
 	}
 	return TRUE;
@@ -2487,7 +2487,8 @@ static void raise_alerts(private_child_create_t *this, notify_type_t type)
 	{
 		case NO_PROPOSAL_CHOSEN:
 			list = this->config->get_proposals(this->config, FALSE, FALSE);
-			charon->bus->alert(charon->bus, ALERT_PROPOSAL_MISMATCH_CHILD, list);
+			charon->bus->alert(charon->bus, ALERT_PROPOSAL_MISMATCH_CHILD,
+							   FALSE, list);
 			list->destroy_offset(list, offsetof(proposal_t, destroy));
 			break;
 		case TS_UNACCEPTABLE:

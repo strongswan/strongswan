@@ -122,7 +122,11 @@ enum alert_t {
 	 * proposals were received from the peer and a linked_list_t of proposal_t.
 	 */
 	ALERT_PROPOSAL_MISMATCH_IKE,
-	/** CHILD proposals do not match, argument is linked_list_t of proposal_t */
+	/**
+	 * CHILD proposals do not match, arguments are a bool indicating whether
+	 * the proposals were received from the peer and a linked_list_t of
+	 * proposal_t.
+	 */
 	ALERT_PROPOSAL_MISMATCH_CHILD,
 	/** traffic selectors do not match, arguments are two linked_list_t
 	 *  containing traffic_selector_t for initiator and for responder */
