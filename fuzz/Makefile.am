@@ -54,7 +54,8 @@ tls_ldflags = \
 
 # fuzzers that use crypto plugins in a significant way
 fuzzers_with_plugins = \
-	fuzz_certs fuzz_crls fuzz_ocsp_req fuzz_ocsp_rsp
+	fuzz_certs fuzz_crls fuzz_ocsp_req fuzz_ocsp_rsp \
+	fuzz_pubkey fuzz_trusted_pubkey
 
 fuzzers_with_def = $(fuzzers_with_plugins:%=%_def)
 fuzzers_with_cus = $(fuzzers_with_plugins:%=%_cus)
@@ -90,6 +91,18 @@ fuzz_ocsp_rsp_def: fuzz_ocsp_rsp.c ${libfuzzer}
 	$(CC) $(fuzz_cppflags_def) $(CFLAGS) -o $@ $< $(fuzz_ldflags)
 
 fuzz_ocsp_rsp_cus: fuzz_ocsp_rsp.c ${libfuzzer}
+	$(CC) $(fuzz_cppflags_cus) $(CFLAGS) -o $@ $< $(fuzz_ldflags)
+
+fuzz_pubkey_def: fuzz_pubkey.c ${libfuzzer}
+	$(CC) $(fuzz_cppflags_def) $(CFLAGS) -o $@ $< $(fuzz_ldflags)
+
+fuzz_pubkey_cus: fuzz_pubkey.c ${libfuzzer}
+	$(CC) $(fuzz_cppflags_cus) $(CFLAGS) -o $@ $< $(fuzz_ldflags)
+
+fuzz_trusted_pubkey_def: fuzz_trusted_pubkey.c ${libfuzzer}
+	$(CC) $(fuzz_cppflags_def) $(CFLAGS) -o $@ $< $(fuzz_ldflags)
+
+fuzz_trusted_pubkey_cus: fuzz_trusted_pubkey.c ${libfuzzer}
 	$(CC) $(fuzz_cppflags_cus) $(CFLAGS) -o $@ $< $(fuzz_ldflags)
 
 fuzz_pa_tnc: fuzz_pa_tnc.c ${libfuzzer}
