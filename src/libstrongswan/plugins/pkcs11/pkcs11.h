@@ -380,6 +380,7 @@ typedef unsigned long ck_key_type_t;
 #define CKK_GOST28147           (0x32UL)
 #define CKK_EC_EDWARDS          (0x40UL)
 #define CKK_EC_MONTGOMERY       (0x41UL)
+#define CKK_ML_DSA              (0x4aUL)
 #define CKK_VENDOR_DEFINED      (1UL << 31)
 
 
@@ -499,6 +500,12 @@ typedef unsigned long ck_attribute_type_t;
 #define CKA_OTP_TIME                    (0x22FUL)
 #define CKA_ALLOWED_MECHANISMS          (CKF_ARRAY_ATTRIBUTE | 0x600UL)
 #define CKA_PROFILE_ID                  (0x601UL)
+#define CKA_PARAMETER_SET               (0x61dUL)
+
+#define CKP_ML_DSA_44                   (1UL)
+#define CKP_ML_DSA_65                   (2UL)
+#define CKP_ML_DSA_87                   (3UL)
+
 #define CKA_VENDOR_DEFINED              (1UL << 31)
 
 
@@ -790,6 +797,9 @@ typedef unsigned long ck_mechanism_type_t;
 #define CKM_AES_KEY_WRAP                (0x2109UL)
 #define CKM_AES_KEY_WRAP_PAD            (0x210AUL)
 #define CKM_XEDDSA                      (0x4029UL)
+
+#define CKM_ML_DSA_KEY_PAIR_GEN         (0x1cUL)
+#define CKM_ML_DSA                      (0x1dUL)
 
 
 #define CKM_VENDOR_DEFINED              (1UL << 31)
