@@ -71,8 +71,14 @@ Issue an attribute certificate.
 .B "\-r, \-\-req"
 Create a PKCS#10 certificate request.
 .TP
+.B "\-b, \-\-bundle"
+Provides PEM certificate bundle functions.
+.TP
 .B "\-7, \-\-pkcs7"
 Provides PKCS#7 wrap/unwrap functions.
+.TP
+.B "\-u, \-\-pkcs12"
+Provides PKCS#12 functions.
 .TP
 .B "\-k, \-\-keyid"
 Calculate key identifiers of a key or certificate.
@@ -195,7 +201,9 @@ certificates with the \-\-crl option.
 .BR pki\ \-\-signcrl (1),
 .BR pki\ \-\-acert (1),
 .BR pki\ \-\-req (1),
+.BR pki\ \-\-bundle (1),
 .BR pki\ \-\-pkcs7 (1),
+.BR pki\ \-\-pkcs12 (1),
 .BR pki\ \-\-keyid (1),
 .BR pki\ \-\-print (1),
 .BR pki\ \-\-dn (1),

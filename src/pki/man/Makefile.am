@@ -1,6 +1,7 @@
 man1_MANS = \
 	pki.1 \
 	pki---acert.1 \
+	pki---bundle.1 \
 	pki---dn.1 \
 	pki---est.1 \
 	pki---estca.1 \
@@ -9,6 +10,7 @@ man1_MANS = \
 	pki---keyid.1 \
 	pki---ocsp.1 \
 	pki---pkcs7.1 \
+	pki---pkcs12.1 \
 	pki---print.1 \
 	pki---pub.1 \
 	pki---req.1 \
