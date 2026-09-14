@@ -1406,9 +1406,10 @@ else
 	AC_MSG_RESULT([no])
 fi
 # disable some warnings, whether explicitly enabled above or by default
-# these are not compatible with our custom printf specifiers
-WARN_CFLAGS="$WARN_CFLAGS -Wno-format"
-WARN_CFLAGS="$WARN_CFLAGS -Wno-format-security"
+# these are not compatible with our custom printf specifiers, so they are
+# kept separate below and must not be overridable via CFLAGS
+PRINTF_CFLAGS="-Wno-format"
+PRINTF_CFLAGS="$PRINTF_CFLAGS -Wno-format-security"
 # we generally use comments, but GCC doesn't seem to recognize many of them
 WARN_CFLAGS="$WARN_CFLAGS -Wno-implicit-fallthrough"
 # we often omit fields when initializing structs (e.g. when using INIT)
@@ -1421,8 +1422,11 @@ WARN_CFLAGS="$WARN_CFLAGS -Wno-sign-compare"
 WARN_CFLAGS="$WARN_CFLAGS -Wno-type-limits"
 # we often don't use function parameters when implementing interfaces
 WARN_CFLAGS="$WARN_CFLAGS -Wno-unused-parameter"
-# add the flags before existing CFLAGS so warning flags can be overridden
-CFLAGS="$WARN_CFLAGS $CFLAGS"
+# add the flags before existing CFLAGS so warning flags can be overridden,
+# but append those required by our custom printf specifiers so they can't be
+# re-enabled by flags in CFLAGS (e.g. the -Wformat added by Debian's hardening
+# build flags, which makes GCC 16 reject %B as C23's binary conversion)
+CFLAGS="$WARN_CFLAGS $CFLAGS $PRINTF_CFLAGS"
 
 # ===============================================
 #  collect plugin list for strongSwan components
