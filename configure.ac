@@ -2067,6 +2067,7 @@ AC_CONFIG_FILES([
 	src/charon-cmd/charon-cmd.8
 	src/pki/man/pki.1
 	src/pki/man/pki---acert.1
+	src/pki/man/pki---bundle.1
 	src/pki/man/pki---dn.1
 	src/pki/man/pki---est.1
 	src/pki/man/pki---estca.1

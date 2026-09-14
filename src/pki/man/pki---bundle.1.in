@@ -1,29 +1,29 @@
-.TH "PKI \-\-PKCS12" 1 "2014-10-17" "@PACKAGE_VERSION@" "strongSwan"
+.TH "PKI \-\-BUNDLE" 1 "2026-09-14" "@PACKAGE_VERSION@" "strongSwan"
 .
 .SH "NAME"
 .
-pki \-\-pkcs12 \- Provides PKCS#12 functions
+pki \-\-bundle \- Provides PEM certificate bundle functions
 .
 .SH "SYNOPSIS"
 .
-.SY pki\ \-\-pkcs12
+.SY pki\ \-\-bundle
 .BR \-\-list
 .OP \-\-in file
 .OP \-\-debug level
 .YS
 .
-.SY pki\ \-\-pkcs12
+.SY pki\ \-\-bundle
 .BI \-\-export\~ index
 .OP \-\-in file
 .OP \-\-outform encoding
 .OP \-\-debug level
 .YS
 .
-.SY pki\ \-\-pkcs12
+.SY pki\ \-\-bundle
 .BI \-\-options\~ file
 .YS
 .
-.SY "pki \-\-pkcs12"
+.SY "pki \-\-bundle"
 .B \-h
 |
 .B \-\-help
@@ -33,7 +33,7 @@ pki \-\-pkcs12 \- Provides PKCS#12 functions
 .
 This sub-command of
 .BR pki (1)
-provides functions to work with PKCS#12 containers.
+provides functions to work with PEM-encoded certificate bundle.
 .
 .SH "OPTIONS"
 .
@@ -48,18 +48,18 @@ Set debug level, default: 1.
 Read command line options from \fIfile\fR.
 .TP
 .BI "\-l, \-\-list"
-List certificates and keys contained in a PKCS#12 container.
+List certificates contained in a PEM-encoded certificate bundle.
 .TP
 .BI "\-e, \-\-export " index
-Export the credential with the given \fIindex\fR.  Use \fI\-\-list\fR to
-determine the index of certificates and keys.
+Export the certificate with the given \fIindex\fR.  Use \fI\-\-list\fR to
+determine the index of certificates.
 .TP
 .BI "\-f, \-\-outform " encoding
 Encoding of the exported credential. Either \fIder\fR (ASN.1 DER) or
 \fIpem\fR (Base64 PEM), defaults to \fIder\fR.
 .TP
 .BI "\-i, \-\-in " file
-PKCS#12 input file. If not given the input is read from \fISTDIN\fR.
+PEM input file. If not given the input is read from \fISTDIN\fR.
 .
 .SH "SEE ALSO"
 .
