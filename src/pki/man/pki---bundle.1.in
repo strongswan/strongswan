@@ -20,6 +20,12 @@ pki \-\-bundle \- Provides PEM certificate bundle functions
 .YS
 .
 .SY pki\ \-\-bundle
+.BR \-\-create
+.BI \-\-cert\~ -|file
+.OP \-\-debug level
+.YS
+.
+.SY pki\ \-\-bundle
 .BI \-\-options\~ file
 .YS
 .
@@ -33,7 +39,7 @@ pki \-\-bundle \- Provides PEM certificate bundle functions
 .
 This sub-command of
 .BR pki (1)
-provides functions to work with PEM-encoded certificate bundle.
+provides functions to work with PEM-encoded certificate bundles.
 .
 .SH "OPTIONS"
 .
@@ -60,6 +66,16 @@ Encoding of the exported credential. Either \fIder\fR (ASN.1 DER) or
 .TP
 .BI "\-i, \-\-in " file
 PEM input file. If not given the input is read from \fISTDIN\fR.
+.TP
+.BI "\-C, \-\-create"
+Create a new PEM-encoded certificate bundle from multiple certificates passed
+via \fI\-\-cert\fR. They are added in the order they appear on the command
+line.
+.TP
+.BI "\-c, \-\-cert " file
+Certificate file to add to a new bundle. If \fI\-\fR is passed the file is
+read from \fISTDIN\fR. Input may be a bundle itself, if so, all certificates are
+added to the new bundle in order. Can be used multiple times.
 .
 .SH "SEE ALSO"
 .
