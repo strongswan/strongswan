@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Martin Willi
+ * Copyright (C) 2026 Tobias Brunner
  *
  * Copyright (C) secunet Security Networks AG
  *
@@ -14,14 +14,34 @@
  * for more details.
  */
 
-#include "container.h"
+/**
+ * @defgroup pem pem
+ * @{ @ingroup containers
+ */
 
-ENUM(container_type_names, CONTAINER_PKCS7, CONTAINER_PEM,
-	"PKCS7",
-	"PKCS7_DATA",
-	"PKCS7_SIGNED_DATA",
-	"PKCS7_ENVELOPED_DATA",
-	"PKCS7_ENCRYPTED_DATA",
-	"PKCS12",
-	"PEM",
-);
+#ifndef PEM_H_
+#define PEM_H_
+
+#include <credentials/containers/container.h>
+
+typedef struct pem_t pem_t;
+
+/**
+ * PEM certificate bundle container type.
+ */
+struct pem_t {
+
+	/**
+	 * Implements container_t.
+	 */
+	container_t container;
+
+	/**
+	 * Create an enumerator over contained certificates.
+	 *
+	 * @return			enumerator over certificate_t
+	 */
+	enumerator_t *(*create_cert_enumerator)(pem_t *this);
+};
+
+#endif /** PEM_H_ @}*/
