@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2017 Tobias Brunner
+ * Copyright (C) 2016-2026 Tobias Brunner
  * Copyright (C) 2015 Andreas Steffen
  * Copyright (C) 2014 Martin Willi
  *
@@ -26,9 +26,11 @@
 #include "swanctl.h"
 #include "load_creds.h"
 
+#include <asn1/asn1.h>
 #include <credentials/sets/mem_cred.h>
 #include <credentials/sets/callback_cred.h>
 #include <credentials/containers/pkcs12.h>
+#include <credentials/containers/pem.h>
 #include <collections/hashtable.h>
 
 #include <vici_cert_info.h>
@@ -54,8 +56,8 @@ typedef struct {
 /**
  * Load a single certificate over vici
  */
-static bool load_cert(load_ctx_t *ctx, char *dir, certificate_type_t type,
-					  x509_flag_t flag, chunk_t data)
+static bool load_cert(load_ctx_t *ctx, certificate_t *cert, char *dir,
+					  certificate_type_t type, x509_flag_t flag, chunk_t data)
 {
 	vici_req_t *req;
 	vici_res_t *res;
@@ -87,12 +89,55 @@ static bool load_cert(load_ctx_t *ctx, char *dir, certificate_type_t type,
 				dir, vici_find_str(res, "", "errmsg"));
 		ret = FALSE;
 	}
+	else if (cert)
+	{
+		printf("loaded certificate '%Y' from '%s'\n", cert->get_subject(cert),
+			   dir);
+	}
 	else
 	{
 		printf("loaded certificate from '%s'\n", dir);
 	}
 	vici_free_res(res);
 	return ret;
+}
+
+/**
+ * Load certificates from a PEM-encoded bundle (handles single PEM-encoded
+ * files as well)
+ */
+static void load_bundle(load_ctx_t *ctx, char *dir, certificate_type_t type,
+						x509_flag_t dir_flag, pem_t *bundle)
+{
+	enumerator_t *enumerator;
+	certificate_t *cert;
+	x509_t *x509;
+	chunk_t encoding;
+
+	enumerator = bundle->create_cert_enumerator(bundle);
+	while (enumerator->enumerate(enumerator, &cert))
+	{
+		x509_flag_t cert_flag = dir_flag;
+
+		if (cert->get_type(cert) == type &&
+			cert->get_encoding(cert, CERT_ASN1_DER, &encoding))
+		{
+			/* don't load end entity certificates as CA certificates, the vici
+			 * plugin would reject them */
+			if (type == CERT_X509 && dir_flag == X509_CA)
+			{
+				x509 = (x509_t*)cert;
+				if (!(x509->get_flags(x509) & X509_CA))
+				{
+					cert_flag = X509_NONE;
+				}
+			}
+			load_cert(ctx, cert, dir, type, cert_flag, encoding);
+			free(encoding.ptr);
+		}
+	}
+	enumerator->destroy(enumerator);
+	bundle->container.destroy(&bundle->container);
 }
 
 /**
@@ -122,7 +167,27 @@ static void load_certs(load_ctx_t *ctx, char *type_str, char *dir)
 				map = chunk_map(path, FALSE);
 				if (map)
 				{
-					load_cert(ctx, path, type, flag, *map);
+					pem_t *bundle = NULL;
+
+					/* only load PEM bundles (possibly containing full chains)
+					 * for regular X.509 certificates and CAs. for other types
+					 * and flags it makes not much sense and would even silently
+					 * skip files that contained at least one certificate */
+					if (!is_asn1(*map) && type == CERT_X509 &&
+						(flag == X509_NONE || flag == X509_CA))
+					{
+						bundle = lib->creds->create(lib->creds, CRED_CONTAINER,
+													CONTAINER_PEM, BUILD_BLOB,
+													*map, BUILD_END);
+						if (bundle)
+						{
+							load_bundle(ctx, path, type, flag, bundle);
+						}
+					}
+					if (!bundle)
+					{
+						load_cert(ctx, NULL, path, type, flag, *map);
+					}
 					chunk_unmap(map);
 				}
 				else
@@ -474,11 +539,7 @@ static bool load_pkcs12(load_ctx_t *ctx, char *path, pkcs12_t *p12)
 		loaded = FALSE;
 		if (cert->get_encoding(cert, CERT_ASN1_DER, &encoding))
 		{
-			loaded = load_cert(ctx, path, CERT_X509, X509_NONE, encoding);
-			if (loaded)
-			{
-				fprintf(stderr, "  %Y\n", cert->get_subject(cert));
-			}
+			loaded = load_cert(ctx, cert, path, CERT_X509, X509_NONE, encoding);
 			free(encoding.ptr);
 		}
 		else
