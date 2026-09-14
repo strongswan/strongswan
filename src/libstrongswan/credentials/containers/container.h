@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Tobias Brunner
+ * Copyright (C) 2013-2026 Tobias Brunner
  * Copyright (C) 2012 Martin Willi
  *
  * Copyright (C) secunet Security Networks AG
@@ -45,6 +45,8 @@ enum container_type_t {
 	CONTAINER_PKCS7_ENCRYPTED_DATA,
 	/** A PKCS#12 container */
 	CONTAINER_PKCS12,
+	/** A bundle of PEM encoded certificates */
+	CONTAINER_PEM,
 };
 
 /**
