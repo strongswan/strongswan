@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Tobias Brunner
+ * Copyright (C) 2013-2026 Tobias Brunner
  * Copyright (C) 2009 Martin Willi
  *
  * Copyright (C) secunet Security Networks AG
@@ -65,5 +65,13 @@ certificate_t *pem_certificate_load(certificate_type_t type, va_list args);
  */
 container_t *pem_container_load(container_type_t type, va_list args);
 
-#endif /** PEM_BUILDER_H_ @}*/
+/**
+ * Load PEM-encoded certificate bundle.
+ *
+ * @param type		type of the container (CONTAINER_PEM)
+ * @param args		builder_part_t argument list
+ * @return 			container, NULL if failed
+ */
+container_t *pem_container_load_bundle(container_type_t type, va_list args);
 
+#endif /** PEM_BUILDER_H_ @}*/
