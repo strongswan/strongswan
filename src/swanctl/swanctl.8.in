@@ -1,4 +1,4 @@
-.TH SWANCTL 8 "2015-11-20" "@PACKAGE_VERSION@" "strongSwan"
+.TH SWANCTL 8 "2026-09-15" "@PACKAGE_VERSION@" "strongSwan"
 .SH NAME
 swanctl \- strongSwan configuration, control and monitoring command line interface.
 .SH SYNOPSIS
@@ -15,7 +15,7 @@ swanctl \- strongSwan configuration, control and monitoring command line interfa
 .
 .SH DESCRIPTION
 swanctl is a cross-platform command line utility to configure, control and
-monitor the strongSwan IKE daemon. It is a replacement for the aging
+monitor the strongSwan IKE daemon. It is a replacement for the deprecated
 .BR starter ,
 .B ipsec
 and
@@ -25,7 +25,8 @@ tools.
 swanctl uses a configuration file called
 .BR swanctl.conf (5)
 to parse configurations and credentials. Private keys, certificates and other
-PKI related credentials are read from specific directories.
+PKI related credentials are read from specific directories (see DIRECTORIES
+below).
 
 To communicate with the IKE daemon, swanctl uses the VICI protocol, the
 Versatile IKE Configuration Interface. This stable interface is usable by
@@ -115,5 +116,71 @@ read command line options from file
 .TP
 .B "\-u, \-\-uri"
 service URI to connect to
+.SH DIRECTORIES
+Credentials are automatically loaded from the following directories by the
+\fI\-\-load\-creds\fR command. Files may be encoded in PEM or DER format.
+
+In order to load encrypted files, the password has to be configured in
+an appropriate section in \fIswanctl.conf\fR. If no password is found,
+\fI\-\-load\-creds\fR will prompt the user for the password unless it is
+called with \fI\-\-noprompt\fR.
+.TP
+.B x509
+Trusted X.509 end entity certificates. May be PEM-encoded certificate bundles
+(e.g. a full trust chain), see the note regarding bundles below for details.
+.TP
+.B x509ca
+Trusted X.509 Certificate Authority (CA) certificates. May be PEM-encoded
+certificate bundles (e.g. a full trust chain), see the note regarding bundles
+below for details.
+.TP
+.B x509aa
+Trusted X.509 Attribute Authority (AA) certificates.
+.TP
+.B x509ocsp
+Trusted X.509 OCSP signer certificates. Note that placing a certificate in this
+directory explicitly applies the OCSPSigning flag to the certificate even if
+it doesn't encode it in its Extended Key Usage extension (EKU).
+.TP
+.B x509crl
+Certificate revocation lists (CRL).
+.TP
+.B x509ac
+Attribute certificates (AC).
+.TP
+.B pubkey
+Raw public keys.
+.TP
+.B rsa
+PKCS#1-encoded RSA private keys.
+.TP
+.B ecdsa
+Plain ECDSA private keys.
+.TP
+.B pkcs8
+PKCS#8 encoded private keys of any type.
+.TP
+.B private
+Private keys in any format. If the format is not detected automatically, place
+the file in the appropriate directory above.
+.TP
+.B pkcs12
+PKCS#12 containers from which all certificates and private keys are loaded. Only
+files with a single password are supported.
+.PP
+Additionally, the default \fIswanctl.conf\fR file contains an
+\fBinclude conf.d/*.conf\fR statement to load files from the following
+directory:
+.TP
+.B conf.d
+May contain config snippets (\fI*.conf\fR files) that are merged with the main
+\fIswanctl.conf\fR file.
+.SS PEM-encoded Certificate Bundles
+In some directories, PEM-encoded certificate bundles are supported (i.e. files
+that concatenate several PEM-encoded certificates). This may be used to
+load certificate chains from a single file. However, please be aware that for
+all other uses, such as referencing a file in \fBcerts\fR or \fBcacerts\fR in
+\fIswanctl.conf\fR, only the \fBfirst\fR certificate is loaded from such a file.
+So if necessary, structure your files accordingly or split them up.
 .SH SEE ALSO
 .BR swanctl.conf (5)
