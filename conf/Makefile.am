@@ -17,6 +17,7 @@ options = \
 	options/charon-logging.opt \
 	options/charon-nm.opt \
 	options/charon-systemd.opt \
+	options/charon-tkm.opt \
 	options/imcv.opt \
 	options/imv_policy_manager.opt \
 	options/iptfs.opt \

@@ -1856,6 +1856,7 @@ AM_COND_IF([USE_NM], [strongswan_options=${strongswan_options}" charon-nm"])
 AM_COND_IF([USE_PKI], [strongswan_options=${strongswan_options}" pki"])
 AM_COND_IF([USE_SWANCTL], [strongswan_options=${strongswan_options}" swanctl"])
 AM_COND_IF([USE_SYSTEMD], [strongswan_options=${strongswan_options}" charon-systemd"])
+AM_COND_IF([USE_TKM], [strongswan_options=${strongswan_options}" charon-tkm"])
 
 AC_SUBST(strongswan_options)
 

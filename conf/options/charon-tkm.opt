@@ -1,0 +1,36 @@
+charon-tkm.ike_socket = /tmp/tkm.rpc.ike
+	Path to the socket to communicate with the TKM.
+
+charon-tkm.ees_socket = /tmp/tkm.rpc.ees
+	Path to the TKM event socket (to deliver IPsec SA events).
+
+charon-tkm.ca_mapping { # }
+	Section to define mappings from CA certificates to TKM CA context
+	identifiers.
+
+charon-tkm.ca_mapping.<name> { # }
+	<name> is an arbitrary name for a particular CA mapping.
+
+charon-tkm.ca_mapping.<name>.fingerprint
+	Hex-encoded SHA-1 hash of the subjectPublicKey of the mapped CA certificate.
+
+charon-tkm.ca_mapping.<name>.id
+	TKM CA context identifier of the mapped CA certificate.
+
+charon-tkm.ke_mapping {}
+	Section to define mappings from IKEv2/IANA key exchange method identifiers
+	to TKM KEA context identifiers.
+
+charon-tkm.proposal_mapping.ike {}
+	Section to define mappings from TKM IA context identifiers to IKE proposal
+	strings.
+
+charon-tkm.proposal_mapping.esp {}
+	Section to define mappings from TKM EA context identifiers to ESP proposal
+	strings.
+
+charon-tkm.sig_mapping {}
+	Section to define mappings from signature scheme identifiers (as ENUM name
+	defined in `signature_scheme_names`) to TKM SIGA context identifiers. Only
+	schemes whose parameters are fully determined by the scheme itself can be
+	mapped (RSA-PSS is currently not supported).
