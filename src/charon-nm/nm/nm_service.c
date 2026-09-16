@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2017 Lubomir Rintel
- * Copyright (C) 2013-2023 Tobias Brunner
+ * Copyright (C) 2013-2026 Tobias Brunner
  * Copyright (C) 2008-2009 Martin Willi
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -26,6 +26,7 @@
 #include <utils/identification.h>
 #include <config/peer_cfg.h>
 #include <credentials/certificates/x509.h>
+#include <credentials/containers/pem.h>
 #include <networking/tun_device.h>
 #include <plugins/kernel_netlink/kernel_netlink_xfrmi.h>
 
@@ -844,6 +845,66 @@ static bool add_traffic_selectors(child_cfg_t *child_cfg, bool local,
 }
 
 /**
+ * Add the given certificate to the credential set (adopted) and return a
+ * reference if it's the first end entity certificate.
+ */
+static void add_certificate(NMStrongswanPluginPrivate *priv,
+							certificate_t *cert, certificate_t **ee_cert)
+{
+	x509_t *x509;
+
+	x509 = (x509_t*)cert;
+	if (!*ee_cert && !(x509->get_flags(x509) & X509_CA))
+	{
+		*ee_cert = cert->get_ref(cert);
+	}
+	priv->creds->add_certificate(priv->creds, cert);
+}
+
+/**
+ * Try to load the given blob as bundle first, otherwise as a single
+ * certificate.  Returns the loaded end entity certificate (first non-CA cert).
+ */
+static bool load_trusted_certificates(NMStrongswanPluginPrivate *priv,
+									  chunk_t file, certificate_t **ee_cert)
+{
+	enumerator_t *enumerator;
+	certificate_t *cert;
+	pem_t *bundle = NULL;
+	int added = 0;
+
+	bundle = lib->creds->create(lib->creds, CRED_CONTAINER, CONTAINER_PEM,
+								BUILD_BLOB, file, BUILD_END);
+	if (bundle)
+	{
+		enumerator = bundle->create_cert_enumerator(bundle);
+		while (enumerator->enumerate(enumerator, &cert))
+		{
+			if (cert->get_type(cert) == CERT_X509)
+			{
+				add_certificate(priv, cert->get_ref(cert), ee_cert);
+				added++;
+			}
+		}
+		enumerator->destroy(enumerator);
+		bundle->container.destroy(&bundle->container);
+
+		if (added)
+		{
+			return TRUE;
+		}
+	}
+	cert = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509,
+							  BUILD_BLOB, file, BUILD_END);
+	if (cert)
+	{
+		add_certificate(priv, cert, ee_cert);
+		return TRUE;
+	}
+	return FALSE;
+}
+
+/**
  * Connect function called from NM via DBUS
  */
 static gboolean connect_(NMVpnServicePlugin *plugin, NMConnection *connection,
@@ -865,7 +926,6 @@ static gboolean connect_(NMVpnServicePlugin *plugin, NMConnection *connection,
 	ike_sa_t *ike_sa;
 	auth_cfg_t *auth;
 	certificate_t *cert = NULL;
-	x509_t *x509;
 	bool loose_gateway_id = FALSE;
 	ike_cfg_create_t ike = {
 		.version = IKEV2,
@@ -946,17 +1006,15 @@ static gboolean connect_(NMVpnServicePlugin *plugin, NMConnection *connection,
 		{
 			return FALSE;
 		}
-		cert = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509,
-								  BUILD_BLOB, safe_file, BUILD_END);
-		chunk_clear(&safe_file);
-		if (!cert)
+		if (!load_trusted_certificates(priv, safe_file, &cert))
 		{
+			chunk_clear(&safe_file);
 			g_set_error(err, NM_VPN_PLUGIN_ERROR,
 						NM_VPN_PLUGIN_ERROR_BAD_ARGUMENTS,
 						"Loading gateway certificate failed.");
 			return FALSE;
 		}
-		priv->creds->add_certificate(priv->creds, cert);
+		chunk_clear(&safe_file);
 	}
 	else
 	{
@@ -972,13 +1030,11 @@ static gboolean connect_(NMVpnServicePlugin *plugin, NMConnection *connection,
 	}
 	else if (cert)
 	{
-		x509 = (x509_t*)cert;
-		if (!(x509->get_flags(x509) & X509_CA))
-		{	/* for server certificates, we use the subject as identity */
-			gateway = cert->get_subject(cert);
-			gateway = gateway->clone(gateway);
-		}
+		/* for server certificates, we use the subject as identity */
+		gateway = cert->get_subject(cert);
+		gateway = gateway->clone(gateway);
 	}
+	DESTROY_IF(cert);
 	if (!gateway || gateway->get_type(gateway) == ID_ANY)
 	{
 		/* if the user configured a CA certificate (or an invalid identity),
