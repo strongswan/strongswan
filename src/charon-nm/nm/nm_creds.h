@@ -38,7 +38,7 @@ struct nm_creds_t {
 	/**
 	 * Add a trusted gateway certificate to serve by this set.
 	 *
-	 * @param cert		certificate to serve
+	 * @param cert		X.509 certificate to serve (adopted)
 	 */
 	void (*add_certificate)(nm_creds_t *this, certificate_t *cert);
 

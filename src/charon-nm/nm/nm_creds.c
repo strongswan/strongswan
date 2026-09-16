@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2011-2026 Tobias Brunner
  * Copyright (C) 2008 Martin Willi
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -163,25 +164,29 @@ METHOD(credential_set_t, create_cert_enumerator, enumerator_t*,
 METHOD(credential_set_t, create_private_enumerator, enumerator_t*,
 	private_nm_creds_t *this, key_type_t type, identification_t *id)
 {
+	this->lock->read_lock(this->lock);
 	if (this->key == NULL)
 	{
-		return NULL;
+		goto no_key;
 	}
 	if (type != KEY_ANY && type != this->key->get_type(this->key))
 	{
-		return NULL;
+		goto no_key;
 	}
 	if (id && id->get_type(id) != ID_ANY)
 	{
 		if (id->get_type(id) != ID_KEY_ID ||
 			!this->key->has_fingerprint(this->key, id->get_encoding(id)))
 		{
-			return NULL;
+			goto no_key;
 		}
 	}
-	this->lock->read_lock(this->lock);
 	return enumerator_create_cleaner(enumerator_create_single(this->key, NULL),
 									 (void*)this->lock->unlock, this->lock);
+
+no_key:
+	this->lock->unlock(this->lock);
+	return NULL;
 }
 
 /**
@@ -288,6 +293,15 @@ no_secret:
 METHOD(nm_creds_t, add_certificate, void,
 	private_nm_creds_t *this, certificate_t *cert)
 {
+	x509_t *x509 = (x509_t*)cert;
+	x509_flag_t flags DBG_UNUSED = x509->get_flags(x509);
+	bool is_ca DBG_UNUSED = flags & X509_CA;
+	bool is_im DBG_UNUSED = is_ca && !(flags & X509_SELF_SIGNED);
+
+	DBG2(DBG_CFG, "loaded %s%scertificate '%Y'",
+		 is_im ? "intermediate " : "", is_ca ? "CA " : "",
+		 cert->get_subject(cert));
+
 	this->lock->write_lock(this->lock);
 	this->certs->insert_last(this->certs, cert);
 	this->lock->unlock(this->lock);
@@ -300,7 +314,6 @@ static void load_ca_file(private_nm_creds_t *this, char *file)
 {
 	certificate_t *cert;
 
-	/* We add the CA constraint, as many CAs miss it */
 	cert = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509,
 							  BUILD_FROM_FILE, file, BUILD_END);
 	if (!cert)
@@ -309,13 +322,7 @@ static void load_ca_file(private_nm_creds_t *this, char *file)
 	}
 	else
 	{
-		DBG2(DBG_CFG, "loaded CA certificate '%Y'", cert->get_subject(cert));
-		x509_t *x509 = (x509_t*)cert;
-		if (!(x509->get_flags(x509) & X509_SELF_SIGNED))
-		{
-			DBG1(DBG_CFG, "%Y is not self signed", cert->get_subject(cert));
-		}
-		this->certs->insert_last(this->certs, cert);
+		add_certificate(this, cert);
 	}
 }
 
@@ -395,6 +402,7 @@ METHOD(nm_creds_t, clear, void,
 {
 	certificate_t *cert;
 
+	this->lock->write_lock(this->lock);
 	while (this->certs->remove_last(this->certs, (void**)&cert) == SUCCESS)
 	{
 		cert->destroy(cert);
@@ -411,6 +419,7 @@ METHOD(nm_creds_t, clear, void,
 	this->user = NULL;
 	this->keypass = NULL;
 	this->keyid = chunk_empty;
+	this->lock->unlock(this->lock);
 }
 
 METHOD(nm_creds_t, destroy, void,
