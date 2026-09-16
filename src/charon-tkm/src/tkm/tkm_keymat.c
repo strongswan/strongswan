@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2022 Tobias Brunner
+ * Copyright (C) 2015-2026 Tobias Brunner
  * Copyright (C) 2012 Reto Buerki
  * Copyright (C) 2012 Adrian-Ken Rueegsegger
  *
@@ -20,6 +20,7 @@
 #include <tkm/constants.h>
 #include <tkm/client.h>
 #include <collections/array.h>
+#include <collections/hashtable.h>
 #include <crypto/hashers/hash_algorithm_set.h>
 
 #include "tkm.h"
@@ -33,6 +34,7 @@ typedef struct private_tkm_keymat_t private_tkm_keymat_t;
 
 static array_t *ike_proposal_map = NULL;
 static array_t *esp_proposal_map = NULL;
+static hashtable_t *scheme_map = NULL;
 
 /**
  * Private data of a keymat_t object.
@@ -63,6 +65,11 @@ struct private_tkm_keymat_t {
 	 * AE context id.
 	 */
 	ae_id_type ae_ctx_id;
+
+	/**
+	 * Authentication method from AUTH payload.
+	 */
+	auth_method_t auth_method;
 
 	/**
 	 * AUTH payload chunk.
@@ -177,25 +184,28 @@ METHOD(keymat_v2_t, derive_ike_keys, bool,
 	block_len_type block_len;
 	icv_len_type icv_len;
 	iv_len_type iv_len;
+	isa_flags_type flags;
 
 	if (!concat_ke_ids(kes, &ke_ids))
 	{
 		return FALSE;
 	}
 
-	nonce = this->initiator ? &nonce_i : &nonce_r;
-
 	if (this->initiator)
 	{
+		nonce = &nonce_i;
 		chunk_to_sequence(&nonce_r, &nonce_rem, sizeof(nonce_type));
 		spi_loc = id->get_initiator_spi(id);
 		spi_rem = id->get_responder_spi(id);
+		flags = TKM_ISA_INITIATOR;
 	}
 	else
 	{
+		nonce = &nonce_r;
 		chunk_to_sequence(&nonce_i, &nonce_rem, sizeof(nonce_type));
 		spi_loc = id->get_responder_spi(id);
 		spi_rem = id->get_initiator_spi(id);
+		flags = 0;
 	}
 
 	ia_id = get_proposal_id(proposal);
@@ -225,7 +235,7 @@ METHOD(keymat_v2_t, derive_ike_keys, bool,
 			 "spi_loc: %llx, spi_rem: %llx)", nc_id, ia_id, ke_ids.data[0],
 			 spi_loc, spi_rem);
 		res = ike_isa_create(this->isa_ctx_id, this->ae_ctx_id, ia_id,
-							 ke_ids.data[0], nc_id, nonce_rem, this->initiator,
+							 ke_ids.data[0], nc_id, nonce_rem, flags,
 							 spi_loc, spi_rem, &block_len, &icv_len, &iv_len);
 	}
 	else
@@ -269,7 +279,7 @@ METHOD(keymat_v2_t, derive_ike_keys, bool,
 			this->ae_ctx_id = isa_info.ae_id;
 			res = ike_isa_create_child(this->isa_ctx_id, isa_info.parent_isa_id,
 									   ia_id, ke_ids, nc_id, nonce_rem,
-									   this->initiator, spi_loc, spi_rem,
+									   flags, spi_loc, spi_rem,
 									   &block_len, &icv_len, &iv_len);
 		}
 
@@ -398,16 +408,15 @@ METHOD(keymat_v2_t, get_auth_octets, bool,
 		return TRUE;
 	}
 
-	INIT(sign,
+	/* add IKE_SA_INIT at the end of the struct so it gets freed with it */
+	INIT_EXTRA(sign, ike_sa_init.len,
 		 .isa_id = this->isa_ctx_id,
-		 .init_message = chunk_clone(ike_sa_init),
 	);
+	memcpy(sign->init_message_data, ike_sa_init.ptr, ike_sa_init.len);
 
-	/*
-	 * store signature info in AUTH octets, which is passed to the private key
-	 * sign() operation
-	 */
-	*octets = chunk_create((u_char *)sign, sizeof(sign_info_t));
+	/* store signature info in AUTH octets, which is passed to the private key
+	 * sign() operation */
+	*octets = chunk_create((u_char*)sign, sizeof(sign_info_t) + ike_sa_init.len);
 	return TRUE;
 }
 
@@ -460,6 +469,34 @@ METHOD(keymat_v2_t, add_hash_algorithm, void,
 	this->hash_algorithms->add(this->hash_algorithms, hash);
 }
 
+CALLBACK(hash_algorithm_filter, bool,
+	void *ctx, enumerator_t *orig, va_list args)
+{
+	signature_scheme_t *scheme_ptr;
+	hash_algorithm_t hash, *out;
+
+	VA_ARGS_VGET(args, out);
+
+	while (orig->enumerate(orig, &scheme_ptr, NULL))
+	{
+		hash = hasher_from_signature_scheme(*scheme_ptr, NULL);
+		if (hasher_algorithm_for_ikev2(hash))
+		{
+			*out = hash;
+			return TRUE;
+		}
+	}
+	return FALSE;
+}
+
+METHOD(keymat_v2_t, hash_algorithm_enumerator_create, enumerator_t*,
+	private_tkm_keymat_t *this)
+{
+	return enumerator_create_filter(
+							scheme_map->create_enumerator(scheme_map),
+							hash_algorithm_filter, NULL, NULL);
+}
+
 METHOD(keymat_t, destroy, void,
 	private_tkm_keymat_t *this)
 {
@@ -493,15 +530,21 @@ METHOD(tkm_keymat_t, get_isa_id, isa_id_type,
 }
 
 METHOD(tkm_keymat_t, set_auth_payload, void,
-	private_tkm_keymat_t *this, const chunk_t * const payload)
+	private_tkm_keymat_t *this, const auth_method_t method,
+	const chunk_t * const payload)
 {
+	this->auth_method = method;
 	this->auth_payload = chunk_clone(*payload);
 }
 
-METHOD(tkm_keymat_t, get_auth_payload, chunk_t*,
-	private_tkm_keymat_t *this)
+METHOD(tkm_keymat_t, get_auth_payload, chunk_t,
+	private_tkm_keymat_t *this, auth_method_t *method)
 {
-	return &this->auth_payload;
+	if (method)
+	{
+		*method = this->auth_method;
+	}
+	return this->auth_payload;
 }
 
 METHOD(tkm_keymat_t, get_peer_init_msg, chunk_t*,
@@ -585,6 +628,124 @@ void destroy_proposal_mapping()
 	esp_proposal_map = NULL;
 }
 
+static u_int hash(void *key)
+{
+	signature_scheme_t s = *(signature_scheme_t*)key;
+	return chunk_hash(chunk_from_thing(s));
+}
+
+static bool equals(void *key, void *other_key)
+{
+	return *(signature_scheme_t*)key == *(signature_scheme_t*)other_key;
+}
+
+/**
+ * Destroy a mapping hashtable and all its key/value pairs
+ */
+static void destroy_map(hashtable_t *map)
+{
+	enumerator_t *enumerator;
+	char *key, *value;
+
+	enumerator = map->create_enumerator(map);
+	while (enumerator->enumerate(enumerator, &key, &value))
+	{
+		free(key);
+		free(value);
+	}
+	enumerator->destroy(enumerator);
+	map->destroy(map);
+}
+
+/*
+ * Described in header
+ */
+uint64_t siga_from_signature_scheme(signature_scheme_t scheme)
+{
+	uint64_t *siga_id_ptr = NULL;
+
+	if (scheme_map)
+	{
+		siga_id_ptr = scheme_map->get(scheme_map, &scheme);
+	}
+	return siga_id_ptr ? *siga_id_ptr : 0;
+}
+
+/*
+ * Described in header
+ */
+int register_sig_mapping()
+{
+	int count;
+	char *sig_id_str, *tkm_id_str;
+	signature_scheme_t scheme, *sig_id;
+	uint64_t id, *tkm_id;
+	hashtable_t *map;
+	enumerator_t *enumerator;
+	bool valid = TRUE;
+
+	map = hashtable_create((hashtable_hash_t)hash,
+						   (hashtable_equals_t)equals, 16);
+
+	enumerator = lib->settings->create_key_value_enumerator(lib->settings,
+															"%s.sig_mapping",
+															lib->ns);
+
+	while (enumerator->enumerate(enumerator, &sig_id_str, &tkm_id_str))
+	{
+		if (!enum_from_name(signature_scheme_names, sig_id_str, &scheme))
+		{
+			DBG1(DBG_CFG, "unknown signature scheme: '%s'", sig_id_str);
+			valid = FALSE;
+			break;
+		}
+		if (map->get(map, &scheme))
+		{
+			DBG1(DBG_CFG, "duplicate signature scheme mapping for %N",
+				 signature_scheme_names, scheme);
+			valid = FALSE;
+			break;
+		}
+		id = settings_value_as_uint64(tkm_id_str, 0);
+		if (!id)
+		{
+			DBG1(DBG_CFG, "invalid TKM signature identifier: '%s'", tkm_id_str);
+			valid = FALSE;
+			break;
+		}
+
+		sig_id = malloc_thing(signature_scheme_t);
+		*sig_id = scheme;
+		tkm_id = malloc_thing(uint64_t);
+		*tkm_id = id;
+
+		map->put(map, sig_id, tkm_id);
+	}
+	enumerator->destroy(enumerator);
+
+	count = map->get_count(map);
+
+	if (valid && count > 0)
+	{
+		scheme_map = map;
+		return count;
+	}
+	destroy_map(map);
+	return 0;
+}
+
+/*
+ * Described in header
+ */
+void destroy_sig_mapping()
+{
+	if (scheme_map)
+	{
+		destroy_map(scheme_map);
+		scheme_map = NULL;
+	}
+}
+
 /*
  * Described in header
  */
@@ -611,6 +772,7 @@ tkm_keymat_t *tkm_keymat_create(bool initiator)
 				.get_psk_sig = _get_psk_sig,
 				.add_hash_algorithm = _add_hash_algorithm,
 				.hash_algorithm_supported = _hash_algorithm_supported,
+				.hash_algorithm_enumerator_create = _hash_algorithm_enumerator_create,
 			},
 			.get_isa_id = _get_isa_id,
 			.set_auth_payload = _set_auth_payload,

@@ -1,8 +1,8 @@
 #!/usr/bin/make
 
 PKG = tkm-rpc
-SRC = https://git.codelabs.ch/git/$(PKG).git
-REV = c43c7d2a070d37e4063b83be0dc01425bf890206
+SRC = https://git.codelabs.ch/$(PKG).git
+REV = cbb96b9b834e0c9ed7ee42f369d4d6b8ef7ee64e
 
 PREFIX = /usr/local/ada
 

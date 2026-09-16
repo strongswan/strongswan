@@ -310,10 +310,6 @@ int main(int argc, char *argv[])
 		goto deinit;
 	}
 
-	/* the authorize hook currently does not support RFC 7427 signature auth */
-	lib->settings->set_bool(lib->settings, "%s.signature_authentication", FALSE,
-							dmn_name);
-
 	/* make sure we log to the DAEMON facility by default */
 	lib->settings->set_int(lib->settings, "%s.syslog.daemon.default",
 			lib->settings->get_int(lib->settings, "%s.syslog.daemon.default", 1,
@@ -339,6 +335,13 @@ int main(int argc, char *argv[])
 	if (!register_proposal_mapping())
 	{
 		DBG1(DBG_DMN, "no proposal mapping defined - aborting %s", dmn_name);
+		goto deinit;
+	}
+
+	if (!register_sig_mapping())
+	{
+		DBG1(DBG_DMN, "no signature scheme mapping defined - aborting %s",
+			 dmn_name);
 		goto deinit;
 	}
 
@@ -435,6 +438,7 @@ int main(int argc, char *argv[])
 
 deinit:
 	destroy_proposal_mapping();
+	destroy_sig_mapping();
 	destroy_ke_mapping();
 	destroy_ca_mapping();
 	libcharon_deinit();

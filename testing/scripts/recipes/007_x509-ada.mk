@@ -1,7 +1,7 @@
 #!/usr/bin/make
 
 PKG = x509-ada
-SRC = https://git.codelabs.ch/git/$(PKG).git
+SRC = https://git.codelabs.ch/$(PKG).git
 REV = v0.1.3
 
 PREFIX = /usr/local/ada

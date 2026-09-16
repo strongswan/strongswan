@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2022-2026 Tobias Brunner
  * Copyright (C) 2012 Reto Buerki
  * Copyright (C) 2012 Adrian-Ken Rueegsegger
  *
@@ -23,6 +24,7 @@
 #ifndef TKM_KEYMAT_H_
 #define TKM_KEYMAT_H_
 
+#include <sa/authenticator.h>
 #include <sa/ikev2/keymat_v2.h>
 
 typedef struct tkm_keymat_t tkm_keymat_t;
@@ -45,18 +47,22 @@ struct tkm_keymat_t {
 	isa_id_type (*get_isa_id)(tkm_keymat_t * const this);
 
 	/**
-	 * Set IKE AUTH payload.
+	 * Set IKE AUTH payload method and data.
 	 *
+	 * @param method		authentication method
 	 * @param payload		AUTH payload
 	 */
-	void (*set_auth_payload)(tkm_keymat_t *this, const chunk_t * const payload);
+	void (*set_auth_payload)(tkm_keymat_t *this, const auth_method_t method,
+							 const chunk_t * const payload);
 
 	/**
 	 * Get IKE AUTH payload.
 	 *
+	 * @param[out] method	authentication method
 	 * @return				AUTH payload if set, chunk_empty otherwise
 	 */
-	chunk_t* (*get_auth_payload)(tkm_keymat_t * const this);
+	chunk_t (*get_auth_payload)(tkm_keymat_t * const this,
+								auth_method_t *method);
 
 	/**
 	 * Get IKE init message of peer.
@@ -78,6 +84,26 @@ int register_proposal_mapping();
  * Destroy IKE/ESP proposal to TKM id mapping.
  */
 void destroy_proposal_mapping();
+
+/**
+ * Map a signature scheme to a TKM signature algorithm id.
+ *
+ * @param scheme	signature scheme to map
+ * @return			mapped TKM id, 0 if not supported
+ */
+uint64_t siga_from_signature_scheme(signature_scheme_t scheme);
+
+/**
+ * Loads signature scheme identifier to TKM id mapping from config.
+ *
+ * @return			number of registered mappings
+ */
+int register_sig_mapping();
+
+/**
+ * Destroy signature scheme identifier to TKM id mapping.
+ */
+void destroy_sig_mapping();
 
 /**
  * Create TKM keymat instance.

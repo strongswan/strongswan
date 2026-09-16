@@ -54,7 +54,7 @@
  * Since the charon-tkm code uses the tkm-rpc library written in Ada, the daemon
  * has to be built using an Ada-aware toolchain. The integration of Ada code
  * into the strongSwan codebase is explained in the TKM documentation, section
- * 5.4.1: http://www.codelabs.ch/tkm#anchor-doc.
+ * 5.4.1: https://www.codelabs.ch/tkm#anchor-doc.
  *
  * The Trusted Key Manager (TKM) is a minimal Trusted Computing Base which
  * implements security-critical functions of the IKEv2 protocol.
@@ -65,7 +65,7 @@
  * The underlying concept of IKE disaggregation and the design of TKM and all
  * related components, of which charon-tkm is one component, is presented in
  * detail in the project documentation found at
- * http://www.codelabs.ch/tkm#anchor-doc.
+ * https://www.codelabs.ch/tkm#anchor-doc.
  */
 
 #ifndef TKM_H_

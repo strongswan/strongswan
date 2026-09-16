@@ -1,7 +1,7 @@
 #!/usr/bin/make
 
 PKG = anet
-SRC = https://git.codelabs.ch/git/$(PKG).git
+SRC = https://git.codelabs.ch/$(PKG).git
 REV = 15b469b1e47fde41822543da5be717df195c87dc
 
 PREFIX = /usr/local/ada

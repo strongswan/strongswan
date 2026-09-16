@@ -84,7 +84,14 @@ static bool test_runner_init(bool init)
 							   "aes256-sha512-prfsha512", lib->ns, 1);
 		lib->settings->set_str(lib->settings, "%s.proposal_mapping.esp.%d",
 							   "aes256-sha512-esn-noesn", lib->ns, 1);
+		lib->settings->set_int(lib->settings, "%s.sig_mapping.%N", 1,
+							   lib->ns, signature_scheme_names,
+							   SIGN_RSA_EMSA_PKCS1_SHA1);
+		lib->settings->set_int(lib->settings, "%s.sig_mapping.%N", 2,
+							   lib->ns, signature_scheme_names,
+							   SIGN_RSA_EMSA_PKCS1_SHA2_256);
 		register_proposal_mapping();
+		register_sig_mapping();
 		register_ke_mapping();
 
 		plugin_loader_add_plugindirs(BUILDDIR "/src/libstrongswan/plugins",
@@ -107,6 +114,7 @@ static bool test_runner_init(bool init)
 	}
 
 	destroy_proposal_mapping();
+	destroy_sig_mapping();
 	destroy_ke_mapping();
 	libcharon_deinit();
 	return result;

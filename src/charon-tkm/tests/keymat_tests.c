@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2013-2026 Tobias Brunner
  * Copyright (C) 2012 Reto Buerki
  * Copyright (C) 2012 Adrian-Ken Rueegsegger
  *
@@ -27,6 +28,32 @@
 #include "tkm_key_exchange.h"
 #include "tkm_keymat.h"
 #include "tkm_types.h"
+
+START_TEST(test_siga_from_signature_scheme)
+{
+	ck_assert_int_eq((uint64_t)1, siga_from_signature_scheme(SIGN_RSA_EMSA_PKCS1_SHA1));
+	ck_assert_int_eq((uint64_t)2, siga_from_signature_scheme(SIGN_RSA_EMSA_PKCS1_SHA2_256));
+}
+END_TEST
+
+START_TEST(test_hash_algorithm_enumerator)
+{
+	enumerator_t *enumerator;
+	hash_algorithm_t alg;
+
+	tkm_keymat_t *keymat = tkm_keymat_create(TRUE);
+	fail_if(!keymat, "Unable to create keymat");
+
+	enumerator = keymat->keymat_v2.hash_algorithm_enumerator_create(&keymat->keymat_v2);
+	/* only SHA-256 should get enumerated with the registered schemes as SHA-1
+	 * is filtered and not allowed for signature authentication */
+	fail_if(!enumerator->enumerate(enumerator, &alg), "No hash algorithms");
+	ck_assert_int_eq((hash_algorithm_t)HASH_SHA256, alg);
+	fail_if(enumerator->enumerate(enumerator, &alg), "Unexpected hash algorithm");
+	enumerator->destroy(enumerator);
+	keymat->keymat_v2.keymat.destroy(&keymat->keymat_v2.keymat);
+}
+END_TEST
 
 START_TEST(test_derive_ike_keys)
 {
@@ -349,6 +376,11 @@ Suite *make_keymat_tests()
 	TCase *tc;
 
 	s = suite_create("keymat");
+
+	tc = tcase_create("sig mapping");
+	tcase_add_test(tc, test_siga_from_signature_scheme);
+	tcase_add_test(tc, test_hash_algorithm_enumerator);
+	suite_add_tcase(s, tc);
 
 	tc = tcase_create("derive IKE keys");
 	tcase_add_test(tc, test_derive_ike_keys);
