@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2014 Tobias Brunner
+ * Copyright (C) 2006-2026 Tobias Brunner
  * Copyright (C) 2006 Daniel Roethlisberger
  * Copyright (C) 2005-2008 Martin Willi
  * Copyright (C) 2005 Jan Hutter
@@ -219,6 +219,22 @@ host_t *host_create_netmask(int family, int netbits);
  * @return				host_t, NULL if family not supported
  */
 host_t *host_create_any(int family);
+
+/**
+ * Check if the host's IP address is set to a loopback address.
+ *
+ * @param host			host to check
+ * @return				TRUE if host matches 127.0.0.0/8 or ::1/128
+ */
+bool host_is_loopback(host_t *host);
+
+/**
+ * Check if the host's IP address is set to a link-local address.
+ *
+ * @param host			host to check
+ * @return				TRUE if host matches 169.254.0.0/16 or fe80::/10
+ */
+bool host_is_linklocal(host_t *host);
 
 /**
  * printf hook function for host_t.

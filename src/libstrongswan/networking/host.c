@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2014 Tobias Brunner
+ * Copyright (C) 2006-2026 Tobias Brunner
  * Copyright (C) 2006 Daniel Roethlisberger
  * Copyright (C) 2005-2006 Martin Willi
  * Copyright (C) 2005 Jan Hutter
@@ -700,4 +700,66 @@ host_t *host_create_any(int family)
 	}
 	free(this);
 	return NULL;
+}
+
+/*
+ * Described in header
+ */
+bool host_is_loopback(host_t *host)
+{
+	private_host_t *this = (private_host_t*)host;
+
+	if (!host)
+	{
+		return FALSE;
+	}
+
+	switch (this->address.sa_family)
+	{
+		case AF_INET:
+		{
+			/* for IPv4 it's the whole 127.0.0.0/8 subnet */
+			return ntohl(this->address4.sin_addr.s_addr) >> 24 == 0x7f;
+		}
+		case AF_INET6:
+		{
+			/* only a single address (::1) for IPv6 */
+			return IN6_IS_ADDR_LOOPBACK(&this->address6.sin6_addr);
+		}
+		default:
+		{
+			return FALSE;
+		}
+	}
+}
+
+/*
+ * Described in header
+ */
+bool host_is_linklocal(host_t *host)
+{
+	private_host_t *this = (private_host_t*)host;
+
+	if (!host)
+	{
+		return FALSE;
+	}
+
+	switch (this->address.sa_family)
+	{
+		case AF_INET:
+		{
+			/* 169.254.0.0/16 */
+			return ntohl(this->address4.sin_addr.s_addr) >> 16 == 0xa9fe;
+		}
+		case AF_INET6:
+		{
+			/* fe80::/10 */
+			return IN6_IS_ADDR_LINKLOCAL(&this->address6.sin6_addr);
+		}
+		default:
+		{
+			return FALSE;
+		}
+	}
 }

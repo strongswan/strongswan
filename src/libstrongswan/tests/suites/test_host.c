@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Tobias Brunner
+ * Copyright (C) 2013-2026 Tobias Brunner
  *
  * Copyright (C) secunet Security Networks AG
  *
@@ -643,6 +643,74 @@ START_TEST(test_equals_any)
 END_TEST
 
 /*******************************************************************************
+ * host_is_loopback/host_is_linklocal
+ */
+
+START_TEST(test_host_is_loopback)
+{
+	host_t *a;
+
+	ck_assert(!host_is_loopback(NULL));
+
+	a = host_create_from_string("192.168.0.1", 0);
+	ck_assert(!host_is_loopback(a));
+	a->destroy(a);
+
+	a = host_create_from_string("127.0.0.1", 0);
+	ck_assert(host_is_loopback(a));
+	a->destroy(a);
+
+	a = host_create_from_string("127.255.255.255", 0);
+	ck_assert(host_is_loopback(a));
+	a->destroy(a);
+
+	a = host_create_from_string("fec1::1", 0);
+	ck_assert(!host_is_loopback(a));
+	a->destroy(a);
+
+	a = host_create_from_string("::1", 0);
+	ck_assert(host_is_loopback(a));
+	a->destroy(a);
+
+	a = host_create_from_string("::2", 0);
+	ck_assert(!host_is_loopback(a));
+	a->destroy(a);
+}
+END_TEST
+
+START_TEST(test_host_is_linklocal)
+{
+	host_t *a;
+
+	ck_assert(!host_is_linklocal(NULL));
+
+	a = host_create_from_string("192.168.0.1", 0);
+	ck_assert(!host_is_linklocal(a));
+	a->destroy(a);
+
+	a = host_create_from_string("169.254.0.1", 0);
+	ck_assert(host_is_linklocal(a));
+	a->destroy(a);
+
+	a = host_create_from_string("169.254.255.255", 0);
+	ck_assert(host_is_linklocal(a));
+	a->destroy(a);
+
+	a = host_create_from_string("fec1::1", 0);
+	ck_assert(!host_is_linklocal(a));
+	a->destroy(a);
+
+	a = host_create_from_string("fe80::1", 0);
+	ck_assert(host_is_linklocal(a));
+	a->destroy(a);
+
+	a = host_create_from_string("febf:ffff:ffff:ffff:ffff:ffff:ffff:ffff", 0);
+	ck_assert(host_is_linklocal(a));
+	a->destroy(a);
+}
+END_TEST
+
+/*******************************************************************************
  * clone
  */
 
@@ -788,6 +856,11 @@ Suite *host_suite_create()
 	tc = tcase_create("equals, ip_equals");
 	tcase_add_test(tc, test_equals);
 	tcase_add_test(tc, test_equals_any);
+	suite_add_tcase(s, tc);
+
+	tc = tcase_create("host_is_loopback/host_is_linklocal");
+	tcase_add_test(tc, test_host_is_loopback);
+	tcase_add_test(tc, test_host_is_linklocal);
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("clone");
