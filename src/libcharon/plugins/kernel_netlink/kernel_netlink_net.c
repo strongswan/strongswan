@@ -1811,6 +1811,32 @@ static rt_entry_t *parse_route(struct nlmsghdr *hdr, rt_entry_t *route)
 }
 
 /**
+ * Whether the routing table used for IPsec routes contains any regular
+ * routes that could be returned by a route lookup. Throw routes (pass) are
+ * ignored, as a lookup falls through them to the main tables anyway.
+ */
+static bool has_ipsec_routes(private_kernel_netlink_net_t *this)
+{
+	enumerator_t *enumerator;
+	route_entry_t *route;
+	bool found = FALSE;
+
+	this->routes_lock->lock(this->routes_lock);
+	enumerator = this->routes->ht.create_enumerator(&this->routes->ht);
+	while (enumerator->enumerate(enumerator, NULL, (void**)&route))
+	{
+		if (!route->pass)
+		{
+			found = TRUE;
+			break;
+		}
+	}
+	enumerator->destroy(enumerator);
+	this->routes_lock->unlock(this->routes_lock);
+	return found;
+}
+
+/**
  * Get a route: If "nexthop", the nexthop is returned. source addr otherwise.
  */
 static host_t *get_route(private_kernel_netlink_net_t *this, host_t *dest,
@@ -1855,11 +1881,19 @@ static host_t *get_route(private_kernel_netlink_net_t *this, host_t *dest,
 		chunk = chunk_from_thing(this->routing_mark.value);
 		netlink_add_attribute(hdr, RTA_MARK, chunk, sizeof(request));
 	}
-	else if (family == AF_INET || this->rta_prefsrc_for_ipv6 ||
-			 this->routing_table || match_net)
+	else if ((family == AF_INET || this->rta_prefsrc_for_ipv6 ||
+			  this->routing_table || match_net) &&
+			 (match_net ||
+			  this->rt_exclude->get_count(this->rt_exclude) > 0 ||
+			  this->vips->ht.get_count(&this->vips->ht) > 0 ||
+			  has_ipsec_routes(this)))
 	{	/* kernels prior to 3.0 do not support RTA_PREFSRC for IPv6 routes.
 		 * as we want to ignore routes with virtual IPs we cannot use DUMP
-		 * if these routes are not installed in a separate table */
+		 * if these routes are not installed in a separate table.
+		 * otherwise a plain RTM_GETROUTE lookup is sufficient, which returns
+		 * the best route per the routing rules. dumping the full routing
+		 * table is very expensive if it contains a full BGP table, and the
+		 * resulting message flood can stall netlink transaction processing */
 		if (this->install_routes)
 		{
 			hdr->nlmsg_flags |= NLM_F_DUMP;
