@@ -172,21 +172,16 @@ static void update_addrs(private_kernel_iph_net_t *this, iface_t *entry,
 
 	for (current = addr->FirstUnicastAddress; current; current = current->Next)
 	{
-		if (current->Address.lpSockaddr->sa_family == AF_INET6)
-		{
-			struct sockaddr_in6 *sin;
-
-			sin = (struct sockaddr_in6*)current->Address.lpSockaddr;
-			if (IN6_IS_ADDR_LINKLOCAL(&sin->sin6_addr))
-			{
-				continue;
-			}
-		}
-
 		host = host_create_from_sockaddr(current->Address.lpSockaddr);
 		if (host)
 		{
 			bool found = FALSE;
+
+			if (host_is_loopback(host) || host_is_linklocal(host))
+			{	/* skip loopback and link-local addresses */
+				host->destroy(host);
+				continue;
+			}
 
 			enumerator = list->create_enumerator(list);
 			while (enumerator->enumerate(enumerator, &old))
