@@ -56,3 +56,5 @@ coverage/
 test-driver
 nbproject/
 *.[si]
+.cache/clangd
+compile_commands.json
