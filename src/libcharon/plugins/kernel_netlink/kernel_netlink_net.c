@@ -1559,10 +1559,6 @@ CALLBACK(filter_interfaces, bool,
 		{	/* skip interfaces excluded by config */
 			continue;
 		}
-		if (!(data->which & ADDR_TYPE_LOOPBACK) && (iface->flags & IFF_LOOPBACK))
-		{	/* ignore loopback devices */
-			continue;
-		}
 		if (!(data->which & ADDR_TYPE_DOWN) && !(iface->flags & IFF_UP))
 		{	/* skip interfaces not up */
 			continue;

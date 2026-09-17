@@ -477,11 +477,6 @@ METHOD(enumerator_t, addr_enumerate, bool,
 			{
 				return FALSE;
 			}
-			if (entry->iftype == IF_TYPE_SOFTWARE_LOOPBACK &&
-				!(this->which & ADDR_TYPE_LOOPBACK))
-			{
-				continue;
-			}
 			if (entry->status != IfOperStatusUp &&
 				!(this->which & ADDR_TYPE_DOWN))
 			{
