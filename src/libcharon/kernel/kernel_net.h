@@ -35,18 +35,17 @@ typedef enum kernel_address_type_t kernel_address_type_t;
  * Type of addresses (e.g. when enumerating them)
  */
 enum kernel_address_type_t {
-	/** normal addresses (on regular, up, non-ignored) interfaces */
+	/** addresses on up and non-ignored interfaces, with usable scope and
+	 * non-deprecated, includes globals on loopback interfaces */
 	ADDR_TYPE_REGULAR = (1 << 0),
 	/** addresses on down interfaces */
 	ADDR_TYPE_DOWN =  (1 << 1),
 	/** addresses on ignored interfaces */
 	ADDR_TYPE_IGNORED = (1 << 2),
-	/** addresses on loopback interfaces */
-	ADDR_TYPE_LOOPBACK = (1 << 3),
 	/** virtual IP addresses */
-	ADDR_TYPE_VIRTUAL = (1 << 4),
+	ADDR_TYPE_VIRTUAL = (1 << 3),
 	/** to enumerate all available addresses */
-	ADDR_TYPE_ALL = (1 << 5) - 1,
+	ADDR_TYPE_ALL = (1 << 4) - 1,
 };
 
 /**
