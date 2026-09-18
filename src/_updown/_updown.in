@@ -154,6 +154,12 @@ FAC_PRIO=local0.notice
 #
 # local0.notice                   -/var/log/vpn
 
+NFT=false
+
+# By default, let's add our rules in the inet family tables
+NFT_IP4_FAMILY=inet
+NFT_IP6_FAMILY=inet
+
 # check interface version
 case "$PLUTO_VERSION" in
 1.[0|1])	# Older release?!?  Play it safe, script may be using new features.
@@ -173,6 +179,25 @@ case "$1:$*" in
 	;;
 iptables:iptables)	# due to (left/right)firewall; for default script only
 	;;
+nftables:nftables*)
+	NFT=true
+	if [ $# -gt 1 ]
+	then
+		# Accept NFT ipv4 family type [ip|inet] as $2
+		NFT_IP4_FAMILY="$2"
+		# Accept NFT ipv6 family type [ip6|inet] as $3
+		[ $# -gt 2 ] && NFT_IP6_FAMILY="$3"
+
+		if [ "$NFT_IP4_FAMILY" != "ip" -a "$NFT_IP4_FAMILY" != "inet" ]
+		then
+			echo "$0: invalid ipv4 nft familiy \`$NFT_IP4_FAMILY', should be either ip or inet" >&2
+		fi
+		if [ "$NFT_IP6_FAMILY" != "ip6" -a "$NFT_IP6_FAMILY" != "inet" ]
+		then
+			echo "$0: invalid ipv6 nft familiy \`$NFT_IP6_FAMILY', should be either ip6 or inet" >&2
+		fi
+	fi
+	;;
 custom:*)		# custom parameters (see above CAUTION comment)
 	;;
 *)	echo "$0: unknown parameters \`$*'" >&2
@@ -180,21 +205,60 @@ custom:*)		# custom parameters (see above CAUTION comment)
 	;;
 esac
 
+# It will be possible to get rid of this dirty piece of code when nftables will
+# implement deleting rules with thier definition (planned)
+delete_nft_rule()
+{
+	family="$1"
+	case "$family" in
+	4) mask="\/32"
+		NFT_FAMILY="$NFT_IP4_FAMILY"
+		;;
+	6) mask="\/128"
+		NFT_FAMILY="$NFT_IP6_FAMILY"
+		;;
+	esac
+	chain="$2"
+	rule="$(echo "$3" | sed "s/$mask//g" | tr -s ' ')"
+	if current_rule="$(nft -a list chain $NFT_FAMILY filter $chain | grep "$rule")"
+	then
+		handle="$(echo "$current_rule" | sed 's/.*# handle //')"
+		[ -n "$handle" ] && nft delete rule $NFT_FAMILY filter $chain handle $handle
+	fi
+}
+
 IPSEC_POLICY="-m policy --pol ipsec --proto $PLUTO_PROTO --reqid $PLUTO_REQID"
 IPSEC_POLICY_IN="$IPSEC_POLICY --dir in"
 IPSEC_POLICY_OUT="$IPSEC_POLICY --dir out"
 
+$NFT && IPSEC_POLICY_IN="ipsec in reqid $PLUTO_REQID"
+$NFT && IPSEC_POLICY_OUT="ipsec out reqid $PLUTO_REQID"
+
 # use protocol specific options to set ports
+MY_PROTOCOL=""
 case "$PLUTO_MY_PROTOCOL" in
 1)	# ICMP
 	ICMP_TYPE_OPTION="--icmp-type"
+	$NFT &&	ICMP_TYPE_OPTION="icmp type"
+	ICMP_CODE_OPTION="icmp code"
+	;;
+6) MY_PROTOCOL="tcp"
+	;;
+17) MY_PROTOCOL="udp"
 	;;
 58)	# ICMPv6
 	ICMP_TYPE_OPTION="--icmpv6-type"
+	$NFT && ICMP_TYPE_OPTION="icmpv6 type"
+	ICMP_CODE_OPTION="icmpv6 code"
 	;;
 *)
 	;;
 esac
+
+SPORT_OPT="--sport"
+$NFT && SPORT_OPT="sport"
+DPORT_OPT="--dport"
+$NFT && DPORT_OPT="dport"
 
 # are there port numbers?
 if [ "$PLUTO_MY_PORT" != 0 ]
@@ -204,22 +268,37 @@ then
 		S_MY_PORT="$ICMP_TYPE_OPTION $PLUTO_MY_PORT"
 		D_MY_PORT="$ICMP_TYPE_OPTION $PLUTO_MY_PORT"
 	else
-		S_MY_PORT="--sport $PLUTO_MY_PORT"
-		D_MY_PORT="--dport $PLUTO_MY_PORT"
+		S_MY_PORT="$SPORT_OPT $PLUTO_MY_PORT"
+		D_MY_PORT="$DPORT_OPT $PLUTO_MY_PORT"
 	fi
 fi
+
 if [ "$PLUTO_PEER_PORT" != 0 ]
 then
 	if [ -n "$ICMP_TYPE_OPTION" ]
 	then
 		# the syntax is --icmp[v6]-type type[/code], so add it to the existing option
 		S_MY_PORT="$S_MY_PORT/$PLUTO_PEER_PORT"
+		$NFT && S_MY_PORT="$S_MY_PORT $ICMP_CODE_OPTION $PLUTO_PEER_PORT"
+
 		D_MY_PORT="$D_MY_PORT/$PLUTO_PEER_PORT"
+		$NFT && D_MY_PORT="$D_MY_PORT $ICMP_CODE_OPTION $PLUTO_PEER_PORT"
 	else
-		S_PEER_PORT="--sport $PLUTO_PEER_PORT"
-		D_PEER_PORT="--dport $PLUTO_PEER_PORT"
+		S_PEER_PORT="$SPORT_OPT $PLUTO_PEER_PORT"
+		D_PEER_PORT="$DPORT_OPT $PLUTO_PEER_PORT"
 	fi
 fi
+
+# use protocol specific options to set ports
+PEER_PROTOCOL=""
+case "$PLUTO_PEER_PROTOCOL" in
+6) PEER_PROTOCOL="tcp"
+	;;
+17) PEER_PROTOCOL="udp"
+	;;
+*)
+	;;
+esac
 
 case "$PLUTO_VERB:$1" in
 up-host:)
@@ -270,6 +349,47 @@ up-host:iptables)
 	  fi
 	fi
 	;;
+up-host:nftables)
+	# connection to me, with (left/right)firewall=yes, coming up
+	# This is used only by the default updown script, not by your custom
+	# ones, so do not mess with it; see CAUTION comment up at top.
+	nft insert rule $NFT_IP4_FAMILY filter INPUT iif $PLUTO_INTERFACE \
+		ip saddr $PLUTO_PEER_CLIENT \
+		ip daddr $PLUTO_ME \
+		$MY_PROTOCOL $S_PEER_PORT \
+		$MY_PROTOCOL $D_MY_PORT \
+		$IPSEC_POLICY_IN accept
+	nft insert rule $NFT_IP4_FAMILY filter OUTPUT oif $PLUTO_INTERFACE \
+		ip saddr $PLUTO_ME \
+		ip daddr $PLUTO_PEER_CLIENT \
+		$PEER_PROTOCOL $S_MY_PORT \
+		$PEER_PROTOCOL $D_PEER_PORT \
+		$IPSEC_POLICY_OUT accept
+	#
+	# allow IPIP traffic because of the implicit SA created by the kernel if
+	# IPComp is used (for small inbound packets that are not compressed)
+	if [ -n "$PLUTO_IPCOMP" ]
+	then
+		nft insert rule $NFT_IP4_FAMILY filter INPUT iif $PLUTO_INTERFACE \
+			meta l4proto 4 \
+			ip saddr $PLUTO_PEER \
+			ip daddr $PLUTO_ME \
+			$IPSEC_POLICY_IN accept
+	fi
+	#
+	# log IPsec host connection setup
+	if [ $VPN_LOGGING ]
+	then
+	  if [ "$PLUTO_PEER_CLIENT" = "$PLUTO_PEER/32" ]
+	  then
+	    logger -t $TAG -p $FAC_PRIO \
+	      "+ $PLUTO_PEER_ID $PLUTO_PEER -- $PLUTO_ME"
+	  else
+	    logger -t $TAG -p $FAC_PRIO \
+	      "+ $PLUTO_PEER_ID $PLUTO_PEER_CLIENT == $PLUTO_PEER -- $PLUTO_ME"
+	  fi
+	fi
+	;;
 down-host:iptables)
 	# connection to me, with (left/right)firewall=yes, going down
 	# This is used only by the default updown script, not by your custom
@@ -299,6 +419,41 @@ down-host:iptables)
 	    logger -t $TAG -p $FAC_PRIO -- \
 	    "- $PLUTO_PEER_ID $PLUTO_PEER_CLIENT == $PLUTO_PEER -- $PLUTO_ME"
 	  fi
+	fi
+	;;
+down-host:nftables)
+	s_port=""
+	d_port=""
+	[ "$S_PEER_PORT" != 0 ] && s_port="$MY_PROTOCOL $S_PEER_PORT"
+	[ "$D_MY_PORT" != 0 ] && d_port="$MY_PROTOCOL $D_MY_PORT"
+	rule="iif \"$PLUTO_INTERFACE\" ip saddr $PLUTO_PEER_CLIENT ip daddr $PLUTO_ME $s_port $d_port $IPSEC_POLICY_IN accept"
+	delete_nft_rule 4 INPUT "$rule"
+
+	s_port=""
+	d_port=""
+	[ "$S_MY_PORT" != 0 ] && s_port="$MY_PROTOCOL $S_MY_PORT"
+	[ "$D_PEER_PORT" != 0 ] && d_port="$MY_PROTOCOL $D_PEER_PORT"
+	rule="oif \"$PLUTO_INTERFACE\" ip saddr $PLUTO_ME ip daddr $PLUTO_PEER_CLIENT $s_port $d_port $IPSEC_POLICY_OUT accept"
+	delete_nft_rule 4 OUTPUT "$rule"
+	#
+	# IPIP exception teardown
+	if [ -n "$PLUTO_IPCOMP" ]
+	then
+		rule="iif \"$PLUTO_INTERFACE\" meta l4proto 4 ip saddr $PLUTO_PEER ip daddr $PLUTO_ME $IPSEC_POLICY_IN accept"
+		delete_nft_rule 4 INPUT "$rule"
+	fi
+	#
+	# log IPsec host connection teardown
+	if [ $VPN_LOGGING ]
+	then
+		if [ "$PLUTO_PEER_CLIENT" = "$PLUTO_PEER/32" ]
+		then
+			logger -t $TAG -p $FAC_PRIO -- \
+				"- $PLUTO_PEER_ID $PLUTO_PEER -- $PLUTO_ME"
+		else
+			logger -t $TAG -p $FAC_PRIO -- \
+				"- $PLUTO_PEER_ID $PLUTO_PEER_CLIENT == $PLUTO_PEER -- $PLUTO_ME"
+		fi
 	fi
 	;;
 up-client:iptables)
@@ -334,6 +489,65 @@ up-client:iptables)
 	then
 	  iptables -I INPUT 1 -i $PLUTO_INTERFACE -p 4 \
 	      -s $PLUTO_PEER -d $PLUTO_ME $IPSEC_POLICY_IN -j ACCEPT
+	fi
+	#
+	# log IPsec client connection setup
+	if [ $VPN_LOGGING ]
+	then
+	  if [ "$PLUTO_PEER_CLIENT" = "$PLUTO_PEER/32" ]
+	  then
+	    logger -t $TAG -p $FAC_PRIO \
+	      "+ $PLUTO_PEER_ID $PLUTO_PEER -- $PLUTO_ME == $PLUTO_MY_CLIENT"
+	  else
+	    logger -t $TAG -p $FAC_PRIO \
+	      "+ $PLUTO_PEER_ID $PLUTO_PEER_CLIENT == $PLUTO_PEER -- $PLUTO_ME == $PLUTO_MY_CLIENT"
+	  fi
+	fi
+	;;
+up-client:nftables)
+	if [ "$PLUTO_PEER_CLIENT" != "$PLUTO_MY_SOURCEIP/32" ]
+	then
+		nft insert rule $NFT_IP4_FAMILY filter FORWARD oif $PLUTO_INTERFACE \
+			ip saddr $PLUTO_MY_CLIENT \
+			ip daddr $PLUTO_PEER_CLIENT \
+			$PEER_PROTOCOL $S_MY_PORT \
+			$PEER_PROTOCOL $D_PEER_PORT \
+			$IPSEC_POLICY_OUT accept
+		nft insert rule $NFT_IP4_FAMILY filter FORWARD iif $PLUTO_INTERFACE \
+			ip saddr $PLUTO_PEER_CLIENT \
+			ip daddr $PLUTO_MY_CLIENT \
+			$MY_PROTOCOL $S_PEER_PORT \
+			$MY_PROTOCOL $D_MY_PORT \
+			$IPSEC_POLICY_IN accept
+	fi
+	#
+	# a virtual IP requires an INPUT and OUTPUT rule on the host
+	# or sometimes host access via the internal IP is needed
+	if [ -n "$PLUTO_MY_SOURCEIP" -o -n "$PLUTO_HOST_ACCESS" ]
+	then
+		nft insert rule $NFT_IP4_FAMILY filter INPUT iif $PLUTO_INTERFACE \
+			ip saddr $PLUTO_PEER_CLIENT \
+			ip daddr $PLUTO_MY_CLIENT \
+			$MY_PROTOCOL $S_PEER_PORT \
+			$MY_PROTOCOL $D_MY_PORT \
+			$IPSEC_POLICY_IN accept
+		nft insert rule $NFT_IP4_FAMILY filter OUTPUT oif $PLUTO_INTERFACE \
+			ip saddr $PLUTO_MY_CLIENT \
+			ip daddr $PLUTO_PEER_CLIENT \
+			$PEER_PROTOCOL $S_MY_PORT \
+			$PEER_PROTOCOL $D_PEER_PORT \
+			$IPSEC_POLICY_OUT accept
+	fi
+	#
+	# allow IPIP traffic because of the implicit SA created by the kernel if
+	# IPComp is used (for small inbound packets that are not compressed).
+	# INPUT is correct here even for forwarded traffic.
+	if [ -n "$PLUTO_IPCOMP" ]
+	then
+		nft insert rule $NFT_IP4_FAMILY filter INPUT iif $PLUTO_INTERFACE \
+			meta l4proto 4 \
+			ip saddr $PLUTO_PEER \
+			ip daddr $PLUTO_ME $IPSEC_POLICY_IN accept
 	fi
 	#
 	# log IPsec client connection setup
@@ -399,6 +613,63 @@ down-client:iptables)
 	  fi
 	fi
 	;;
+down-client:nftables)
+	if [ "$PLUTO_PEER_CLIENT" != "$PLUTO_MY_SOURCEIP/32" ]
+	then
+		s_port=""
+		d_port=""
+		[ "$S_MY_PORT" != 0 ] && s_port="$MY_PROTOCOL $S_MY_PORT"
+		[ "$D_PEER_PORT" != 0 ] && d_port="$MY_PROTOCOL $D_PEER_PORT"
+		rule="oif \"$PLUTO_INTERFACE\" ip saddr $PLUTO_MY_CLIENT ip daddr $PLUTO_PEER_CLIENT $s_port $d_port $IPSEC_POLICY_OUT accept"
+		delete_nft_rule 4 FORWARD "$rule"
+
+		s_port=""
+		d_port=""
+		[ "$S_PEER_PORT" != 0 ] && s_port="$MY_PROTOCOL $S_PEER_PORT"
+		[ "$D_MY_PORT" != 0 ] && d_port="$MY_PROTOCOL $D_MY_PORT"
+		rule="iif \"$PLUTO_INTERFACE\" ip saddr $PLUTO_PEER_CLIENT ip daddr $PLUTO_MY_CLIENT $s_port $d_port $IPSEC_POLICY_IN accept"
+		delete_nft_rule 4 FORWARD "$rule"
+	fi
+	#
+	# a virtual IP requires an INPUT and OUTPUT rule on the host
+	# or sometimes host access via the internal IP is needed
+	if [ -n "$PLUTO_MY_SOURCEIP" -o -n "$PLUTO_HOST_ACCESS" ]
+	then
+		s_port=""
+		d_port=""
+		[ "$S_PEER_PORT" != 0 ] && s_port="$MY_PROTOCOL $S_PEER_PORT"
+		[ "$D_MY_PORT" != 0 ] && d_port="$MY_PROTOCOL $D_MY_PORT"
+		rule="iif \"$PLUTO_INTERFACE\" ip saddr $PLUTO_PEER_CLIENT ip daddr $PLUTO_MY_CLIENT $s_port $d_port $IPSEC_POLICY_IN accept"
+		delete_nft_rule 4 INPUT "$rule"
+
+		s_port=""
+		d_port=""
+		[ "$S_MY_PORT" != 0 ] && s_port="$MY_PROTOCOL $S_MY_PORT"
+		[ "$D_PEER_PORT" != 0 ] && d_port="$MY_PROTOCOL $D_PEER_PORT"
+		rule="oif \"$PLUTO_INTERFACE\" ip saddr $PLUTO_MY_CLIENT ip daddr $PLUTO_PEER_CLIENT $s_port $d_port $IPSEC_POLICY_OUT accept"
+		delete_nft_rule 4 OUTPUT "$rule"
+	fi
+	#
+	# IPIP exception teardown
+	if [ -n "$PLUTO_IPCOMP" ]
+	then
+		rule="iif \"$PLUTO_INTERFACE\" meta l4proto 4 ip saddr $PLUTO_PEER ip daddr $PLUTO_ME $IPSEC_POLICY_IN accept"
+		delete_nft_rule 4 INPUT "$rule"
+	fi
+	#
+	# log IPsec client connection teardown
+	if [ $VPN_LOGGING ]
+	then
+		if [ "$PLUTO_PEER_CLIENT" = "$PLUTO_PEER/32" ]
+		then
+			logger -t $TAG -p $FAC_PRIO -- \
+				"- $PLUTO_PEER_ID $PLUTO_PEER -- $PLUTO_ME == $PLUTO_MY_CLIENT"
+		else
+			logger -t $TAG -p $FAC_PRIO -- \
+				"- $PLUTO_PEER_ID $PLUTO_PEER_CLIENT == $PLUTO_PEER -- $PLUTO_ME == $PLUTO_MY_CLIENT"
+		fi
+	fi
+	;;
 #
 # IPv6
 #
@@ -450,6 +721,41 @@ up-host-v6:iptables)
 	  fi
 	fi
 	;;
+up-host-v6:nftables)
+	nft insert rule $NFT_IP6_FAMILY filter INPUT iif $PLUTO_INTERFACE \
+		ip6 saddr $PLUTO_PEER_CLIENT \
+		ip6 daddr $PLUTO_ME \
+		$MY_PROTOCOL $S_PEER_PORT \
+		$MY_PROTOCOL $D_MY_PORT \
+		$IPSEC_POLICY_IN accept
+	nft insert rule $NFT_IP6_FAMILY filter OUTPUT oif $PLUTO_INTERFACE \
+		ip6 saddr $PLUTO_ME \
+		ip6 daddr $PLUTO_PEER_CLIENT \
+		$PEER_PROTOCOL $S_MY_PORT \
+		$PEER_PROTOCOL $D_PEER_PORT \
+		$IPSEC_POLICY_OUT \ accept
+	#
+	# allow IP6IP6 traffic because of the implicit SA created by the kernel if
+	# IPComp is used (for small inbound packets that are not compressed)
+	if [ -n "$PLUTO_IPCOMP" ]
+	then
+		nft insert rule $NFT_IP6_FAMILY filter INPUT iif $PLUTO_INTERFACE meta l4proto 41 \
+			ip6 saddr $PLUTO_PEER ip6 daddr $PLUTO_ME $IPSEC_POLICY_IN accept
+	fi
+	#
+	# log IPsec host connection setup
+	if [ $VPN_LOGGING ]
+	then
+		if [ "$PLUTO_PEER_CLIENT" = "$PLUTO_PEER/128" ]
+		then
+			logger -t $TAG -p $FAC_PRIO \
+				"+ $PLUTO_PEER_ID $PLUTO_PEER -- $PLUTO_ME"
+		else
+			logger -t $TAG -p $FAC_PRIO \
+				"+ $PLUTO_PEER_ID $PLUTO_PEER_CLIENT == $PLUTO_PEER -- $PLUTO_ME"
+	  fi
+	fi
+	;;
 down-host-v6:iptables)
 	# connection to me, with (left/right)firewall=yes, going down
 	# This is used only by the default updown script, not by your custom
@@ -478,6 +784,41 @@ down-host-v6:iptables)
 	  else
 	    logger -t $TAG -p $FAC_PRIO -- \
 	    "- $PLUTO_PEER_ID $PLUTO_PEER_CLIENT == $PLUTO_PEER -- $PLUTO_ME"
+	  fi
+	fi
+	;;
+down-host-v6:nftables)
+	s_port=""
+	d_port=""
+	[ "$S_PEER_PORT" != 0 ] && s_port="$MY_PROTOCOL $S_PEER_PORT"
+	[ "$D_MY_PORT" != 0 ] && d_port="$MY_PROTOCOL $D_MY_PORT"
+	rule="iif \"$PLUTO_INTERFACE\" ip6 saddr $PLUTO_PEER_CLIENT ip6 daddr $PLUTO_ME $s_port $d_port $IPSEC_POLICY_IN accept"
+	delete_nft_rule 6 INPUT "$rule"
+
+	s_port=""
+	d_port=""
+	[ "$S_MY_PORT" != 0 ] && s_port="$MY_PROTOCOL $S_MY_PORT"
+	[ "$D_PEER_PORT" != 0 ] && d_port="$MY_PROTOCOL $D_PEER_PORT"
+	rule="oif \"$PLUTO_INTERFACE\" ip6 saddr $PLUTO_ME ip6 daddr $PLUTO_PEER_CLIENT $s_port $d_port $IPSEC_POLICY_OUT accept"
+	delete_nft_rule 6 OUTPUT "$rule"
+	#
+	# IP6IP6 exception teardown
+	if [ -n "$PLUTO_IPCOMP" ]
+	then
+	  rule="iif \"$PLUTO_INTERFACE\" meta l4proto 41 ip6 saddr $PLUTO_PEER ip6 daddr $PLUTO_ME $IPSEC_POLICY_IN accept"
+	  delete_nft_rule 6 INPUT "$rule"
+	fi
+	#
+	# log IPsec host connection teardown
+	if [ $VPN_LOGGING ]
+	then
+		if [ "$PLUTO_PEER_CLIENT" = "$PLUTO_PEER/128" ]
+		then
+			logger -t $TAG -p $FAC_PRIO -- \
+				"- $PLUTO_PEER_ID $PLUTO_PEER -- $PLUTO_ME"
+		else
+			logger -t $TAG -p $FAC_PRIO -- \
+				"- $PLUTO_PEER_ID $PLUTO_PEER_CLIENT == $PLUTO_PEER -- $PLUTO_ME"
 	  fi
 	fi
 	;;
@@ -529,6 +870,65 @@ up-client-v6:iptables)
 	  fi
 	fi
 	;;
+up-client-v6:nftables)
+	if [ "$PLUTO_PEER_CLIENT" != "$PLUTO_MY_SOURCEIP/128" ]
+	then
+		nft insert rule $NFT_IP6_FAMILY filter FORWARD oif $PLUTO_INTERFACE \
+			ip6 saddr $PLUTO_MY_CLIENT \
+			ip6 daddr $PLUTO_PEER_CLIENT \
+			$PEER_PROTOCOL $S_MY_PORT \
+			$PEER_PROTOCOL $D_PEER_PORT \
+			$IPSEC_POLICY_OUT accept
+		nft insert rule $NFT_IP6_FAMILY filter FORWARD iif $PLUTO_INTERFACE \
+			ip6 saddr $PLUTO_PEER_CLIENT \
+			ip6 daddr $PLUTO_MY_CLIENT \
+			$MY_PROTOCOL $S_PEER_PORT \
+			$MY_PROTOCOL $D_MY_PORT \
+			$IPSEC_POLICY_IN accept
+	fi
+	#
+	# a virtual IP requires an INPUT and OUTPUT rule on the host
+	# or sometimes host access via the internal IP is needed
+	if [ -n "$PLUTO_MY_SOURCEIP" -o -n "$PLUTO_HOST_ACCESS" ]
+	then
+		nft insert rule $NFT_IP6_FAMILY filter INPUT iif $PLUTO_INTERFACE \
+			ip6 saddr $PLUTO_PEER_CLIENT \
+			ip6 daddr $PLUTO_MY_CLIENT \
+			$MY_PROTOCOL $S_PEER_PORT \
+			$MY_PROTOCOL $D_MY_PORT \
+			$IPSEC_POLICY_IN accept
+		nft insert rule $NFT_IP6_FAMILY filter OUTPUT oif $PLUTO_INTERFACE \
+			ip6 saddr $PLUTO_MY_CLIENT \
+			ip6 daddr $PLUTO_PEER_CLIENT \
+			$PEER_PROTOCOL $S_MY_PORT \
+			$PEER_PROTOCOL $D_PEER_PORT \
+			$IPSEC_POLICY_OUT accept
+	fi
+	#
+	# allow IP6IP6 traffic because of the implicit SA created by the kernel if
+	# IPComp is used (for small inbound packets that are not compressed).
+	# INPUT is correct here even for forwarded traffic.
+	if [ -n "$PLUTO_IPCOMP" ]
+	then
+		nft insert rule $NFT_IP6_FAMILY filter INPUT iif $PLUTO_INTERFACE \
+			meta l4proto 41 \
+			ip saddr $PLUTO_PEER \
+			ip daddr $PLUTO_ME $IPSEC_POLICY_IN accept
+	fi
+	#
+	# log IPsec client connection setup
+	if [ $VPN_LOGGING ]
+	then
+		if [ "$PLUTO_PEER_CLIENT" = "$PLUTO_PEER/128" ]
+		then
+			logger -t $TAG -p $FAC_PRIO \
+				"+ $PLUTO_PEER_ID $PLUTO_PEER -- $PLUTO_ME == $PLUTO_MY_CLIENT"
+		else
+			logger -t $TAG -p $FAC_PRIO \
+				"+ $PLUTO_PEER_ID $PLUTO_PEER_CLIENT == $PLUTO_PEER -- $PLUTO_ME == $PLUTO_MY_CLIENT"
+		fi
+	fi
+	;;
 down-client-v6:iptables)
 	# connection to client subnet, with (left/right)firewall=yes, going down
 	# This is used only by the default updown script, not by your custom
@@ -577,6 +977,63 @@ down-client-v6:iptables)
 	    logger -t $TAG -p $FAC_PRIO -- \
 	      "- $PLUTO_PEER_ID $PLUTO_PEER_CLIENT == $PLUTO_PEER -- $PLUTO_ME == $PLUTO_MY_CLIENT"
 	  fi
+	fi
+	;;
+down-client-v6:nftables)
+	if [ "$PLUTO_PEER_CLIENT" != "$PLUTO_MY_SOURCEIP/128" ]
+	then
+		s_port=""
+		d_port=""
+		[ "$S_MY_PORT" != 0 ] && s_port="$MY_PROTOCOL $S_MY_PORT"
+		[ "$D_PEER_PORT" != 0 ] && d_port="$MY_PROTOCOL $D_PEER_PORT"
+		rule="oif \"$PLUTO_INTERFACE\" ip6 saddr $PLUTO_MY_CLIENT ip6 daddr $PLUTO_PEER_CLIENT $s_port $d_port $IPSEC_POLICY_OUT accept"
+		delete_nft_rule 6 FORWARD "$rule"
+
+		s_port=""
+		d_port=""
+		[ "$S_PEER_PORT" != 0 ] && s_port="$MY_PROTOCOL $S_PEER_PORT"
+		[ "$D_MY_PORT" != 0 ] && d_port="$MY_PROTOCOL $D_MY_PORT"
+		rule="iif \"$PLUTO_INTERFACE\" ip6 saddr $PLUTO_PEER_CLIENT ip6 daddr $PLUTO_MY_CLIENT $s_port $d_port $IPSEC_POLICY_IN accept"
+		delete_nft_rule 6 FORWARD "$rule"
+	fi
+	#
+	# a virtual IP requires an INPUT and OUTPUT rule on the host
+	# or sometimes host access via the internal IP is needed
+	if [ -n "$PLUTO_MY_SOURCEIP" -o -n "$PLUTO_HOST_ACCESS" ]
+	then
+		s_port=""
+		d_port=""
+		[ "$S_PEER_PORT" != 0 ] && s_port="$MY_PROTOCOL $S_PEER_PORT"
+		[ "$D_MY_PORT" != 0 ] && d_port="$MY_PROTOCOL $D_MY_PORT"
+		rule="iif \"$PLUTO_INTERFACE\" ip6 saddr $PLUTO_PEER_CLIENT ip6 daddr $PLUTO_MY_CLIENT $s_port $d_port $IPSEC_POLICY_IN accept"
+		delete_nft_rule 6 INPUT "$rule"
+
+		s_port=""
+		d_port=""
+		[ "$S_MY_PORT" != 0 ] && s_port="$MY_PROTOCOL $S_MY_PORT"
+		[ "$D_PEER_PORT" != 0 ] && d_port="$MY_PROTOCOL $D_PEER_PORT"
+		rule="oif \"$PLUTO_INTERFACE\" ip6 saddr $PLUTO_MY_CLIENT ip6 daddr $PLUTO_PEER_CLIENT $s_port $d_port $IPSEC_POLICY_OUT accept"
+		delete_nft_rule 6 OUTPUT "$rule"
+	fi
+	#
+	# IP6IP6 exception teardown
+	if [ -n "$PLUTO_IPCOMP" ]
+	then
+		rule="iif \"$PLUTO_INTERFACE\" meta l4proto 41 ip6 saddr $PLUTO_PEER ip6 daddr $PLUTO_ME $IPSEC_POLICY_IN accept"
+		delete_nft_rule 6 INPUT "$rule"
+	fi
+	#
+	# log IPsec client connection teardown
+	if [ $VPN_LOGGING ]
+	then
+		if [ "$PLUTO_PEER_CLIENT" = "$PLUTO_PEER/128" ]
+		then
+			logger -t $TAG -p $FAC_PRIO -- \
+				"- $PLUTO_PEER_ID $PLUTO_PEER -- $PLUTO_ME == $PLUTO_MY_CLIENT"
+		else
+			logger -t $TAG -p $FAC_PRIO -- \
+				"- $PLUTO_PEER_ID $PLUTO_PEER_CLIENT == $PLUTO_PEER -- $PLUTO_ME == $PLUTO_MY_CLIENT"
+		fi
 	fi
 	;;
 *)	echo "$0: unknown verb \`$PLUTO_VERB' or parameter \`$1'" >&2
