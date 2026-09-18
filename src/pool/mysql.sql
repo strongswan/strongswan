@@ -86,6 +86,7 @@ CREATE TABLE `peer_configs` (
   `auth_method` tinyint(3) unsigned NOT NULL default '1',
   `eap_type` tinyint(3) unsigned NOT NULL default '0',
   `eap_vendor` smallint(5) unsigned NOT NULL default '0',
+  `eap_id` int(10) unsigned NOT NULL default '0',
   `keyingtries` tinyint(3) unsigned NOT NULL default '3',
   `rekeytime` mediumint(8) unsigned NOT NULL default '7200',
   `reauthtime` mediumint(8) unsigned NOT NULL default '0',
