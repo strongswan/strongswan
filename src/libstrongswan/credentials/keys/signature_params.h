@@ -24,6 +24,7 @@
 
 typedef struct signature_params_t signature_params_t;
 typedef struct rsa_pss_params_t rsa_pss_params_t;
+typedef struct pqc_params_t pqc_params_t;
 
 #include <crypto/hashers/hasher.h>
 
@@ -113,6 +114,18 @@ struct rsa_pss_params_t {
 };
 
 /**
+ * Parameters for Post Quantum Cryptography (PQC) signature schemes
+ */
+struct pqc_params_t {
+	/** Use deterministic signature */
+	bool deterministic;
+	/** Context string */
+	chunk_t ctx;
+	/** Context string with length prefix */
+	chunk_t pre_ctx;
+};
+
+/**
  * Parse the given ASN.1 algorithm identifier params
  *
  * @param asn1		ASN.1 encoded RSASSA-PSS-params
@@ -141,5 +154,21 @@ bool rsa_pss_params_build(rsa_pss_params_t *params, chunk_t *asn1);
  * @return			salt length to use, negative on error
  */
 bool rsa_pss_params_set_salt_len(rsa_pss_params_t *params, size_t modbits);
+
+/**
+ * Set PQC signature params, allocating context string with length prefix
+ *
+ * @param p_in		input PQC signature params, use defaults if NULL
+ * @param p_out		output PQC signature params
+ * @return			TRUE if successfully created
+ */
+bool pqc_params_create(pqc_params_t *p_in, pqc_params_t *p_out);
+
+/**
+ * Free allocated context string with length prefix in PQC signature params
+ *
+ * @param params	PQC signature params to be freed
+ */
+void pqc_params_free(pqc_params_t *params);
 
 #endif /** SIGNATURE_PARAMS_H_ @}*/
