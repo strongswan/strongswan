@@ -312,7 +312,7 @@ int traffic_selector_printf_hook(printf_hook_data_t *data,
 
 		if (this->from_port == this->to_port)
 		{
-			struct servent *serv;
+			struct servent *serv = NULL;
 
 			if (this->protocol == IPPROTO_ICMP ||
 				this->protocol == IPPROTO_ICMPV6)
@@ -321,7 +321,24 @@ int traffic_selector_printf_hook(printf_hook_data_t *data,
 			}
 			else
 			{
-				serv = getservbyport(htons(this->from_port), serv_proto);
+				/* only TCP/UDP/SCTP/DCCP have a service-name namespace in
+				 * /etc/services.  Skipping the lookup for other protocols
+				 * (e.g. GRE, whose port is a key, not a service) avoids a
+				 * pointless per-selector scan of /etc/services that can never
+				 * match; the output is unchanged as those always fell back to
+				 * the numeric port. */
+				if (this->protocol == IPPROTO_TCP ||
+					this->protocol == IPPROTO_UDP ||
+#ifdef IPPROTO_SCTP
+					this->protocol == IPPROTO_SCTP ||
+#endif
+#ifdef IPPROTO_DCCP
+					this->protocol == IPPROTO_DCCP ||
+#endif
+					FALSE)
+				{
+					serv = getservbyport(htons(this->from_port), serv_proto);
+				}
 				if (serv)
 				{
 					written += print_in_hook(data, "%s", serv->s_name);
