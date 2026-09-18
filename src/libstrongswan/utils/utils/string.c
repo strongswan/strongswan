@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2014 Tobias Brunner
+ * Copyright (C) 2008-2026 Tobias Brunner
  * Copyright (C) 2005-2008 Martin Willi
  *
  * Copyright (C) secunet Security Networks AG
@@ -15,9 +15,11 @@
  * for more details.
  */
 
+#include <errno.h>
+
 #include <utils/utils.h>
 
-/**
+/*
  * Described in header.
  */
 char* translate(char *str, const char *from, const char *to)
@@ -39,7 +41,7 @@ char* translate(char *str, const char *from, const char *to)
 	return str;
 }
 
-/**
+/*
  * Described in header.
  */
 char* strreplace(const char *str, const char *search, const char *replace)
@@ -89,4 +91,66 @@ char* strreplace(const char *str, const char *search, const char *replace)
 	while ((found = (char*)strstr(pos, search)));
 	strcpy(dst, pos);
 	return res;
+}
+
+/*
+ * Described in header
+ */
+bool uint64_from_string(const char *str, char **end, int base, uint64_t *out)
+{
+	const char *startptr = str;
+	char *endptr;
+	unsigned long long val;
+
+	if (!str || !out)
+	{
+		return FALSE;
+	}
+	/* explicitly reject '-' prefixes and whitespace-only strings */
+	while (isspace((u_char)*startptr))
+	{
+		startptr++;
+	}
+	if (!*startptr || *startptr == '-')
+	{
+		return FALSE;
+	}
+	errno = 0;
+	val = strtoull(startptr, &endptr, base);
+	if (endptr == startptr || errno)
+	{
+		return FALSE;
+	}
+	*out = val;
+	if (end)
+	{
+		*end = endptr;
+	}
+	return TRUE;
+}
+
+/*
+ * Described in header
+ */
+bool int64_from_string(const char *str, char **end, int base, int64_t *out)
+{
+	char *endptr;
+	long long val;
+
+	if (!str || !out)
+	{
+		return FALSE;
+	}
+	errno = 0;
+	val = strtoll(str, &endptr, base);
+	if (endptr == str || errno)
+	{
+		return FALSE;
+	}
+	*out = val;
+	if (end)
+	{
+		*end = endptr;
+	}
+	return TRUE;
 }

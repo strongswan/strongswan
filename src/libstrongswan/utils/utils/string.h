@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2014 Tobias Brunner
+ * Copyright (C) 2008-2026 Tobias Brunner
  * Copyright (C) 2008 Martin Willi
  *
  * Copyright (C) secunet Security Networks AG
@@ -22,6 +22,8 @@
 
 #ifndef STRING_H_
 #define STRING_H_
+
+#include <ctype.h>
 
 /**
  * Helper function that compares two strings for equality
@@ -100,5 +102,165 @@ char *translate(char *str, const char *from, const char *to);
  * @return			allocated string, if anything got replaced, str otherwise
  */
 char *strreplace(const char *str, const char *search, const char *replace);
+
+/**
+ * Parse an unsigned 64-bit integer from a string, wrapping strtoull().
+ *
+ * It rejects the following:  empty/no-digit input, a leading '-' (which
+ * strtoull() would wrap modulo 2^64) and out-of-range values.
+ *
+ * Only the prefix is parsed, \p end (if given) points to the first unconsumed
+ * character so callers can scan suffixes.  To ensure a plain number,
+ * additionally check <tt>*end == '\0'</tt>.
+ *
+ * Prefer base 10 (with the settings_t-style explicit 0x-check for hex) because
+ * base 0 additionally enables octal, which silently reinterprets zero-padded
+ * input ("010" => 8).
+ *
+ * @param str		string to parse (NULL-safe)
+ * @param end		first unconsumed character on success (optional)
+ * @param base		numeric base, same as strtoull()
+ * @param[out] out	parsed value on success, unchanged otherwise (required)
+ * @return			TRUE if at least one digit converted without range error
+ */
+bool uint64_from_string(const char *str, char **end, int base, uint64_t *out);
+
+/**
+ * Parse an unsigned 32-bit integer from a string, wrapping strtoull().
+ *
+ * @copydetails uint64_from_string
+ */
+static inline bool uint32_from_string(const char *str, char **end, int base,
+									  uint32_t *out)
+{
+	char *endptr;
+	uint64_t val;
+
+	if (out && uint64_from_string(str, &endptr, base, &val) &&
+		val <= UINT32_MAX)
+	{
+		if (end)
+		{
+			*end = endptr;
+		}
+		*out = val;
+		return TRUE;
+	}
+	return FALSE;
+}
+
+/**
+ * Parse an unsigned 16-bit integer from a string, wrapping strtoull().
+ *
+ * @copydetails uint64_from_string
+ */
+static inline bool uint16_from_string(const char *str, char **end, int base,
+									  uint16_t *out)
+{
+	char *endptr;
+	uint64_t val;
+
+	if (out && uint64_from_string(str, &endptr, base, &val) &&
+		val <= UINT16_MAX)
+	{
+		if (end)
+		{
+			*end = endptr;
+		}
+		*out = val;
+		return TRUE;
+	}
+	return FALSE;
+}
+
+/**
+ * Parse an unsigned 8-bit integer from a string, wrapping strtoull().
+ *
+ * @copydetails uint64_from_string
+ */
+static inline bool uint8_from_string(const char *str, char **end, int base,
+									 uint8_t *out)
+{
+	char *endptr;
+	uint64_t val;
+
+	if (out && uint64_from_string(str, &endptr, base, &val) && val <= UINT8_MAX)
+	{
+		if (end)
+		{
+			*end = endptr;
+		}
+		*out = val;
+		return TRUE;
+	}
+	return FALSE;
+}
+
+/**
+ * Parse a signed 64-bit integer from a string, wrapping strtoll().
+ *
+ * It rejects the following:  empty/no-digit input and out-of-range values.
+ * A leading -/+ is accepted as the value's sign.
+ *
+ * Only the prefix is parsed, \p end (if given) points to the first unconsumed
+ * character so callers can scan suffixes.  To ensure a plain number,
+ * additionally check <tt>*end == '\0'</tt>.
+ *
+ * Prefer base 10 (with the settings_t-style explicit 0x-check for hex) because
+ * base 0 additionally enables octal, which silently reinterprets zero-padded
+ * input ("010" => 8).
+ *
+ * @param str		string to parse (NULL-safe)
+ * @param end		first unconsumed character on success (optional)
+ * @param base		numeric base, same as strtoll()
+ * @param[out] out	parsed value on success, unchanged otherwise (required)
+ * @return			TRUE if at least one digit converted without range error
+ */
+bool int64_from_string(const char *str, char **end, int base, int64_t *out);
+
+/**
+ * Parse a signed 32-bit integer from a string, wrapping strtoll().
+ *
+ * @copydetails int64_from_string
+ */
+static inline bool int32_from_string(const char *str, char **end, int base,
+									 int32_t *out)
+{
+	char *endptr;
+	int64_t val;
+
+	if (out && int64_from_string(str, &endptr, base, &val) &&
+		val <= INT32_MAX && val >= INT32_MIN)
+	{
+		if (end)
+		{
+			*end = endptr;
+		}
+		*out = val;
+		return TRUE;
+	}
+	return FALSE;
+}
+
+/**
+ * Determine the base when parsing integer strings.
+ *
+ * We generally only want to parse integers in base 10 and 16 (with 0x prefix).
+ *
+ * @param str		string to parse (NULL-safe)
+ * @return			base determined based on the given string, defaults to 10
+ */
+static inline int base_from_string(const char *str)
+{
+	while (str && isspace((u_char)*str))
+	{
+		str++;
+	}
+	if (str && (*str == '-' || *str == '+'))
+	{
+		str++;
+	}
+	return strcasepfx(str, "0x") ? 16 : 10;
+}
 
 #endif /** STRING_H_ @} */

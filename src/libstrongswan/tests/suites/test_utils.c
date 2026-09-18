@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2015 Tobias Brunner
+ * Copyright (C) 2013-2026 Tobias Brunner
  *
  * Copyright (C) secunet Security Networks AG
  *
@@ -123,6 +123,227 @@ START_TEST(test_timeval_add_ms)
 	timeval_add_ms(&tv, 1500);
 	ck_assert_int_eq(tv.tv_sec, 3);
 	ck_assert_int_eq(tv.tv_usec, 500000);
+}
+END_TEST
+
+/*******************************************************************************
+ * [u]int64_from_string
+ */
+
+static struct {
+	char *s;
+	int b;
+	char e;
+	bool v;
+	uint64_t i;
+} ufs_data[] = {
+	{NULL,	0,	'\0',	FALSE,	0},
+	{"",	0,	'\0',	FALSE,	0},
+	{"  ",	0,	'\0',	FALSE,	0},
+	{"-",	0,	'\0',	FALSE,	0},
+	{"+",	0,	'\0',	FALSE,	0},
+	{"a",	0,	'\0',	FALSE,	0},
+	{"0",	0,	'\0',	TRUE,	0},
+	{"-0",	0,	'\0',	FALSE,	0},
+	{"5",	0,	'\0',	TRUE,	5},
+	{"5",	2,	'\0',	FALSE,	0},
+	{" 5",	0,	'\0',	TRUE,	5},
+	{"\t5",	0,	'\0',	TRUE,	5},
+	{"+5",	0,	'\0',	TRUE,	5},
+	{"-5",	0,	'\0',	FALSE,	0},
+	{" -5",	0,	'\0',	FALSE,	0},
+	{"5s",	0,	's',	TRUE,	5},
+	{"010",	0,	'\0',	TRUE,	8},
+	{"010",	2,	'\0',	TRUE,	2},
+	{"010",	10,	'\0',	TRUE,	10},
+	{"0x10",	0,	'\0',	TRUE,	16},
+	{"0x10",	10,	'x',	TRUE,	0},
+	{"0x10",	16,	'\0',	TRUE,	16},
+	{"0x10s",	0,	's',	TRUE,	16},
+	{"18446744073709551615",	0,	'\0',	TRUE,	UINT64_MAX},
+	{"18446744073709551615s",	0,	's',	TRUE,	UINT64_MAX},
+	{"18446744073709551616",	0,	'\0',	FALSE,	0},
+	{"18446744073709551616s",	0,	'\0',	FALSE,	0},
+};
+
+START_TEST(test_uint64_from_string)
+{
+	char *end;
+	uint64_t val = 42;
+
+	ck_assert(!uint64_from_string(ufs_data[_i].s, NULL, ufs_data[_i].b, NULL));
+	ck_assert(!uint64_from_string(ufs_data[_i].s, &end, ufs_data[_i].b, NULL));
+	ck_assert(uint64_from_string(ufs_data[_i].s, NULL, ufs_data[_i].b,
+								 &val) == ufs_data[_i].v);
+	if (ufs_data[_i].v)
+	{
+		ck_assert_int_eq(val, ufs_data[_i].i);
+	}
+	else
+	{
+		ck_assert_int_eq(val, 42);
+	}
+	val = 42;
+	ck_assert(uint64_from_string(ufs_data[_i].s, &end, ufs_data[_i].b,
+								 &val) == ufs_data[_i].v);
+	if (ufs_data[_i].v)
+	{
+		ck_assert_int_eq(val, ufs_data[_i].i);
+		ck_assert_int_eq(ufs_data[_i].e, *end);
+	}
+	else
+	{
+		ck_assert_int_eq(val, 42);
+	}
+}
+END_TEST
+
+START_TEST(test_uintx_from_string)
+{
+	char *end;
+	uint32_t val32 = 0;
+	uint16_t val16 = 0;
+	uint8_t val8 = 0;
+
+	/* the main parsing functionality is already tested above, so only check
+	 * range enforcement for smaller integer types */
+	ck_assert(!uint32_from_string("4294967295", NULL, 0, NULL));
+	ck_assert(!uint32_from_string("4294967295", &end, 0, NULL));
+	ck_assert(uint32_from_string("4294967295", NULL, 0, &val32));
+	ck_assert(uint32_from_string("4294967295", &end, 0, &val32));
+	ck_assert_int_eq(val32, UINT32_MAX);
+	ck_assert(!uint32_from_string("4294967296", &end, 0, &val32));
+
+	ck_assert(!uint16_from_string("65535", NULL, 0, NULL));
+	ck_assert(!uint16_from_string("65535", &end, 0, NULL));
+	ck_assert(uint16_from_string("65535", NULL, 0, &val16));
+	ck_assert(uint16_from_string("65535", &end, 0, &val16));
+	ck_assert_int_eq(val16, UINT16_MAX);
+	ck_assert(!uint16_from_string("65536", &end, 0, &val16));
+
+	ck_assert(!uint8_from_string("255", NULL, 0, NULL));
+	ck_assert(!uint8_from_string("255", &end, 0, NULL));
+	ck_assert(uint8_from_string("255", NULL, 0, &val8));
+	ck_assert(uint8_from_string("255", &end, 0, &val8));
+	ck_assert_int_eq(val8, UINT8_MAX);
+	ck_assert(!uint8_from_string("256", &end, 0, &val8));
+}
+END_TEST
+
+
+static struct {
+	char *s;
+	int b;
+	char e;
+	bool v;
+	int64_t i;
+} ifs_data[] = {
+	{NULL,	0,	'\0',	FALSE,	0},
+	{"",	0,	'\0',	FALSE,	0},
+	{"  ",	0,	'\0',	FALSE,	0},
+	{"-",	0,	'\0',	FALSE,	0},
+	{"+",	0,	'\0',	FALSE,	0},
+	{"a",	0,	'\0',	FALSE,	0},
+	{"0",	0,	'\0',	TRUE,	0},
+	{"-0",	0,	'\0',	TRUE,	0},
+	{"5",	0,	'\0',	TRUE,	5},
+	{"5",	2,	'\0',	FALSE,	0},
+	{" 5",	0,	'\0',	TRUE,	5},
+	{"\t5",	0,	'\0',	TRUE,	5},
+	{"+5",	0,	'\0',	TRUE,	5},
+	{"-5",	0,	'\0',	TRUE,	-5},
+	{" -5",	0,	'\0',	TRUE,	-5},
+	{"5s",	0,	's',	TRUE,	5},
+	{"010",	0,	'\0',	TRUE,	8},
+	{"010",	2,	'\0',	TRUE,	2},
+	{"010",	10,	'\0',	TRUE,	10},
+	{"0x10",	0,	'\0',	TRUE,	16},
+	{"0x10",	10,	'x',	TRUE,	0},
+	{"0x10",	16,	'\0',	TRUE,	16},
+	{"-0x10",	16,	'\0',	TRUE,	-16},
+	{"0x10s",	0,	's',	TRUE,	16},
+	{"-0x10s",	0,	's',	TRUE,	-16},
+	{"9223372036854775807",		0,	'\0',	TRUE,	INT64_MAX},
+	{"9223372036854775807s",	0,	's',	TRUE,	INT64_MAX},
+	{"9223372036854775808",		0,	'\0',	FALSE,	0},
+	{"9223372036854775808s",	0,	'\0',	FALSE,	0},
+	{"-9223372036854775808",	0,	'\0',	TRUE,	INT64_MIN},
+	{"-9223372036854775808s",	0,	's',	TRUE,	INT64_MIN},
+	{"-9223372036854775809",	0,	'\0',	FALSE,	0},
+	{"-9223372036854775809s",	0,	'\0',	FALSE,	0},
+};
+
+START_TEST(test_int64_from_string)
+{
+	char *end;
+	int64_t val = 42;
+
+	ck_assert(!int64_from_string(ifs_data[_i].s, NULL, ifs_data[_i].b, NULL));
+	ck_assert(!int64_from_string(ifs_data[_i].s, &end, ifs_data[_i].b, NULL));
+	ck_assert(int64_from_string(ifs_data[_i].s, NULL, ifs_data[_i].b,
+								&val) == ifs_data[_i].v);
+	if (ifs_data[_i].v)
+	{
+		ck_assert_int_eq(val, ifs_data[_i].i);
+	}
+	else
+	{
+		ck_assert_int_eq(val, 42);
+	}
+	val = 42;
+	ck_assert(int64_from_string(ifs_data[_i].s, &end, ifs_data[_i].b,
+								&val) == ifs_data[_i].v);
+	if (ifs_data[_i].v)
+	{
+		ck_assert_int_eq(val, ifs_data[_i].i);
+		ck_assert_int_eq(ifs_data[_i].e, *end);
+	}
+	else
+	{
+		ck_assert_int_eq(val, 42);
+	}
+}
+END_TEST
+
+START_TEST(test_intx_from_string)
+{
+	char *end;
+	int32_t val32 = 0;
+
+	/* the main parsing functionality is already tested above, so only check
+	 * range enforcement for smaller integer types */
+	ck_assert(!int32_from_string("2147483647", NULL, 0, NULL));
+	ck_assert(!int32_from_string("2147483647", &end, 0, NULL));
+	ck_assert(int32_from_string("2147483647", NULL, 0, &val32));
+	ck_assert(int32_from_string("2147483647", &end, 0, &val32));
+	ck_assert_int_eq(val32, INT32_MAX);
+	ck_assert(!int32_from_string("2147483648", &end, 0, &val32));
+
+	ck_assert(int32_from_string("-2147483648", &end, 0, &val32));
+	ck_assert_int_eq(val32, INT32_MIN);
+	ck_assert(!int32_from_string("-2147483649", &end, 0, &val32));
+}
+END_TEST
+
+/*******************************************************************************
+ * base_from_string
+ */
+
+START_TEST(test_base_from_string)
+{
+	ck_assert_int_eq(base_from_string(NULL), 10);
+	ck_assert_int_eq(base_from_string(""), 10);
+	ck_assert_int_eq(base_from_string(" "), 10);
+	ck_assert_int_eq(base_from_string("0"), 10);
+	ck_assert_int_eq(base_from_string(" 0"), 10);
+	ck_assert_int_eq(base_from_string("0x"), 16);
+	ck_assert_int_eq(base_from_string("-0x"), 16);
+	ck_assert_int_eq(base_from_string("+0x"), 16);
+	ck_assert_int_eq(base_from_string(" -0x"), 16);
+	ck_assert_int_eq(base_from_string("  0x"), 16);
+	ck_assert_int_eq(base_from_string("0x2"), 16);
+	ck_assert_int_eq(base_from_string("\t0x2"), 16);
+	ck_assert_int_eq(base_from_string("\t -0x2"), 16);
 }
 END_TEST
 
@@ -1341,6 +1562,17 @@ Suite *utils_suite_create()
 
 	tc = tcase_create("timeval_add_ms");
 	tcase_add_test(tc, test_timeval_add_ms);
+	suite_add_tcase(s, tc);
+
+	tc = tcase_create("[u]int64_from_string");
+	tcase_add_loop_test(tc, test_uint64_from_string, 0, countof(ufs_data));
+	tcase_add_test(tc, test_uintx_from_string);
+	tcase_add_loop_test(tc, test_int64_from_string, 0, countof(ifs_data));
+	tcase_add_test(tc, test_intx_from_string);
+	suite_add_tcase(s, tc);
+
+	tc = tcase_create("base_from_string");
+	tcase_add_test(tc, test_base_from_string);
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("timespan_from_string");
