@@ -60,46 +60,31 @@ bool vici_parse_bool(bool *out, chunk_t value)
 	return VICI_PARSE_MAP(map, countof(map), out, value);
 }
 
-/*
- * Described in header
+/**
+ * Parse an unsigned 64-bit integer using the given base. If base is 0, default
+ * to 10 or 16 depending on the prefix to avoid octal encoding.
  */
-bool vici_parse_uint64(uint64_t *out, chunk_t value)
+static bool parse_uint64_base(uint64_t *out, chunk_t v, int base)
 {
 	char buf[32], *end;
-	unsigned long long l;
-
-	if (!vici_stringify(value, buf, sizeof(buf)))
-	{
-		return FALSE;
-	}
-	l = strtoull(buf, &end, 0);
-	if (*end == 0)
-	{
-		*out = l;
-		return TRUE;
-	}
-	return FALSE;
-}
-
-/**
- * Parse an unsigned 32-bit integer using the given base.
- */
-static bool parse_uint32_base(uint32_t *out, chunk_t v, int base)
-{
-	char buf[16], *end;
-	u_long l;
 
 	if (!vici_stringify(v, buf, sizeof(buf)))
 	{
 		return FALSE;
 	}
-	l = strtoul(buf, &end, base);
-	if (*end == 0 && l <= UINT32_MAX)
+	if (!base)
 	{
-		*out = l;
-		return TRUE;
+		base = base_from_string(buf);
 	}
-	return FALSE;
+	return uint64_from_string(buf, &end, base, out) && *end == '\0';
+}
+
+/*
+ * Described in header
+ */
+bool vici_parse_uint64(uint64_t *out, chunk_t value)
+{
+	return parse_uint64_base(out, value, 0);
 }
 
 /*
@@ -107,7 +92,14 @@ static bool parse_uint32_base(uint32_t *out, chunk_t v, int base)
  */
 bool vici_parse_uint32(uint32_t *out, chunk_t value)
 {
-	return parse_uint32_base(out, value, 0);
+	uint64_t l;
+
+	if (parse_uint64_base(&l, value, 0) && l <= UINT32_MAX)
+	{
+		*out = l;
+		return TRUE;
+	}
+	return FALSE;
 }
 
 /*
@@ -115,9 +107,9 @@ bool vici_parse_uint32(uint32_t *out, chunk_t value)
  */
 bool vici_parse_uint16(uint16_t *out, chunk_t value)
 {
-	uint32_t l;
+	uint64_t l;
 
-	if (vici_parse_uint32(&l, value) && l <= UINT16_MAX)
+	if (parse_uint64_base(&l, value, 0) && l <= UINT16_MAX)
 	{
 		*out = l;
 		return TRUE;
@@ -130,9 +122,9 @@ bool vici_parse_uint16(uint16_t *out, chunk_t value)
  */
 static bool parse_uint8_base(uint8_t *out, chunk_t v, int base)
 {
-	uint32_t l;
+	uint64_t l;
 
-	if (parse_uint32_base(&l, v, base) && l <= UINT8_MAX)
+	if (parse_uint64_base(&l, v, base) && l <= UINT8_MAX)
 	{
 		*out = l;
 		return TRUE;
@@ -161,15 +153,18 @@ bool vici_parse_uint8_bin(uint8_t *out, chunk_t value)
  */
 bool vici_parse_time(uint64_t *out, chunk_t value)
 {
-	char buf[16], *end;
-	unsigned long long l;
+	char buf[32], *end;
+	uint64_t l;
 
 	if (!vici_stringify(value, buf, sizeof(buf)))
 	{
 		return FALSE;
 	}
 
-	l = strtoull(buf, &end, 0);
+	if (!uint64_from_string(buf, &end, 10, &l))
+	{
+		return FALSE;
+	}
 	while (*end == ' ')
 	{
 		end++;
@@ -178,15 +173,24 @@ bool vici_parse_time(uint64_t *out, chunk_t value)
 	{
 		case 'd':
 		case 'D':
-			l *= 24;
+			if (__builtin_mul_overflow(l, 24, &l))
+			{
+				return FALSE;
+			}
 			/* fall */
 		case 'h':
 		case 'H':
-			l *= 60;
+			if (__builtin_mul_overflow(l, 60, &l))
+			{
+				return FALSE;
+			}
 			/* fall */
 		case 'm':
 		case 'M':
-			l *= 60;
+			if (__builtin_mul_overflow(l, 60, &l))
+			{
+				return FALSE;
+			}
 			/* fall */
 		case 's':
 		case 'S':

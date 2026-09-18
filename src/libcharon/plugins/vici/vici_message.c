@@ -21,8 +21,6 @@
 #include <bio/bio_reader.h>
 #include <bio/bio_writer.h>
 
-#include <errno.h>
-
 typedef struct private_vici_message_t private_vici_message_t;
 
 /**
@@ -354,7 +352,7 @@ METHOD(vici_message_t, vget_int, int,
 	chunk_t value;
 	bool found;
 	char buf[32], *pos;
-	int ret;
+	int32_t ret;
 
 	found = find_value(this, &value, fmt, args);
 	if (found)
@@ -366,9 +364,9 @@ METHOD(vici_message_t, vget_int, int,
 		if (chunk_printable(value, NULL, 0))
 		{
 			snprintf(buf, sizeof(buf), "%.*s", (int)value.len, value.ptr);
-			errno = 0;
-			ret = strtol(buf, &pos, 0);
-			if (errno == 0 && pos == buf + strlen(buf))
+
+			if (int32_from_string(buf, &pos, base_from_string(buf), &ret) &&
+				!*pos)
 			{
 				return ret;
 			}

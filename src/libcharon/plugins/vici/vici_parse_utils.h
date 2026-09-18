@@ -86,7 +86,7 @@ bool vici_parse_string(char **out, chunk_t value);
 bool vici_parse_bool(bool *out, chunk_t value);
 
 /**
- * Parse a value as an unsigned 64-bit integer (accepts any base).
+ * Parse a value as an unsigned 64-bit integer (base 10 and 16).
  *
  * @param out			location to store the result
  * @param value			value to parse
@@ -95,7 +95,7 @@ bool vici_parse_bool(bool *out, chunk_t value);
 bool vici_parse_uint64(uint64_t *out, chunk_t value);
 
 /**
- * Parse a value as an unsigned 32-bit integer (accepts any base).
+ * Parse a value as an unsigned 32-bit integer (base 10 and 16).
  *
  * @param out			location to store the result
  * @param value			value to parse
@@ -104,7 +104,7 @@ bool vici_parse_uint64(uint64_t *out, chunk_t value);
 bool vici_parse_uint32(uint32_t *out, chunk_t value);
 
 /**
- * Parse a value as an unsigned 16-bit integer (accepts any base).
+ * Parse a value as an unsigned 16-bit integer (base 10 and 16).
  *
  * @param out			location to store the result
  * @param value			value to parse
@@ -113,7 +113,7 @@ bool vici_parse_uint32(uint32_t *out, chunk_t value);
 bool vici_parse_uint16(uint16_t *out, chunk_t value);
 
 /**
- * Parse a value as an unsigned 8-bit integer (accepts any base).
+ * Parse a value as an unsigned 8-bit integer (base 10 and 16).
  *
  * @param out			location to store the result
  * @param value			value to parse
@@ -122,7 +122,7 @@ bool vici_parse_uint16(uint16_t *out, chunk_t value);
 bool vici_parse_uint8(uint8_t *out, chunk_t value);
 
 /**
- * Parse a value as an unsigned 8-bit integer (only accepts base 2).
+ * Parse a value as an unsigned 8-bit integer (only base 2).
  *
  * @param out			location to store the result
  * @param value			value to parse
@@ -219,7 +219,7 @@ static inline vici_parse_rule_t vici_rule_bool(const char *name, bool *out)
 }
 
 /**
- * Define a rule to parse a value as a 64-bit integer (accept any base).
+ * Define a rule to parse a value as a 64-bit integer (base 10 and 16).
  *
  * @hideinitializer
  * @param name			key/list name to match
@@ -240,7 +240,7 @@ static inline vici_parse_rule_t vici_rule_uint64(const char *name,
 }
 
 /**
- * Define a rule to parse a value as a 32-bit integer (accept any base).
+ * Define a rule to parse a value as a 32-bit integer (base 10 and 16).
  *
  * @hideinitializer
  * @param name			key/list name to match
@@ -261,7 +261,7 @@ static inline vici_parse_rule_t vici_rule_uint32(const char *name,
 }
 
 /**
- * Define a rule to parse a value as a 16-bit integer (accept any base).
+ * Define a rule to parse a value as a 16-bit integer (base 10 and 16).
  *
  * @hideinitializer
  * @param name			key/list name to match
@@ -282,7 +282,7 @@ static inline vici_parse_rule_t vici_rule_uint16(const char *name,
 }
 
 /**
- * Define a rule to parse a value as an 8-bit integer (accept any base).
+ * Define a rule to parse a value as an 8-bit integer (base 10 and 16).
  *
  * @hideinitializer
  * @param name			key/list name to match
@@ -303,7 +303,7 @@ static inline vici_parse_rule_t vici_rule_uint8(const char *name,
 }
 
 /**
- * Define a rule to parse a value as an 8-bit integer (only accepts base 2).
+ * Define a rule to parse a value as an 8-bit integer (only base 2).
  *
  * @hideinitializer
  * @param name			key/list name to match

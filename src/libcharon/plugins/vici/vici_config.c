@@ -646,7 +646,6 @@ CALLBACK(parse_ts, bool,
 	traffic_selector_t *ts = NULL;
 	struct protoent *protoent;
 	struct servent *svc;
-	long int p;
 	uint16_t from = 0, to = 0xffff;
 	uint8_t proto = 0;
 
@@ -674,25 +673,17 @@ CALLBACK(parse_ts, bool,
 			port = sep + 1;
 		}
 
-		if (streq(protoport, "any"))
-		{
-			proto = 0;
-		}
-		else
+		if (*protoport && !streq(protoport, "any"))
 		{
 			protoent = getprotobyname(protoport);
 			if (protoent)
 			{
 				proto = protoent->p_proto;
 			}
-			else
+			else if (!uint8_from_string(protoport, &end,
+								base_from_string(protoport), &proto) || *end)
 			{
-				p = strtol(protoport, &end, 0);
-				if ((*protoport && *end) || p < 0 || p > 0xff)
-				{
-					return FALSE;
-				}
-				proto = (uint8_t)p;
+				return FALSE;
 			}
 		}
 		if (streq(port, "opaque"))
@@ -709,22 +700,21 @@ CALLBACK(parse_ts, bool,
 			}
 			else
 			{
-				p = strtol(port, &end, 0);
-				if (p < 0 || p > 0xffff)
+				if (!uint16_from_string(port, &end, base_from_string(port),
+										&from))
 				{
 					return FALSE;
 				}
-				from = p;
+				to = from;
 				if (*end == '-')
 				{
 					port = end + 1;
-					p = strtol(port, &end, 0);
-					if (p < 0 || p > 0xffff)
+					if (!uint16_from_string(port, &end, base_from_string(port),
+											&to))
 					{
 						return FALSE;
 					}
 				}
-				to = p;
 				if (*end)
 				{
 					return FALSE;
@@ -1018,14 +1008,16 @@ CALLBACK(parse_bytes, bool,
 	uint64_t *out, chunk_t v)
 {
 	char buf[32], *end;
-	unsigned long long l, ll;
+	uint64_t l;
 
 	if (!vici_stringify(v, buf, sizeof(buf)))
 	{
 		return FALSE;
 	}
-
-	l = ll = strtoull(buf, &end, 0);
+	if (!uint64_from_string(buf, &end, base_from_string(buf), &l))
+	{
+		return FALSE;
+	}
 	while (*end == ' ')
 	{
 		end++;
@@ -1034,15 +1026,24 @@ CALLBACK(parse_bytes, bool,
 	{
 		case 'g':
 		case 'G':
-			ll *= 1024;
+			if (__builtin_mul_overflow(l, 1024, &l))
+			{
+				return FALSE;
+			}
 			/* fall */
 		case 'm':
 		case 'M':
-			ll *= 1024;
+			if (__builtin_mul_overflow(l, 1024, &l))
+			{
+				return FALSE;
+			}
 			/* fall */
 		case 'k':
 		case 'K':
-			ll *= 1024;
+			if (__builtin_mul_overflow(l, 1024, &l))
+			{
+				return FALSE;
+			}
 			end++;
 			break;
 		case '\0':
@@ -1054,7 +1055,7 @@ CALLBACK(parse_bytes, bool,
 	{
 		return FALSE;
 	}
-	*out = (ll < l) ? UINT64_MAX : ll;
+	*out = l;
 	return TRUE;
 }
 
