@@ -153,60 +153,13 @@ bool vici_parse_uint8_bin(uint8_t *out, chunk_t value)
  */
 bool vici_parse_time(uint64_t *out, chunk_t value)
 {
-	char buf[32], *end;
-	uint64_t l;
+	char buf[32];
 
 	if (!vici_stringify(value, buf, sizeof(buf)))
 	{
 		return FALSE;
 	}
-
-	if (!uint64_from_string(buf, &end, 10, &l))
-	{
-		return FALSE;
-	}
-	while (*end == ' ')
-	{
-		end++;
-	}
-	switch (*end)
-	{
-		case 'd':
-		case 'D':
-			if (__builtin_mul_overflow(l, 24, &l))
-			{
-				return FALSE;
-			}
-			/* fall */
-		case 'h':
-		case 'H':
-			if (__builtin_mul_overflow(l, 60, &l))
-			{
-				return FALSE;
-			}
-			/* fall */
-		case 'm':
-		case 'M':
-			if (__builtin_mul_overflow(l, 60, &l))
-			{
-				return FALSE;
-			}
-			/* fall */
-		case 's':
-		case 'S':
-			end++;
-			break;
-		case '\0':
-			break;
-		default:
-			return FALSE;
-	}
-	if (*end)
-	{
-		return FALSE;
-	}
-	*out = l;
-	return TRUE;
+	return uint64_timespan_from_string(buf, NULL, out);
 }
 
 /*
