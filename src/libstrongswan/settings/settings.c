@@ -612,19 +612,17 @@ METHOD(settings_t, get_bool, bool,
  */
 inline int settings_value_as_int(char *value, int def)
 {
-	int intval;
+	int32_t intval;
 	char *end;
 	int base = 10;
 
 	if (value)
 	{
-		errno = 0;
-		if (value[0] == '0' && value[1] == 'x')
+		if (strcasepfx(value, "0x"))
 		{	/* manually detect 0x prefix as we want to avoid octal encoding */
 			base = 16;
 		}
-		intval = strtoul(value, &end, base);
-		if (errno == 0 && *end == 0 && end != value)
+		if (int32_from_string(value, &end, base, &intval) && !*end)
 		{
 			return intval;
 		}
@@ -655,13 +653,11 @@ inline uint64_t settings_value_as_uint64(char *value, uint64_t def)
 
 	if (value)
 	{
-		errno = 0;
-		if (value[0] == '0' && value[1] == 'x')
+		if (strcasepfx(value, "0x"))
 		{	/* manually detect 0x prefix as we want to avoid octal encoding */
 			base = 16;
 		}
-		intval = strtoull(value, &end, base);
-		if (errno == 0 && *end == 0 && end != value)
+		if (uint64_from_string(value, &end, base, &intval) && !*end)
 		{
 			return intval;
 		}
@@ -706,9 +702,9 @@ METHOD(settings_t, get_double, double,
  */
 inline uint32_t settings_value_as_time(char *value, uint32_t def)
 {
-	time_t val;
+	uint64_t val;
 
-	if (timespan_from_string(value, NULL, &val))
+	if (uint64_timespan_from_string(value, NULL, &val) && val <= UINT32_MAX)
 	{
 		return val;
 	}
