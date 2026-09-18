@@ -1257,16 +1257,22 @@ METHOD(tpm_tss_t, sign, bool,
 		case SIGN_ECDSA_WITH_SHA256_DER:
 		case SIGN_ECDSA_WITH_SHA384_DER:
 		case SIGN_ECDSA_WITH_SHA512_DER:
-			*signature = asn1_wrap(ASN1_SEQUENCE, "mm",
-							asn1_integer("c",
-								chunk_create(
+		{
+			chunk_t r, s;
+
+			/* return an ASN.1 encoded sequence of integers r and s, removing
+			 * any zero-padding */
+			r = chunk_skip_zero(chunk_create(
 									sig.signature.ecdsa.signatureR.buffer,
-									sig.signature.ecdsa.signatureR.size)),
-							asn1_integer("c",
-								chunk_create(
+									sig.signature.ecdsa.signatureR.size));
+			s = chunk_skip_zero(chunk_create(
 									sig.signature.ecdsa.signatureS.buffer,
-									sig.signature.ecdsa.signatureS.size)));
+									sig.signature.ecdsa.signatureS.size));
+			*signature = asn1_wrap(ASN1_SEQUENCE, "mm",
+								   asn1_integer("c", r),
+								   asn1_integer("c", s));
 			break;
+		}
 		default:
 			DBG1(DBG_PTS, LABEL "unsupported %N signature scheme",
 						  signature_scheme_names, scheme);
