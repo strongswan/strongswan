@@ -83,55 +83,87 @@ time_t time_monotonic(timeval_t *tv)
 /*
  * Described in header
  */
-bool timespan_from_string(char *str, char *defunit, time_t *val)
+bool uint64_timespan_from_string(const char *str, const char *defunit,
+								 uint64_t *val)
 {
-	char *endptr, unit;
-	time_t timeval;
+	char *endptr, *suffix, unit;
+	uint64_t timeval, mul = 1;
 
-	if (str)
+	if (!uint64_from_string(str, &endptr, 10, &timeval))
 	{
-		errno = 0;
-		timeval = strtoull(str, &endptr, 10);
-		if (endptr == str)
-		{
+		return FALSE;
+	}
+	suffix = endptr;
+	while (isspace((u_char)*suffix))
+	{
+		suffix++;
+	}
+	unit = *suffix;
+	if (unit)
+	{
+		if (*++suffix)
+		{	/* content after the suffix */
 			return FALSE;
 		}
-		if (errno == 0)
-		{
-			while (isspace(*endptr))
-			{
-				endptr++;
-			}
-			unit = *endptr;
-			if (!unit && defunit)
-			{
-				unit = *defunit;
-			}
-			switch (unit)
-			{
-				case 'd':		/* time in days */
-					timeval *= 24 * 3600;
-					break;
-				case 'h':		/* time in hours */
-					timeval *= 3600;
-					break;
-				case 'm':		/* time in minutes */
-					timeval *= 60;
-					break;
-				case 's':		/* time in seconds */
-				case '\0':
-					break;
-				default:
-					return FALSE;
-			}
-			if (val)
-			{
-				*val = timeval;
-			}
-			return TRUE;
-		}
 	}
-	return FALSE;
+	else if (suffix != endptr)
+	{	/* trailing whitespace without suffix */
+		return FALSE;
+	}
+	else if (defunit)
+	{
+		unit = *defunit;
+	}
+	switch (unit)
+	{
+		case 'd':
+		case 'D':	/* time in days */
+			mul = 24 * 3600;
+			break;
+		case 'h':
+		case 'H':	/* time in hours */
+			mul = 3600;
+			break;
+		case 'm':
+		case 'M':	/* time in minutes */
+			mul = 60;
+			break;
+		case 's':
+		case 'S':	/* time in seconds */
+			break;
+		case '\0':
+			break;
+		default:
+			return FALSE;
+	}
+	if (__builtin_mul_overflow(timeval, mul, &timeval))
+	{
+		return FALSE;
+	}
+	if (val)
+	{
+		*val = timeval;
+	}
+	return TRUE;
+}
+
+/*
+ * Described in header
+ */
+bool timespan_from_string(const char *str, const char *defunit, time_t *val)
+{
+	uint64_t timeval;
+
+	if (!uint64_timespan_from_string(str, defunit, &timeval) ||
+		timeval > INT64_MAX || (sizeof(time_t) == 4 && timeval > INT32_MAX))
+	{
+		return FALSE;
+	}
+	if (val)
+	{
+		*val = timeval;
+	}
+	return TRUE;
 }
 
 /*

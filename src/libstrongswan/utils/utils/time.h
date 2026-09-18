@@ -86,16 +86,35 @@ static inline void timeval_add_ms(timeval_t *tv, u_int ms)
 }
 
 /**
- * Parse the given string as time span and return the number of seconds,
- * optionally with a default unit ('s' for seconds, 'm' for minutes, 'h' for
- * hours, 'd' for days - default is 's').
+ * Parse the given string as time span, with optional unit suffix ('s' for
+ * seconds, 'm' for minutes, 'h' for hours, 'd' for days), and return the
+ * resulting number of seconds as an unsigned 64-bit integer.
  *
- * @param str		value to parse
- * @param defunit	optional default unit
- * @param[out] val	parsed value
- * @return			TRUE if a value was parsed
+ * The default unit may optionally be specified with \p defunit (same as the
+ * suffix, default is 's').
+ *
+ * @param str		value to parse (NULL-safe)
+ * @param defunit	default unit (optional, only the first character is used)
+ * @param[out] val	parsed value on success (optional)
+ * @return			TRUE if a value was successfully parsed and fits \c uint64_t
  */
-bool timespan_from_string(char *str, char *defunit, time_t *val);
+bool uint64_timespan_from_string(const char *str, const char *defunit,
+								 uint64_t *val);
+
+/**
+ * Parse the given string as time span, with optional unit suffix ('s' for
+ * seconds, 'm' for minutes, 'h' for hours, 'd' for days), and return the
+ * resulting number of seconds as a \c time_t.
+ *
+ * The default unit may optionally be specified with \p defunit (same as the
+ * suffix, default is 's').
+ *
+ * @param str		value to parse (NULL-safe)
+ * @param defunit	default unit (optional, only the first character is used)
+ * @param[out] val	parsed value on success (optional)
+ * @return			TRUE if a value was successfully parsed and fits \c time_t
+ */
+bool timespan_from_string(const char *str, const char *defunit, time_t *val);
 
 /**
  * printf hook for time_t.

@@ -348,43 +348,127 @@ START_TEST(test_base_from_string)
 END_TEST
 
 /*******************************************************************************
- * timespan_from_string
+ * [uint64_]timespan_from_string
  */
 
 static struct {
 	char *s;
 	char *u;
 	bool v;
-	time_t t;
-} ts_data[] = {
+	uint64_t t;
+} ts64_data[] = {
 	{NULL,	NULL,	FALSE,	0},
 	{"",	NULL,	FALSE,	0},
+	{" ",	NULL,	FALSE,	0},
 	{"a",	NULL,	FALSE,	0},
+	{" a",	NULL,	FALSE,	0},
 	{"0",	NULL,	TRUE,	0},
 	{"5",	NULL,	TRUE,	5},
+	{"5 ",	NULL,	FALSE,	0},
+	{" 5",	NULL,	TRUE,	5},
+	{"-5",	NULL,	FALSE,	0},
+	{"0x5",	NULL,	FALSE,	0},
 	{"5s",	NULL,	TRUE,	5},
+	{"5 s",	NULL,	TRUE,	5},
+	{"5s ",	NULL,	FALSE,	0},
+	{"5S",	NULL,	TRUE,	5},
 	{"5m",	NULL,	TRUE,	300},
-	{"5ms",	NULL,	TRUE,	300},
+	{"5M",	NULL,	TRUE,	300},
+	{"5ms",	NULL,	FALSE,	0},
 	{"5h",	NULL,	TRUE,	18000},
+	{"5H",	NULL,	TRUE,	18000},
 	{"5d",	NULL,	TRUE,	432000},
+	{"5D",	NULL,	TRUE,	432000},
 	{"5x",	NULL,	FALSE,	0},
+	{"5 x",	NULL,	FALSE,	0},
 	{"5",	"",		TRUE,	5},
 	{"5",	"m",	TRUE,	300},
 	{"5",	"ms",	TRUE,	300},
 	{"5",	"x",	FALSE,	0},
 	{"5x",	"m",	FALSE,	0},
+	{"213503982334601d",		NULL,	TRUE,	18446744073709526400ULL},
+	{"213503982334602d",		NULL,	FALSE,	0},
+	{"18446744073709551615",	NULL,	TRUE,	UINT64_MAX},
+	{"18446744073709551615s",	NULL,	TRUE,	UINT64_MAX},
+	{"18446744073709551616",	NULL,	FALSE,	0},
+};
+
+START_TEST(test_uint64_timespan_from_string)
+{
+	uint64_t val = 42;
+
+	ck_assert(uint64_timespan_from_string(ts64_data[_i].s, ts64_data[_i].u,
+										  NULL) == ts64_data[_i].v);
+	ck_assert(uint64_timespan_from_string(ts64_data[_i].s, ts64_data[_i].u,
+										  &val) == ts64_data[_i].v);
+	if (ts64_data[_i].v)
+	{
+		ck_assert_int_eq(val, ts64_data[_i].t);
+	}
+	else
+	{
+		ck_assert_int_eq(val, 42);
+	}
+}
+END_TEST
+
+static struct {
+	char *s;
+	char *u;
+	bool v;
+	/* don't use time_t in case it's only 32-bit */
+	uint64_t t;
+} ts_data[] = {
+	{NULL,	NULL,	FALSE,	0},
+	{"",	NULL,	FALSE,	0},
+	{" ",	NULL,	FALSE,	0},
+	{"a",	NULL,	FALSE,	0},
+	{" a",	NULL,	FALSE,	0},
+	{"0",	NULL,	TRUE,	0},
+	{"5",	NULL,	TRUE,	5},
+	{"5 ",	NULL,	FALSE,	0},
+	{" 5",	NULL,	TRUE,	5},
+	{"-5",	NULL,	FALSE,	0},
+	{"0x5",	NULL,	FALSE,	0},
+	{"5s",	NULL,	TRUE,	5},
+	{"5 s",	NULL,	TRUE,	5},
+	{"5s ",	NULL,	FALSE,	0},
+	{"5S",	NULL,	TRUE,	5},
+	{"5m",	NULL,	TRUE,	300},
+	{"5M",	NULL,	TRUE,	300},
+	{"5ms",	NULL,	FALSE,	0},
+	{"5h",	NULL,	TRUE,	18000},
+	{"5H",	NULL,	TRUE,	18000},
+	{"5d",	NULL,	TRUE,	432000},
+	{"5D",	NULL,	TRUE,	432000},
+	{"5x",	NULL,	FALSE,	0},
+	{"5 x",	NULL,	FALSE,	0},
+	{"5",	"",		TRUE,	5},
+	{"5",	"m",	TRUE,	300},
+	{"5",	"ms",	TRUE,	300},
+	{"5",	"x",	FALSE,	0},
+	{"5x",	"m",	FALSE,	0},
+	{"2147483647",				NULL,	TRUE,	INT32_MAX},
+	{"9223372036854775807",		NULL,	TRUE,	INT64_MAX},
+	{"9223372036854775808",		NULL,	FALSE,	0},
 	{"18446744073709551616",	NULL,	FALSE,	0},
 };
 
 START_TEST(test_timespan_from_string)
 {
 	time_t val = 42;
+	bool exp = ts_data[_i].v;
+
+	if (sizeof(time_t) == 4 && ts_data[_i].t > INT32_MAX)
+	{
+		exp = FALSE;
+	}
 
 	ck_assert(timespan_from_string(ts_data[_i].s, ts_data[_i].u,
-								   NULL) == ts_data[_i].v);
+								   NULL) == exp);
 	ck_assert(timespan_from_string(ts_data[_i].s, ts_data[_i].u,
-								   &val) == ts_data[_i].v);
-	if (ts_data[_i].v)
+								   &val) == exp);
+	if (exp)
 	{
 		ck_assert_int_eq(val, ts_data[_i].t);
 	}
@@ -1575,7 +1659,8 @@ Suite *utils_suite_create()
 	tcase_add_test(tc, test_base_from_string);
 	suite_add_tcase(s, tc);
 
-	tc = tcase_create("timespan_from_string");
+	tc = tcase_create("[uint64_]timespan_from_string");
+	tcase_add_loop_test(tc, test_uint64_timespan_from_string, 0, countof(ts64_data));
 	tcase_add_loop_test(tc, test_timespan_from_string, 0, countof(ts_data));
 	suite_add_tcase(s, tc);
 
