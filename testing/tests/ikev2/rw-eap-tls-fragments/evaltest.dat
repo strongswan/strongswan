@@ -3,6 +3,8 @@ moon:: swanctl --list-sas --ike-id 1 --raw 2> /dev/null::rw-eap.*version=2 state
 carol::cat /var/log/daemon.log::server requested EAP_TLS authentication::YES
 carol::cat /var/log/daemon.log::allow mutual EAP-only authentication::YES
 carol::cat /var/log/daemon.log::authentication of 'C=CH, O=strongSwan Project, CN=moon.d.strongswan.org' with EAP successful::YES
+moon:: cat /var/log/daemon.log::sending TLS Handshake record (16384 bytes)::YES
+moon:: cat /var/log/daemon.log::sending TLS Handshake record ([0-9]\{3,4\} bytes)::YES
 moon:: cat /var/log/daemon.log::authentication of 'C=CH, O=strongSwan Project, CN=carol@d.strongswan.org' with EAP successful::YES
 carol::ping -c 1 PH_IP_ALICE::64 bytes from PH_IP_ALICE: icmp_.eq=1::YES
 moon::tcpdump::IP carol.strongswan.org > moon.strongswan.org: ESP::YES

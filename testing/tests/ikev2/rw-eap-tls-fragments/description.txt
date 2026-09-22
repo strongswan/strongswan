@@ -2,3 +2,7 @@ The roadwarrior <b>carol</b> sets up a connection to gateway <b>moon</b>.
 The strong mutual authentication of both peers is based on <b>EAP-TLS</b> only
 (without a separate IKEv2 authentication), using TLS client and server certificates,
 respectively.
+<p/>
+This scenario uses several intermediate CA certificates that all encode a
+nonsensical but large certificate policy in order to trigger TLS fragmentation
+by exceeding the TLS fragment size of 16k.
