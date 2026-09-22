@@ -509,19 +509,12 @@ METHOD(private_key_t, sign, bool,
 		case SIGN_ECDSA_WITH_SHA256_DER:
 		case SIGN_ECDSA_WITH_SHA384_DER:
 		case SIGN_ECDSA_WITH_SHA512_DER:
-		{
-			chunk_t r, s;
-
-			/* return an ASN.1 encoded sequence of integers r and s, removing
-			 * any zero-padding */
 			len /= 2;
-			r = chunk_skip_zero(chunk_create(buf, len));
-			s = chunk_skip_zero(chunk_create(buf+len, len));
 			*signature = asn1_wrap(ASN1_SEQUENCE, "mm",
-								   asn1_integer("c", r), asn1_integer("c", s));
+								asn1_integer("c", chunk_create(buf, len)),
+								asn1_integer("c", chunk_create(buf+len, len)));
 			free(buf);
 			break;
-		}
 		default:
 			*signature = chunk_create(buf, len);
 			break;
