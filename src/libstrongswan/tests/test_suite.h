@@ -288,6 +288,22 @@ void test_warn_msg(const char *file, int line, char *fmt, ...);
 void test_fail_if_worker_failed();
 
 /**
+ * Generic macro to produce a type-specific format specifier
+ *
+ * The default covers \c int and all automatically promoted smaller types.
+ *
+ * @param x			integer variable for which to determine the specifier
+ */
+#define test_int_fmt(x) _Generic((x), \
+	long: "%ld", \
+	long long: "%lld", \
+	unsigned long: "%lu", \
+	unsigned long long: "%llu", \
+	unsigned int: "%u", \
+	default: "%d" \
+)
+
+/**
  * Check if two integers equal, fail test if not
  *
  * @param a			first integer
@@ -300,7 +316,11 @@ void test_fail_if_worker_failed();
 	test_fail_if_worker_failed(); \
 	if (_a != _b) \
 	{ \
-		test_fail_msg(__FILE__, __LINE__, #a " != " #b " (%d != %d)", _a, _b); \
+		char _sa[32], _sb[32]; \
+		snprintf(_sa, sizeof(_sa), test_int_fmt(_a), _a); \
+		snprintf(_sb, sizeof(_sb), test_int_fmt(_b), _b); \
+		test_fail_msg(__FILE__, __LINE__, \
+					  #a " != " #b " (%s != %s)", _sa, _sb); \
 	} \
 })
 
