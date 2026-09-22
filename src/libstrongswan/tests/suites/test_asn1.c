@@ -727,16 +727,16 @@ START_TEST(test_asn1_integer)
 	chunk_t b1 = chunk_from_chars(0x02, 0x01, 0x7f);
 	chunk_t b2 = chunk_from_chars(0x02, 0x02, 0x00, 0x80);
 
-	chunk_t c0 = chunk_empty;
-	chunk_t c1 = chunk_from_chars(0x7f);
-	chunk_t c2 = chunk_from_chars(0x80);
-	chunk_t c3 = chunk_from_chars(0x00, 0x80);
-
 	testdata_t test[] = {
-		{ b0, c0 },
-		{ b1, c1 },
-		{ b2, c2 },
-		{ b2, c3 }
+		{ b0, chunk_empty },
+		{ b0, chunk_from_chars(0x00) },
+		{ b0, chunk_from_chars(0x00, 0x00) },
+		{ b1, chunk_from_chars(0x7f) },
+		{ b1, chunk_from_chars(0x00, 0x7f) },
+		{ b1, chunk_from_chars(0x00, 0x00, 0x7f) },
+		{ b2, chunk_from_chars(0x80) },
+		{ b2, chunk_from_chars(0x00, 0x80) },
+		{ b2, chunk_from_chars(0x00, 0x00, 0x80) },
 	};
 
 	chunk_t a = chunk_empty;

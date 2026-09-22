@@ -294,7 +294,7 @@ chunk_t asn1_bitstring(const char *mode, chunk_t content);
  * Build an ASN.1 INTEGER object
  *
  * @param mode		'c' for copy or 'm' for move
- * @param content	content of the INTEGER
+ * @param content	content of the INTEGER (zero-padding is removed)
  * @return			chunk containing the ASN.1 coded INTEGER
  */
 chunk_t asn1_integer(const char *mode, chunk_t content);
