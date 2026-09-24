@@ -17,7 +17,9 @@ fuzz_cppflags_cus = ${AM_CPPFLAGS} \
 	-DPLUGINS="\"${fc_plugins}\""
 
 fuzz_ldflags = ${libfuzzer} \
+	-Wl,--whole-archive \
 	$(top_builddir)/src/libstrongswan/.libs/libstrongswan.a \
+	-Wl,--no-whole-archive \
 	@FUZZING_LDFLAGS@
 
 if USE_OPENSSL
@@ -29,27 +31,37 @@ fuzz_ldflags += -Wl,-Bstatic -lgmp -Wl,-Bdynamic
 endif
 
 pa_tnc_ldflags = \
+	-Wl,--whole-archive \
 	$(top_builddir)/src/libimcv/.libs/libimcv.a \
-	$(top_builddir)/src/libtncif/.libs/libtncif.a \
 	$(top_builddir)/src/libtpmtss/.libs/libtpmtss.a \
+	-Wl,--no-whole-archive \
+	$(top_builddir)/src/libtncif/.libs/libtncif.a \
 	$(fuzz_ldflags)
 
 pb_tnc_ldflags = \
+	-Wl,--whole-archive \
 	$(top_builddir)/src/libtnccs/.libs/libtnccs.a \
+	-Wl,--no-whole-archive \
 	$(top_builddir)/src/libtncif/.libs/libtncif.a \
 	$(fuzz_ldflags)
 
 charon_ldflags = \
+	-Wl,--whole-archive \
 	$(top_builddir)/src/libcharon/.libs/libcharon.a \
 	$(top_builddir)/src/libradius/.libs/libradius.a \
+	-Wl,--no-whole-archive \
 	$(fuzz_ldflags)
 
 radius_ldflags = \
+	-Wl,--whole-archive \
 	$(top_builddir)/src/libradius/.libs/libradius.a \
+	-Wl,--no-whole-archive \
 	$(fuzz_ldflags)
 
 tls_ldflags = \
+	-Wl,--whole-archive \
 	$(top_builddir)/src/libtls/.libs/libtls.a \
+	-Wl,--no-whole-archive \
 	$(fuzz_ldflags)
 
 # fuzzers that use crypto plugins in a significant way
