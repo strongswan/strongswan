@@ -8,7 +8,8 @@ AM_CPPFLAGS = @CPPFLAGS@ \
 	-I$(top_srcdir)/src/libtls \
 	-I$(top_srcdir)/src/libtnccs \
 	-I$(top_srcdir)/src/libtnccs/plugins/tnccs_20 \
-	-I$(top_srcdir)/src/libradius
+	-I$(top_srcdir)/src/libradius \
+	-I$(top_srcdir)/src/libipsec
 
 fuzz_cppflags_def = ${AM_CPPFLAGS} \
 	-DPLUGINS="\"${fd_plugins}\""
@@ -52,6 +53,10 @@ tls_ldflags = \
 	$(top_builddir)/src/libtls/.libs/libtls.a \
 	$(fuzz_ldflags)
 
+ipsec_ldflags = \
+	$(top_builddir)/src/libipsec/.libs/libipsec.a \
+	$(fuzz_ldflags)
+
 # fuzzers that use crypto plugins in a significant way
 fuzzers_with_plugins = \
 	fuzz_certs fuzz_crls fuzz_ocsp_req fuzz_ocsp_rsp
@@ -60,7 +65,8 @@ fuzzers_with_def = $(fuzzers_with_plugins:%=%_def)
 fuzzers_with_cus = $(fuzzers_with_plugins:%=%_cus)
 
 fuzzers_no_plugins = \
-	fuzz_ids fuzz_ike fuzz_pa_tnc fuzz_pb_tnc fuzz_radius fuzz_tls fuzz_vici
+	fuzz_esp fuzz_ids fuzz_ike fuzz_pa_tnc fuzz_pb_tnc fuzz_radius fuzz_tls \
+	fuzz_vici
 
 ALL_FUZZERS=$(fuzzers_with_def) $(fuzzers_with_cus) $(fuzzers_no_plugins)
 
@@ -100,6 +106,9 @@ fuzz_pb_tnc: fuzz_pb_tnc.c ${libfuzzer}
 
 fuzz_ids: fuzz_ids.c ${libfuzzer}
 	$(CC) $(AM_CPPFLAGS) $(CFLAGS) -o $@ $< $(fuzz_ldflags)
+
+fuzz_esp: fuzz_esp.c ${libfuzzer}
+	$(CC) $(AM_CPPFLAGS) $(CFLAGS) -o $@ $< $(ipsec_ldflags)
 
 fuzz_ike: fuzz_ike.c ${libfuzzer}
 	$(CC) $(AM_CPPFLAGS) $(CFLAGS) -o $@ $< $(charon_ldflags)
