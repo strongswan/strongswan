@@ -133,7 +133,7 @@ METHOD(private_key_t, get_public_key, public_key_t*,
 	public_key_t *public;
 	chunk_t pubkey;
 
-	pubkey = curve25519_public_key_info_encode(this->pubkey);
+	pubkey = public_key_info_encode(this->pubkey, OID_ED25519);
 	public = lib->creds->create(lib->creds, CRED_PUBLIC_KEY, KEY_ED25519,
 								BUILD_BLOB_ASN1_DER, pubkey, BUILD_END);
 	free(pubkey.ptr);
