@@ -284,47 +284,55 @@ METHOD(plugin_t, get_features, int,
 #ifndef NO_DH
 		/* MODP DH groups */
 		PLUGIN_REGISTER(KE, wolfssl_diffie_hellman_create),
-	#if (defined(USE_FAST_MATH) && FP_MAX_BITS >= (3072 * 2)) || \
+	#if ((defined(USE_FAST_MATH) && FP_MAX_BITS >= (3072 * 2)) || \
 		(defined(WOLFSSL_SP_MATH_ALL) && SP_INT_BITS >= 3072) || \
-		defined(USE_INTEGER_HEAP_MATH)
+		defined(USE_INTEGER_HEAP_MATH)) && \
+		(!defined(DH_MIN_SIZE) || DH_MIN_SIZE <= 3072)
 			PLUGIN_PROVIDE(KE, MODP_3072_BIT),
 	#endif
-	#if (defined(USE_FAST_MATH) && FP_MAX_BITS >= (4096 * 2)) || \
+	#if ((defined(USE_FAST_MATH) && FP_MAX_BITS >= (4096 * 2)) || \
 		(defined(WOLFSSL_SP_MATH_ALL) && SP_INT_BITS >= 4096) || \
-		defined(USE_INTEGER_HEAP_MATH)
+		defined(USE_INTEGER_HEAP_MATH)) && \
+		(!defined(DH_MIN_SIZE) || DH_MIN_SIZE <= 4096)
 			PLUGIN_PROVIDE(KE, MODP_4096_BIT),
 	#endif
-	#if (defined(USE_FAST_MATH) && FP_MAX_BITS >= (6144 * 2)) || \
+	#if ((defined(USE_FAST_MATH) && FP_MAX_BITS >= (6144 * 2)) || \
 		(defined(WOLFSSL_SP_MATH_ALL) && SP_INT_BITS >= 6144) || \
-		defined(USE_INTEGER_HEAP_MATH)
+		defined(USE_INTEGER_HEAP_MATH)) && \
+		(!defined(DH_MIN_SIZE) || DH_MIN_SIZE <= 6144)
 			PLUGIN_PROVIDE(KE, MODP_6144_BIT),
 	#endif
-	#if (defined(USE_FAST_MATH) && FP_MAX_BITS >= (8192 * 2)) || \
+	#if ((defined(USE_FAST_MATH) && FP_MAX_BITS >= (8192 * 2)) || \
 		(defined(WOLFSSL_SP_MATH_ALL) && SP_INT_BITS >= 8192) || \
-		defined(USE_INTEGER_HEAP_MATH)
+		defined(USE_INTEGER_HEAP_MATH)) && \
+		(!defined(DH_MIN_SIZE) || DH_MIN_SIZE <= 8192)
 			PLUGIN_PROVIDE(KE, MODP_8192_BIT),
 	#endif
-	#if (defined(USE_FAST_MATH) && FP_MAX_BITS >= (2048 * 2)) || \
+	#if ((defined(USE_FAST_MATH) && FP_MAX_BITS >= (2048 * 2)) || \
 		(defined(WOLFSSL_SP_MATH_ALL) && SP_INT_BITS >= 2048) || \
-		defined(USE_INTEGER_HEAP_MATH)
+		defined(USE_INTEGER_HEAP_MATH)) && \
+		(!defined(DH_MIN_SIZE) || DH_MIN_SIZE <= 2048)
 			PLUGIN_PROVIDE(KE, MODP_2048_BIT),
 			PLUGIN_PROVIDE(KE, MODP_2048_224),
 			PLUGIN_PROVIDE(KE, MODP_2048_256),
 	#endif
-	#if (defined(USE_FAST_MATH) && FP_MAX_BITS >= (1536 * 2)) || \
+	#if ((defined(USE_FAST_MATH) && FP_MAX_BITS >= (1536 * 2)) || \
 		(defined(WOLFSSL_SP_MATH_ALL) && SP_INT_BITS >= 1536) || \
-		defined(USE_INTEGER_HEAP_MATH)
+		defined(USE_INTEGER_HEAP_MATH)) && \
+		(!defined(DH_MIN_SIZE) || DH_MIN_SIZE <= 1536)
 			PLUGIN_PROVIDE(KE, MODP_1536_BIT),
 	#endif
-	#if (defined(USE_FAST_MATH) && FP_MAX_BITS >= (1024 * 2)) || \
+	#if ((defined(USE_FAST_MATH) && FP_MAX_BITS >= (1024 * 2)) || \
 		(defined(WOLFSSL_SP_MATH_ALL) && SP_INT_BITS >= 1024) || \
-		defined(USE_INTEGER_HEAP_MATH)
+		defined(USE_INTEGER_HEAP_MATH)) && \
+		(!defined(DH_MIN_SIZE) || DH_MIN_SIZE <= 1024)
 			PLUGIN_PROVIDE(KE, MODP_1024_BIT),
 			PLUGIN_PROVIDE(KE, MODP_1024_160),
 	#endif
-	#if (defined(USE_FAST_MATH) && FP_MAX_BITS >= (768 * 2)) || \
+	#if ((defined(USE_FAST_MATH) && FP_MAX_BITS >= (768 * 2)) || \
 		(defined(WOLFSSL_SP_MATH_ALL) && SP_INT_BITS >= 768) || \
-		defined(USE_INTEGER_HEAP_MATH)
+		defined(USE_INTEGER_HEAP_MATH)) && \
+		(!defined(DH_MIN_SIZE) || DH_MIN_SIZE <= 768)
 			PLUGIN_PROVIDE(KE, MODP_768_BIT),
 	#endif
 			PLUGIN_PROVIDE(KE, MODP_CUSTOM),
