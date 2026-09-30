@@ -31,7 +31,7 @@ build_botan()
 	cd $BOTAN_DIR &&
 	git checkout -qf $BOTAN_REV &&
 	./configure.py --amalgamation $BOTAN_CONFIG &&
-	make -j$(nproc) libs >/dev/null &&
+	make -j$NPROC libs >/dev/null &&
 	sudo make install >/dev/null &&
 	sudo ldconfig || exit $?
 	cd -
@@ -64,7 +64,7 @@ build_wolfssl()
 	git checkout -qf $WOLFSSL_REV &&
 	./autogen.sh &&
 	./configure C_EXTRA_FLAGS="$WOLFSSL_CFLAGS" $WOLFSSL_CONFIG &&
-	make -j$(nproc) >/dev/null &&
+	make -j$NPROC >/dev/null &&
 	sudo make install >/dev/null &&
 	sudo ldconfig || exit $?
 	cd -
@@ -86,7 +86,7 @@ build_tss2()
 	curl -L $TSS2_SRC | tar xz -C $DEPS_BUILD_DIR &&
 	cd $TSS2_DIR &&
 	./configure --prefix=$DEPS_PREFIX --disable-doxygen-doc &&
-	make -j$(nproc) >/dev/null &&
+	make -j$NPROC >/dev/null &&
 	sudo make install >/dev/null &&
 	sudo ldconfig || exit $?
 	cd -
@@ -114,7 +114,7 @@ build_openssl()
 	else
 		cd $SSL_DIR &&
 		./config --prefix=$SSL_INS --openssldir=$SSL_INS --libdir=lib $SSL_OPT &&
-		make -j$(nproc) >/dev/null &&
+		make -j$NPROC >/dev/null &&
 		sudo make install_sw >/dev/null &&
 		sudo ldconfig || exit $?
 		cd -
@@ -183,6 +183,7 @@ prepare_system_openssl()
 : ${BUILD_DIR=$PWD}
 : ${DEPS_BUILD_DIR=$BUILD_DIR/..}
 : ${DEPS_PREFIX=/usr/local}
+: ${NPROC=$(nproc 2>/dev/null || sysctl -n hw.logicalcpu 2>/dev/null || echo 2)}
 
 if [ -e /etc/os-release ]; then
 	. /etc/os-release
@@ -536,15 +537,15 @@ apidoc)
 	;;
 esac
 
-echo "$ make -j$(nproc) $TARGET"
+echo "$ make -j$NPROC $TARGET"
 case "$TEST" in
 sonarcloud)
 	# without target, coverage is currently not supported anyway because
 	# sonarqube only supports gcov, not lcov
-	build-wrapper-linux-x86-64 --out-dir $BUILD_WRAPPER_OUT_DIR make -j$(nproc) || exit $?
+	build-wrapper-linux-x86-64 --out-dir $BUILD_WRAPPER_OUT_DIR make -j$NPROC || exit $?
 	;;
 *)
-	make -j$(nproc) $TARGET || exit $?
+	make -j$NPROC $TARGET || exit $?
 	;;
 esac
 
