@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2026 Tobias Brunner
  * Copyright (C) 2014 Martin Willi
  *
  * Copyright (C) secunet Security Networks AG
@@ -17,6 +18,7 @@
 #include "test_suite.h"
 
 #include <unistd.h>
+#include <fcntl.h>
 
 #include <utils/process.h>
 
@@ -75,10 +77,12 @@ START_TEST(test_not_found)
 		"/bin/does-not-exist",
 		NULL
 	};
+	int retval;
 
 	process = process_start(argv, NULL, NULL, NULL, NULL, TRUE);
-	/* both is acceptable behavior */
-	ck_assert(process == NULL || !process->wait(process, NULL));
+	/* both is acceptable behavior, posix_spawn() might fail with 127 */
+	ck_assert(process == NULL || !process->wait(process, &retval) ||
+			  retval == 127);
 }
 END_TEST
 
@@ -98,10 +102,11 @@ START_TEST(test_echo)
 	int retval, in, out;
 	char *msg = "test";
 	char buf[strlen(msg) + 1];
+	bool close_all = _i;
 
 	memset(buf, 0, strlen(msg) + 1);
 
-	process = process_start(argv, NULL, &in, &out, NULL, TRUE);
+	process = process_start(argv, NULL, &in, &out, NULL, close_all);
 	ck_assert(process != NULL);
 	ck_assert_int_eq(write(in, msg, strlen(msg)), strlen(msg));
 	ck_assert(close(in) == 0);
@@ -131,10 +136,11 @@ START_TEST(test_echo_err)
 	int retval, in, err;
 	char *msg = "a longer test message";
 	char buf[strlen(msg) + 1];
+	bool close_all = _i;
 
 	memset(buf, 0, strlen(msg) + 1);
 
-	process = process_start(argv, NULL, &in, NULL, &err, TRUE);
+	process = process_start(argv, NULL, &in, NULL, &err, close_all);
 	ck_assert(process != NULL);
 	ck_assert_int_eq(write(in, msg, strlen(msg)), strlen(msg));
 	ck_assert(close(in) == 0);
@@ -143,6 +149,68 @@ START_TEST(test_echo_err)
 	ck_assert(close(err) == 0);
 	ck_assert(process->wait(process, &retval));
 	ck_assert_int_eq(retval, 0);
+}
+END_TEST
+
+START_TEST(test_close_all)
+{
+#ifndef WIN32
+	process_t *process;
+	char *argv[] = { "/bin/sh", "-c", NULL, NULL };
+	int extra, err, code;
+	char cmd[64], fd_file[64], buf[BUF_LEN];
+	bool close_all = _i;
+
+	/* extra fd above 2, deliberately without O_CLOEXEC so the child inherits it
+	 * unless close_all closes it */
+	extra = open("/dev/null", O_RDONLY);
+	ck_assert(extra >= 3);
+
+	/* because many shells (e.g. dash) only support single digits for shell
+	 * redirection, we only use this portable approach if the fd fits */
+	if (extra <= 9)
+	{
+		snprintf(cmd, sizeof(cmd), "true <&%d", extra);
+	}
+	else
+	{
+		/* otherwise we try to test the existence of the fd via /dev or /proc
+		 * file system.  however, this is not fully portable as e.g. FreeBSD
+		 * needs fdescfs mounted for /dev/fd populated with fds > 2 and /proc
+		 * is technically also optional on Linux, so we do a pre-check in the
+		 * parent where the fd must exist in one of these locations */
+		snprintf(fd_file, sizeof(fd_file), "/dev/fd/%d", extra);
+		if (access(fd_file, F_OK) != 0)
+		{
+			snprintf(fd_file, sizeof(fd_file), "/proc/self/fd/%d", extra);
+			if (access(fd_file, F_OK) != 0)
+			{
+				close(extra);
+				fail("neither /dev/fd/%d nor /proc/self/fd/%d available, "
+					 "cannot verify close_all", extra, extra);
+				return;
+			}
+		}
+		snprintf(cmd, sizeof(cmd), "test -e %s", fd_file);
+	}
+	argv[2] = cmd;
+
+	process = process_start(argv, NULL, NULL, NULL, &err, close_all);
+	ck_assert(process != NULL);
+	/* drain stderr */
+	ignore_result(read(err, buf, sizeof(buf)));
+	close(err);
+	ck_assert(process->wait(process, &code));
+	if (close_all)
+	{	/* fd must be gone: redirection or check fails, sh exits non-zero */
+		ck_assert(code != 0);
+	}
+	else
+	{	/* fd must survive: redirection or check succeeds, exit 0 */
+		ck_assert_int_eq(code, 0);
+	}
+	close(extra);
+#endif
 }
 END_TEST
 
@@ -215,8 +283,13 @@ Suite *process_suite_create()
 
 	tc = tcase_create("echo");
 	tcase_set_timeout(tc, 10);
-	tcase_add_test(tc, test_echo);
-	tcase_add_test(tc, test_echo_err);
+	tcase_add_loop_test(tc, test_echo, 0, 2);
+	tcase_add_loop_test(tc, test_echo_err, 0, 2);
+	suite_add_tcase(s, tc);
+
+	tc = tcase_create("close_all");
+	tcase_set_timeout(tc, 10);
+	tcase_add_loop_test(tc, test_close_all, 0, 2);
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("env");
