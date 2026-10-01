@@ -679,6 +679,9 @@ AC_CHECK_FUNC(
 
 AC_CHECK_FUNCS(prctl mallinfo mallinfo2 getpass closefrom getpwnam_r getgrnam_r getpwuid_r chown)
 AC_CHECK_FUNCS(fmemopen funopen mmap memrchr setlinebuf strptime dirfd sigwaitinfo explicit_bzero)
+AC_CHECK_FUNCS(posix_spawn posix_spawn_file_actions_addclosefrom_np posix_spawn_file_actions_addinherit_np)
+
+AC_CHECK_DECLS([POSIX_SPAWN_CLOEXEC_DEFAULT], [], [], [[#include <spawn.h>]])
 
 AC_CHECK_FUNC([syslog], [
 	AC_DEFINE([HAVE_SYSLOG], [], [have syslog(3) and friends])

@@ -41,6 +41,9 @@ jobs:
           prepare: |
             ./scripts/test.sh deps
           run: |
+            # make sure we have /dev/fd for fds > 2 for our process_t test suite
+            mount -t fdescfs null /dev/fd
+            #
             ./scripts/test.sh
       - if: ${{ failure() }}
         uses: actions/upload-artifact@v6

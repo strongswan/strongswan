@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2026 Tobias Brunner
  * Copyright (C) 2014 Martin Willi
  *
  * Copyright (C) secunet Security Networks AG
@@ -38,10 +39,22 @@ enum {
 
 #ifndef WIN32
 
+/* use posix_spawn() if we can close all open fds > 2, either via the
+ * proprietary glibc function or the proprietary macOS flag */
+#if defined(HAVE_POSIX_SPAWN) && \
+	(defined(HAVE_POSIX_SPAWN_FILE_ACTIONS_ADDCLOSEFROM_NP) || \
+	 HAVE_DECL_POSIX_SPAWN_CLOEXEC_DEFAULT)
+#define USE_POSIX_SPAWN 1
+#endif
+
 #include <unistd.h>
 #include <errno.h>
 #include <sys/wait.h>
 #include <signal.h>
+
+#ifdef USE_POSIX_SPAWN
+#include <spawn.h>
+#endif
 
 /**
  * Private data of an process_t object.
@@ -122,6 +135,110 @@ METHOD(process_t, wait_, bool,
 	return TRUE;
 }
 
+#ifdef USE_POSIX_SPAWN
+/**
+ * Handles the two ends of a pipe appropriately, dup the one in "from" to "to"
+ * and close both ends (unless there is an overlap).
+ */
+static inline int add_pipe_actions(posix_spawn_file_actions_t *actions,
+								   int pipe[PIPE_ENDS], int from, int to)
+{
+	int other = (from == PIPE_READ) ? PIPE_WRITE : PIPE_READ, ret = 0;
+
+	if (pipe[other] != -1)
+	{
+		ret = posix_spawn_file_actions_addclose(actions,
+												pipe[other]);
+	}
+	if (!ret && pipe[from] != -1)
+	{
+		ret = posix_spawn_file_actions_adddup2(actions,
+											   pipe[from], to);
+		if (!ret && pipe[from] != to)
+		{
+			ret = posix_spawn_file_actions_addclose(actions,
+													pipe[from]);
+		}
+	}
+	return ret;
+}
+
+/**
+ * Use posix_spawn() to start the process, which has the advantage of avoiding
+ * several issues with fork(), in particular on macOS where atfork handlers in
+ * system libraries use allocations that can interfere with e.g. ASan's wrappers
+ * and the locks they use.
+ */
+static bool process_spawn(private_process_t *this, char *const argv[],
+						  char *const envp[], bool close_all)
+{
+	posix_spawn_file_actions_t actions;
+	posix_spawnattr_t attr;
+	pid_t pid;
+	int ret = 0;
+
+	if (posix_spawn_file_actions_init(&actions) != 0)
+	{
+		return FALSE;
+	}
+	if (posix_spawnattr_init(&attr) != 0)
+	{
+		posix_spawn_file_actions_destroy(&actions);
+		return FALSE;
+	}
+	if (!ret)
+	{
+		ret = add_pipe_actions(&actions, this->in, PIPE_READ, 0);
+	}
+	if (!ret)
+	{
+		ret = add_pipe_actions(&actions, this->out, PIPE_WRITE, 1);
+	}
+	if (!ret)
+	{
+		ret = add_pipe_actions(&actions, this->err, PIPE_WRITE, 2);
+	}
+	if (!ret && close_all)
+	{
+#ifdef HAVE_POSIX_SPAWN_FILE_ACTIONS_ADDCLOSEFROM_NP
+		ret = posix_spawn_file_actions_addclosefrom_np(&actions, 3);
+#elif HAVE_DECL_POSIX_SPAWN_CLOEXEC_DEFAULT
+		ret = posix_spawnattr_setflags(&attr, POSIX_SPAWN_CLOEXEC_DEFAULT);
+#ifdef HAVE_POSIX_SPAWN_FILE_ACTIONS_ADDINHERIT_NP
+		/* the above includes FDs 0-2 on macOS (but not on Android), so inherit
+		 * them if they are not redirected to preserve the behavior seen on
+		 * other platforms and with the fork fallback */
+		if (!ret && this->in[PIPE_READ] == -1)
+		{
+			ret = posix_spawn_file_actions_addinherit_np(&actions, 0);
+		}
+		if (!ret && this->out[PIPE_WRITE] == -1)
+		{
+			ret = posix_spawn_file_actions_addinherit_np(&actions, 1);
+		}
+		if (!ret && this->err[PIPE_WRITE] == -1)
+		{
+			ret = posix_spawn_file_actions_addinherit_np(&actions, 2);
+		}
+#endif
+#endif
+	}
+	if (!ret)
+	{
+		ret = posix_spawn(&pid, argv[0], &actions, &attr, argv, envp);
+	}
+	posix_spawn_file_actions_destroy(&actions);
+	posix_spawnattr_destroy(&attr);
+	if (ret)
+	{
+		DBG1(DBG_LIB, "spawning process failed: %s", strerror(ret));
+		return FALSE;
+	}
+	this->pid = pid;
+	return TRUE;
+}
+#endif
+
 /**
  * See header
  */
@@ -159,6 +276,13 @@ process_t* process_start(char *const argv[], char *const envp[],
 		return NULL;
 	}
 
+#ifdef USE_POSIX_SPAWN
+	if (!process_spawn(this, argv, envp ?: empty, close_all))
+	{
+		process_destroy(this);
+		return NULL;
+	}
+#else
 	this->pid = fork();
 	switch (this->pid)
 	{
@@ -177,6 +301,10 @@ process_t* process_start(char *const argv[], char *const envp[],
 				{
 					raise(SIGKILL);
 				}
+				if (this->in[PIPE_READ] != 0)
+				{
+					close(this->in[PIPE_READ]);
+				}
 			}
 			if (this->out[PIPE_WRITE] != -1)
 			{
@@ -184,12 +312,20 @@ process_t* process_start(char *const argv[], char *const envp[],
 				{
 					raise(SIGKILL);
 				}
+				if (this->out[PIPE_WRITE] != 1)
+				{
+					close(this->out[PIPE_WRITE]);
+				}
 			}
 			if (this->err[PIPE_WRITE] != -1)
 			{
 				if (dup2(this->err[PIPE_WRITE], 2) == -1)
 				{
 					raise(SIGKILL);
+				}
+				if (this->err[PIPE_WRITE] != 2)
+				{
+					close(this->err[PIPE_WRITE]);
 				}
 			}
 			if (close_all)
@@ -203,26 +339,29 @@ process_t* process_start(char *const argv[], char *const envp[],
 			/* not reached */
 		default:
 			/* parent */
-			close_if(&this->in[PIPE_READ]);
-			close_if(&this->out[PIPE_WRITE]);
-			close_if(&this->err[PIPE_WRITE]);
-			if (in)
-			{
-				*in = this->in[PIPE_WRITE];
-				this->in[PIPE_WRITE] = -1;
-			}
-			if (out)
-			{
-				*out = this->out[PIPE_READ];
-				this->out[PIPE_READ] = -1;
-			}
-			if (err)
-			{
-				*err = this->err[PIPE_READ];
-				this->err[PIPE_READ] = -1;
-			}
-			return &this->public;
+			break;
 	}
+#endif
+
+	close_if(&this->in[PIPE_READ]);
+	close_if(&this->out[PIPE_WRITE]);
+	close_if(&this->err[PIPE_WRITE]);
+	if (in)
+	{
+		*in = this->in[PIPE_WRITE];
+		this->in[PIPE_WRITE] = -1;
+	}
+	if (out)
+	{
+		*out = this->out[PIPE_READ];
+		this->out[PIPE_READ] = -1;
+	}
+	if (err)
+	{
+		*err = this->err[PIPE_READ];
+		this->err[PIPE_READ] = -1;
+	}
+	return &this->public;
 }
 
 /**
