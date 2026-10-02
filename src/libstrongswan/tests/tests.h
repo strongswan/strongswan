@@ -43,6 +43,7 @@ TEST_SUITE_DEPEND(rsa_oaep_sha384_suite_create, PRIVKEY_DECRYPT, ENCRYPT_RSA_OAE
 TEST_SUITE_DEPEND(rsa_oaep_sha512_suite_create, PRIVKEY_DECRYPT, ENCRYPT_RSA_OAEP_SHA512)
 TEST_SUITE_DEPEND(certpolicy_suite_create, CERT_ENCODE, CERT_X509)
 TEST_SUITE_DEPEND(certnames_suite_create, CERT_ENCODE, CERT_X509)
+TEST_SUITE_DEPEND(credential_manager_suite_create, PRIVKEY_GEN, KEY_ED25519)
 TEST_SUITE_DEPEND(serial_gen_suite_create, CERT_ENCODE, CERT_X509)
 TEST_SUITE_DEPEND(serial_parse_suite_create, CERT_DECODE, CERT_X509)
 TEST_SUITE(host_suite_create)
