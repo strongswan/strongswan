@@ -46,7 +46,7 @@ struct private_pgp_cert_t {
 	/**
 	 * creation time
 	 */
-	uint32_t created;
+	time_t created;
 
 	/**
 	 * days the certificate is valid
@@ -74,6 +74,13 @@ struct private_pgp_cert_t {
 	refcount_t ref;
 };
 
+/**
+ * Clamps the given time at Jan 19 03:14:07 UTC 2038 on 32-bit platforms
+ */
+#define CLAMP_TIME32(val) ({ \
+	typeof(val) _val = (val); \
+	(sizeof(time_t) == 4 && _val > TIME_32_BIT_SIGNED_MAX) ? \
+		TIME_32_BIT_SIGNED_MAX : _val; })
 
 METHOD(certificate_t, get_type, certificate_type_t,
 	private_pgp_cert_t *this)
@@ -156,16 +163,16 @@ METHOD(certificate_t, get_validity, bool,
 	}
 	if (this->valid)
 	{
-		expiry = this->created + this->valid * 24 * 60 * 60;
+		expiry = this->created + (uint64_t)this->valid * 24 * 60 * 60;
 	}
-	if (!expiry || (sizeof(time_t) == 4 && expiry > TIME_32_BIT_SIGNED_MAX))
+	if (!expiry)
 	{
 		/* Jan 19 03:14:07 UTC 2038 */
 		until = TIME_32_BIT_SIGNED_MAX;
 	}
 	else
 	{
-		until = expiry;
+		until = CLAMP_TIME32(expiry);
 	}
 	if (not_after)
 	{
@@ -271,6 +278,7 @@ private_pgp_cert_t *create_empty()
 static bool parse_public_key(private_pgp_cert_t *this, chunk_t packet)
 {
 	chunk_t pubkey_packet = packet;
+	uint32_t created;
 
 	if (!pgp_read_scalar(&packet, 1, &this->version))
 	{
@@ -279,14 +287,14 @@ static bool parse_public_key(private_pgp_cert_t *this, chunk_t packet)
 	switch (this->version)
 	{
 		case 3:
-			if (!pgp_read_scalar(&packet, 4, &this->created) ||
+			if (!pgp_read_scalar(&packet, 4, &created) ||
 				!pgp_read_scalar(&packet, 2, &this->valid))
 			{
 				return FALSE;
 			}
 			break;
 		case 4:
-			if (!pgp_read_scalar(&packet, 4, &this->created))
+			if (!pgp_read_scalar(&packet, 4, &created))
 			{
 				return FALSE;
 			}
@@ -296,6 +304,7 @@ static bool parse_public_key(private_pgp_cert_t *this, chunk_t packet)
 				 this->version);
 			return FALSE;
 	}
+	this->created = CLAMP_TIME32(created);
 	if (this->valid)
 	{
 		DBG2(DBG_ASN, "L2 - created %T, valid %d days", &this->created, FALSE,
@@ -356,6 +365,7 @@ static bool parse_public_key(private_pgp_cert_t *this, chunk_t packet)
 static bool parse_signature(private_pgp_cert_t *this, chunk_t packet)
 {
 	uint32_t version, len, type, created;
+	time_t created_time DBG_UNUSED;
 
 	if (!pgp_read_scalar(&packet, 1, &version))
 	{
@@ -387,8 +397,9 @@ static bool parse_signature(private_pgp_cert_t *this, chunk_t packet)
 		{
 			return FALSE;
 		}
+		created_time = CLAMP_TIME32(created);
 		DBG2(DBG_ASN, "L2 - v3 signature of type 0x%02x, created %T", type,
-			 &created, FALSE);
+			 &created_time, FALSE);
 	}
 	/* TODO: parse and save signature to a list */
 	return TRUE;
