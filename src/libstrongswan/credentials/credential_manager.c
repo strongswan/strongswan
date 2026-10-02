@@ -1241,7 +1241,7 @@ METHOD(credential_manager_t, get_private, private_key_t*,
 	auth_cfg_t *auth)
 {
 	enumerator_t *enumerator;
-	certificate_t *cert;
+	certificate_t *cert, *first_cert = NULL;
 	private_key_t *private = NULL, *first_private = NULL;
 	auth_cfg_t *trustchain, *first_trustchain = NULL;
 	auth_rule_t rule;
@@ -1283,6 +1283,7 @@ METHOD(credential_manager_t, get_private, private_key_t*,
 						}
 						else if (!first_private)
 						{
+							first_cert = cert->get_ref(cert);
 							first_private = private;
 							first_trustchain = trustchain;
 							private = NULL;
@@ -1319,10 +1320,7 @@ METHOD(credential_manager_t, get_private, private_key_t*,
 						}
 						else if (!first_private)
 						{
-							/* add this certificate, if we end up choosing a
-							 * different one, it gets replaced above */
-							auth->add(auth, AUTH_RULE_SUBJECT_CERT,
-									  cert->get_ref(cert));
+							first_cert = cert->get_ref(cert);
 							first_private = private;
 							first_trustchain = trustchain;
 							private = NULL;
@@ -1341,8 +1339,11 @@ METHOD(credential_manager_t, get_private, private_key_t*,
 		if (!private && first_private)
 		{
 			auth->merge(auth, first_trustchain, FALSE);
+			prefer_cert(auth, first_cert);
+			first_cert = NULL;
 			private = first_private->get_ref(first_private);
 		}
+		DESTROY_IF(first_cert);
 		DESTROY_IF(first_private);
 		DESTROY_IF(first_trustchain);
 	}
