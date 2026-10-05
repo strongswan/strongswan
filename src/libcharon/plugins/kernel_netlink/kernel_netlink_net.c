@@ -1517,6 +1517,10 @@ CALLBACK(filter_addresses, bool,
 		{	/* skip deprecated addresses or those with an unusable scope */
 			continue;
 		}
+		if (host_is_loopback(addr->ip) || host_is_linklocal(addr->ip))
+		{	/* skip loopback and link-local addresses explicitly */
+			continue;
+		}
 		if (!addr->refcount && addr->ip->get_family(addr->ip) == AF_INET6)
 		{	/* handle non-VIP temporary IPv6 addresses according to config */
 			bool temporary = (addr->flags & IFA_F_TEMPORARY) == IFA_F_TEMPORARY;
@@ -1553,10 +1557,6 @@ CALLBACK(filter_interfaces, bool,
 	{
 		if (!(data->which & ADDR_TYPE_IGNORED) && !iface->usable)
 		{	/* skip interfaces excluded by config */
-			continue;
-		}
-		if (!(data->which & ADDR_TYPE_LOOPBACK) && (iface->flags & IFF_LOOPBACK))
-		{	/* ignore loopback devices */
 			continue;
 		}
 		if (!(data->which & ADDR_TYPE_DOWN) && !(iface->flags & IFF_UP))

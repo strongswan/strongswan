@@ -1122,8 +1122,7 @@ CALLBACK(filter_addresses, bool,
 	address_enumerator_t *data, enumerator_t *orig, va_list args)
 {
 	addr_entry_t *addr;
-	host_t *ip, **out;
-	struct sockaddr_in6 *sin6;
+	host_t **out;
 
 	VA_ARGS_VGET(args, out);
 
@@ -1137,16 +1136,11 @@ CALLBACK(filter_addresses, bool,
 		{	/* address is regular, but not requested */
 			continue;
 		}
-		ip = addr->ip;
-		if (ip->get_family(ip) == AF_INET6)
-		{
-			sin6 = (struct sockaddr_in6 *)ip->get_sockaddr(ip);
-			if (IN6_IS_ADDR_LINKLOCAL(&sin6->sin6_addr))
-			{   /* skip addresses with a unusable scope */
-				continue;
-			}
+		if (host_is_loopback(addr->ip) || host_is_linklocal(addr->ip))
+		{	/* skip loopback and link-local addresses */
+			continue;
 		}
-		*out = ip;
+		*out = addr->ip;
 		return TRUE;
 	}
 	return FALSE;
@@ -1173,10 +1167,6 @@ CALLBACK(filter_interfaces, bool,
 	{
 		if (!(data->which & ADDR_TYPE_IGNORED) && !iface->usable)
 		{	/* skip interfaces excluded by config */
-			continue;
-		}
-		if (!(data->which & ADDR_TYPE_LOOPBACK) && (iface->flags & IFF_LOOPBACK))
-		{	/* ignore loopback devices */
 			continue;
 		}
 		if (!(data->which & ADDR_TYPE_DOWN) && !(iface->flags & IFF_UP))
