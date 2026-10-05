@@ -801,6 +801,9 @@ typedef unsigned long ck_mechanism_type_t;
 #define CKM_ML_DSA_KEY_PAIR_GEN         (0x1cUL)
 #define CKM_ML_DSA                      (0x1dUL)
 
+#define CKH_HEDGE_PREFERRED             (0UL)
+#define CKH_HEDGE_REQUIRED              (1UL)
+#define CKH_DETERMINISTIC_REQUIRED      (2UL)
 
 #define CKM_VENDOR_DEFINED              (1UL << 31)
 
@@ -936,6 +939,12 @@ typedef struct CK_XEDDSA_PARAMS {
 } CK_XEDDSA_PARAMS;
 
 typedef CK_XEDDSA_PARAMS *CK_XEDDSA_PARAMS_PTR;
+
+typedef struct CK_SIGN_ADDITIONAL_CONTEXT {
+        unsigned long hedgeVariant;
+        unsigned char *pContext;
+        unsigned long ulContextLen;
+} CK_SIGN_ADDITIONAL_CONTEXT;
 
 typedef struct CK_AES_CTR_PARAMS {
     unsigned long ulCounterBits;

@@ -1012,20 +1012,24 @@ static private_pkcs11_public_key_t *find_key_by_keyid(pkcs11_library_t *p11,
 				CK_ATTRIBUTE ps_attr[] = {
 					{CKA_PARAMETER_SET, &param_set, sizeof(param_set)},
 				};
-				if (p11->f->C_GetAttributeValue(session, object, ps_attr, 1) == CKR_OK)
+				if (p11->f->C_GetAttributeValue(session, object,
+												ps_attr, 1) == CKR_OK)
 				{
 					switch (param_set)
 					{
 						case CKP_ML_DSA_44:
 							key_type = KEY_ML_DSA_44;
+							keylen = get_public_key_size(key_type) * 8;
 							found = TRUE;
 							break;
 						case CKP_ML_DSA_65:
 							key_type = KEY_ML_DSA_65;
+							keylen = get_public_key_size(key_type) * 8;
 							found = TRUE;
 							break;
 						case CKP_ML_DSA_87:
 							key_type = KEY_ML_DSA_87;
+							keylen = get_public_key_size(key_type) * 8;
 							found = TRUE;
 							break;
 					}

@@ -45,6 +45,7 @@
 
 #include <utils/debug.h>
 #include <asn1/asn1.h>
+#include <credentials/keys/signature_params.h>
 
 typedef struct private_pkcs11_private_key_t private_pkcs11_private_key_t;
 
@@ -348,6 +349,41 @@ CK_MECHANISM_PTR pkcs11_signature_scheme_to_mech(pkcs11_library_t *p11,
 				}
 				mechanism->pParameter = rsa_pkcs_pss_params;
 				mechanism->ulParameterLen = sizeof(CK_RSA_PKCS_PSS_PARAMS);
+			}
+			else if (scheme == SIGN_ML_DSA_44 ||
+					 scheme == SIGN_ML_DSA_65 ||
+					 scheme == SIGN_ML_DSA_87)
+			{
+				if (params)
+				{
+					pqc_params_t pqc_params;
+					CK_SIGN_ADDITIONAL_CONTEXT *ctx_params;
+
+					if (!pqc_params_create(params, &pqc_params))
+					{
+						free(mechanism);
+						return NULL;
+					}
+					ctx_params = malloc(sizeof(*ctx_params) +
+										pqc_params.ctx.len);
+					ctx_params->hedgeVariant = pqc_params.deterministic ?
+						CKH_DETERMINISTIC_REQUIRED : CKH_HEDGE_REQUIRED;
+					ctx_params->ulContextLen = pqc_params.ctx.len;
+					if (pqc_params.ctx.len)
+					{
+						ctx_params->pContext = (CK_BYTE_PTR)(ctx_params + 1);
+						memcpy(ctx_params->pContext, pqc_params.ctx.ptr,
+							   pqc_params.ctx.len);
+					}
+					else
+					{
+						ctx_params->pContext = NULL;
+					}
+					pqc_params_free(&pqc_params);
+					mechanism->pParameter = ctx_params;
+					mechanism->ulParameterLen =
+							sizeof(CK_SIGN_ADDITIONAL_CONTEXT);
+				}
 			}
 			else
 			{
