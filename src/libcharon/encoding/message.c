@@ -2943,7 +2943,8 @@ static status_t add_fragment(private_message_t *this, uint16_t num,
 	this->frag->len += data.len;
 	if (this->frag->len > this->frag->max_packet)
 	{
-		DBG1(DBG_ENC, "fragmented IKE message is too large");
+		DBG1(DBG_ENC, "fragmented IKE message exceeds the maximum packet "
+			 "size of %zu bytes", this->frag->max_packet);
 		reset_defrag(this);
 		return FAILED;
 	}
