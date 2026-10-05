@@ -28,7 +28,7 @@ jobs:
   macos:
     strategy:
       matrix:
-        os: [macos-latest, macos-14]
+        os: [macos-latest, macos-15]
     needs: pre-check
     if: ${{ needs.pre-check.outputs.should_skip != 'true' }}
     runs-on: ${{ matrix.os }}
