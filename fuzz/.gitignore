@@ -4,6 +4,7 @@ fuzz_crls_cus
 fuzz_crls_def
 fuzz_ids
 fuzz_ike
+fuzz_ml_kem
 fuzz_ocsp_req_cus
 fuzz_ocsp_req_def
 fuzz_ocsp_rsp_cus

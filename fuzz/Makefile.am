@@ -64,6 +64,10 @@ fuzzers_no_plugins = \
 
 ALL_FUZZERS=$(fuzzers_with_def) $(fuzzers_with_cus) $(fuzzers_no_plugins)
 
+if USE_ML
+ALL_FUZZERS += fuzz_ml_kem
+endif
+
 all-local: $(ALL_FUZZERS)
 
 CLEANFILES=$(ALL_FUZZERS)
@@ -112,6 +116,9 @@ fuzz_tls: fuzz_tls.c ${libfuzzer}
 
 fuzz_vici: fuzz_vici.c ${libfuzzer}
 	$(CC) $(AM_CPPFLAGS) $(CFLAGS) -o $@ $< $(charon_ldflags)
+
+fuzz_ml_kem: fuzz_ml_kem.c ${libfuzzer}
+	$(CC) $(AM_CPPFLAGS) -DPLUGINS="\"sha3 ml\"" $(CFLAGS) -o $@ $< $(fuzz_ldflags)
 
 noinst_LIBRARIES = libFuzzerLocal.a
 libFuzzerLocal_a_SOURCES = libFuzzerLocal.c
