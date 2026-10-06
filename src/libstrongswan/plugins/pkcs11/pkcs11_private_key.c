@@ -196,11 +196,11 @@ CK_MECHANISM_PTR pkcs11_signature_scheme_to_mech(pkcs11_library_t *p11,
 		{SIGN_ECDSA_521,				{CKM_ECDSA,				NULL, 0},
 		 KEY_ECDSA, 521,									HASH_SHA512},
 		{SIGN_ML_DSA_44,				{CKM_ML_DSA,			NULL, 0},
-		 KEY_ML_DSA_44, 0,									HASH_UNKNOWN},
+		 KEY_ML_DSA_44, 0,								   HASH_UNKNOWN},
 		{SIGN_ML_DSA_65,				{CKM_ML_DSA,			NULL, 0},
-		 KEY_ML_DSA_65, 0,									HASH_UNKNOWN},
+		 KEY_ML_DSA_65, 0,								   HASH_UNKNOWN},
 		{SIGN_ML_DSA_87,				{CKM_ML_DSA,			NULL, 0},
-		 KEY_ML_DSA_87, 0,									HASH_UNKNOWN},
+		 KEY_ML_DSA_87, 0,								   HASH_UNKNOWN},
 	};
 
 	CK_MECHANISM_PTR mechanism;
@@ -354,36 +354,31 @@ CK_MECHANISM_PTR pkcs11_signature_scheme_to_mech(pkcs11_library_t *p11,
 					 scheme == SIGN_ML_DSA_65 ||
 					 scheme == SIGN_ML_DSA_87)
 			{
-				if (params)
-				{
-					pqc_params_t pqc_params;
-					CK_SIGN_ADDITIONAL_CONTEXT *ctx_params;
+				pqc_params_t pqc_params;
+				CK_SIGN_ADDITIONAL_CONTEXT *ctx_params;
 
-					if (!pqc_params_create(params, &pqc_params))
-					{
-						free(mechanism);
-						return NULL;
-					}
-					ctx_params = malloc(sizeof(*ctx_params) +
-										pqc_params.ctx.len);
-					ctx_params->hedgeVariant = pqc_params.deterministic ?
-						CKH_DETERMINISTIC_REQUIRED : CKH_HEDGE_REQUIRED;
-					ctx_params->ulContextLen = pqc_params.ctx.len;
-					if (pqc_params.ctx.len)
-					{
-						ctx_params->pContext = (CK_BYTE_PTR)(ctx_params + 1);
-						memcpy(ctx_params->pContext, pqc_params.ctx.ptr,
-							   pqc_params.ctx.len);
-					}
-					else
-					{
-						ctx_params->pContext = NULL;
-					}
-					pqc_params_free(&pqc_params);
-					mechanism->pParameter = ctx_params;
-					mechanism->ulParameterLen =
-							sizeof(CK_SIGN_ADDITIONAL_CONTEXT);
+				if (!pqc_params_create(params, &pqc_params))
+				{
+					free(mechanism);
+					return NULL;
 				}
+				INIT_EXTRA(ctx_params, pqc_params.ctx.len,
+					.hedgeVariant = CKH_HEDGE_REQUIRED,
+					.ulContextLen = pqc_params.ctx.len,
+				);
+				if (pqc_params.deterministic)
+				{
+					ctx_params->hedgeVariant = CKH_DETERMINISTIC_REQUIRED;
+				}
+				if (pqc_params.ctx.len)
+				{
+					ctx_params->pContext = (CK_BYTE_PTR)(ctx_params + 1);
+					memcpy(ctx_params->pContext, pqc_params.ctx.ptr,
+						   pqc_params.ctx.len);
+				}
+				pqc_params_free(&pqc_params);
+				mechanism->pParameter = ctx_params;
+				mechanism->ulParameterLen = sizeof(CK_SIGN_ADDITIONAL_CONTEXT);
 			}
 			else
 			{
@@ -466,8 +461,8 @@ METHOD(private_key_t, sign, bool,
 {
 	CK_MECHANISM_PTR mechanism;
 	CK_SESSION_HANDLE session;
-	CK_BYTE_PTR buf;
-	CK_ULONG len;
+	CK_BYTE_PTR buf = NULL;
+	CK_ULONG len = 0;
 	CK_RV rv;
 	hash_algorithm_t hash_alg;
 	chunk_t hash = chunk_empty;
@@ -530,25 +525,12 @@ METHOD(private_key_t, sign, bool,
 		}
 		data = hash;
 	}
-	len = (get_keysize(this) + 7) / 8;
-	if (this->type == KEY_ECDSA)
-	{	/* signature is twice the length of the base point order */
-		len *= 2;
-	}
-	else if (this->type == KEY_ML_DSA_44)
+	rv = this->lib->f->C_Sign(session, data.ptr, data.len, NULL, &len);
+	if (rv == CKR_OK)
 	{
-		len = 2420;
+		buf = malloc(len);
+		rv = this->lib->f->C_Sign(session, data.ptr, data.len, buf, &len);
 	}
-	else if (this->type == KEY_ML_DSA_65)
-	{
-		len = 3309;
-	}
-	else if (this->type == KEY_ML_DSA_87)
-	{
-		len = 4627;
-	}
-	buf = malloc(len);
-	rv = this->lib->f->C_Sign(session, data.ptr, data.len, buf, &len);
 	this->lib->f->C_CloseSession(session);
 	chunk_free(&hash);
 	if (rv != CKR_OK)
@@ -899,80 +881,67 @@ static bool find_key(private_pkcs11_private_key_t *this, chunk_t keyid)
 	CK_OBJECT_HANDLE object;
 	CK_KEY_TYPE type;
 	CK_BBOOL reauth = FALSE;
+	CK_ULONG param_set = 0;
 	CK_ATTRIBUTE attr[] = {
 		{CKA_KEY_TYPE, &type, sizeof(type)},
+		{CKA_PARAMETER_SET, &param_set, sizeof(param_set)},
 		{CKA_ALWAYS_AUTHENTICATE, &reauth, sizeof(reauth)},
 	};
 	enumerator_t *enumerator;
 	int count = countof(attr);
-	bool found = FALSE;
 
 	/* do not use CKA_ALWAYS_AUTHENTICATE if not supported */
 	if (!(this->lib->get_features(this->lib) & PKCS11_ALWAYS_AUTH_KEYS))
 	{
+		attr[2].ulValueLen = CK_UNAVAILABLE_INFORMATION;
 		count--;
 	}
+
 	enumerator = this->lib->create_object_enumerator(this->lib,
 							this->session, tmpl, countof(tmpl), attr, count);
 	if (enumerator->enumerate(enumerator, &object) &&
 		attr[0].ulValueLen != CK_UNAVAILABLE_INFORMATION)
 	{
-		this->type = KEY_RSA;
 		switch (type)
 		{
+			case CKK_RSA:
+				this->type = KEY_RSA;
+				break;
 			case CKK_ECDSA:
 				this->type = KEY_ECDSA;
-				/* fall-through */
-			case CKK_RSA:
-				if (attr[1].ulValueLen != CK_UNAVAILABLE_INFORMATION)
-				{
-					this->reauth = reauth;
-				}
-				this->object = object;
-				found = TRUE;
 				break;
 			case CKK_ML_DSA:
-			{
-				CK_ULONG param_set = 0;
-				CK_ATTRIBUTE ps_attr[] = {
-					{CKA_PARAMETER_SET, &param_set, sizeof(param_set)},
-				};
-				if (this->lib->f->C_GetAttributeValue(this->session,
-						object, ps_attr, 1) == CKR_OK)
+				if (attr[1].ulValueLen != CK_UNAVAILABLE_INFORMATION)
 				{
 					switch (param_set)
 					{
 						case CKP_ML_DSA_44:
 							this->type = KEY_ML_DSA_44;
-							found = TRUE;
 							break;
 						case CKP_ML_DSA_65:
 							this->type = KEY_ML_DSA_65;
-							found = TRUE;
 							break;
 						case CKP_ML_DSA_87:
 							this->type = KEY_ML_DSA_87;
-							found = TRUE;
 							break;
 					}
 				}
-				if (found)
-				{
-					if (attr[1].ulValueLen != CK_UNAVAILABLE_INFORMATION)
-					{
-						this->reauth = reauth;
-					}
-					this->object = object;
-				}
 				break;
-			}
 			default:
 				DBG1(DBG_CFG, "PKCS#11 key type %d not supported", type);
 				break;
 		}
+		if (this->type != KEY_ANY)
+		{
+			if (attr[2].ulValueLen != CK_UNAVAILABLE_INFORMATION)
+			{
+				this->reauth = reauth;
+			}
+			this->object = object;
+		}
 	}
 	enumerator->destroy(enumerator);
-	return found;
+	return this->type != KEY_ANY;
 }
 
 /**

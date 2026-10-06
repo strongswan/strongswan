@@ -230,6 +230,9 @@ METHOD(plugin_t, get_features, int,
 	static plugin_feature_t f_pubkey[] = {
 		PLUGIN_REGISTER(PUBKEY, pkcs11_public_key_load, TRUE),
 			PLUGIN_PROVIDE(PUBKEY, KEY_RSA),
+			PLUGIN_PROVIDE(PUBKEY, KEY_ML_DSA_44),
+			PLUGIN_PROVIDE(PUBKEY, KEY_ML_DSA_65),
+			PLUGIN_PROVIDE(PUBKEY, KEY_ML_DSA_87),
 			PLUGIN_PROVIDE(PUBKEY, KEY_ECDSA),
 	};
 	static plugin_feature_t f_manager[] = {
