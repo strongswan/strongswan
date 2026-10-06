@@ -170,6 +170,28 @@ static void push_dns_env(private_updown_listener_t *this, ike_sa_t *ike_sa,
 }
 
 /**
+ * Push variables for handled DNS search domains
+ */
+static void push_domain_env(private_updown_listener_t *this, ike_sa_t *ike_sa,
+							char *envp[], u_int count)
+{
+	enumerator_t *enumerator;
+	char *domain;
+	int i = 0;
+
+	if (this->handler)
+	{
+		enumerator = this->handler->create_domain_enumerator(this->handler,
+											ike_sa->get_unique_id(ike_sa));
+		while (enumerator->enumerate(enumerator, &domain))
+		{
+			push_env(envp, count, "PLUTO_DNS_DOMAIN_%d=%s", ++i, domain);
+		}
+		enumerator->destroy(enumerator);
+	}
+}
+
+/**
  * Push variables for local/remote virtual IPs
  */
 static void push_vip_env(private_updown_listener_t *this, ike_sa_t *ike_sa,
@@ -381,6 +403,7 @@ static void invoke_once(private_updown_listener_t *this, ike_sa_t *ike_sa,
 		push_env(envp, countof(envp), "PLUTO_IPCOMP=1");
 	}
 	push_dns_env(this, ike_sa, envp, countof(envp));
+	push_domain_env(this, ike_sa, envp, countof(envp));
 	if (config->has_option(config, OPT_HOSTACCESS))
 	{
 		push_env(envp, countof(envp), "PLUTO_HOST_ACCESS=1");

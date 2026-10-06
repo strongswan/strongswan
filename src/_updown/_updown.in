@@ -135,6 +135,11 @@
 #              responder, $i enumerates from 1 to the number of servers per
 #              address family.
 #
+#       PLUTO_DNS_DOMAIN_$i
+#              contains a DNS search domain (INTERNAL_DNS_DOMAIN) received
+#              from a responder, $i enumerates from 1 to the number of
+#              domains. Used for split-DNS configurations.
+#
 
 # define a minimum PATH environment in case it is not set
 PATH="/sbin:/bin:/usr/sbin:/usr/bin:@sbindir@"

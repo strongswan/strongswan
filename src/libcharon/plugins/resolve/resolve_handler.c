@@ -71,6 +71,11 @@ struct private_resolve_handler_t {
 	 * Reference counting for DNS servers dns_server_t
 	 */
 	hashtable_t *servers;
+
+	/**
+	 * Reference counting for DNS search domains dns_domain_t
+	 */
+	hashtable_t *domains;
 };
 
 /**
@@ -91,6 +96,16 @@ typedef struct {
 } dns_server_t;
 
 /**
+ * Reference counting for DNS search domains
+ */
+typedef struct {
+	/** DNS search domain */
+	char *domain;
+	/** reference count */
+	u_int refcount;
+} dns_domain_t;
+
+/**
  * Hash DNS server address
  */
 static u_int dns_server_hash(const void *key)
@@ -109,14 +124,31 @@ static bool dns_server_equals(const void *a, const void *b)
 }
 
 /**
- * Writes the given nameservers to resolv.conf
+ * Convert a received DNS domain attribute to a sanitized, NUL-terminated
+ * string. The value is responder-controlled and gets written to resolv.conf,
+ * so replace any non-printable bytes (e.g. a newline that would otherwise
+ * inject a nameserver line).
  */
-static bool write_nameservers(private_resolve_handler_t *this,
-							  hashtable_t *servers)
+static char *sanitize_domain(chunk_t data)
+{
+	chunk_t sane;
+	char *domain;
+
+	chunk_printable(data, &sane, '?');
+	domain = strndup(sane.ptr, sane.len);
+	chunk_free(&sane);
+	return domain;
+}
+
+/**
+ * Writes the current set of nameservers and search domains to resolv.conf
+ */
+static bool write_resolv_conf(private_resolve_handler_t *this)
 {
 	FILE *in, *out;
 	enumerator_t *enumerator;
 	dns_server_t *dns;
+	dns_domain_t *dom;
 	char line[1024];
 	bool handled = FALSE;
 
@@ -127,16 +159,29 @@ static bool write_nameservers(private_resolve_handler_t *this,
 	if (out)
 	{
 		/* write our current set of servers */
-		enumerator = servers->create_enumerator(servers);
+		enumerator = this->servers->create_enumerator(this->servers);
 		while (enumerator->enumerate(enumerator, NULL, &dns))
 		{
 			fprintf(out, "nameserver %H" RESOLV_CONF_SUFFIX "\n", dns->server);
 		}
 		enumerator->destroy(enumerator);
 
+		/* write our current set of search domains as a single line */
+		if (this->domains->get_count(this->domains))
+		{
+			fprintf(out, "search");
+			enumerator = this->domains->create_enumerator(this->domains);
+			while (enumerator->enumerate(enumerator, NULL, &dom))
+			{
+				fprintf(out, " %s", dom->domain);
+			}
+			enumerator->destroy(enumerator);
+			fprintf(out, RESOLV_CONF_SUFFIX "\n");
+		}
+
 		if (in)
 		{
-			/* copy the rest of the file, except our previous servers */
+			/* copy the rest of the file, except our previous entries */
 			while (fgets(line, sizeof(line), in))
 			{
 				if (!strstr(line, RESOLV_CONF_SUFFIX "\n"))
@@ -158,18 +203,19 @@ static bool write_nameservers(private_resolve_handler_t *this,
 }
 
 /**
- * Install the given nameservers by invoking resolvconf. If the table is empty,
- * remove the config.
+ * Install the current set of nameservers and search domains by invoking
+ * resolvconf. If there are none, remove the config.
  */
-static bool invoke_resolvconf(private_resolve_handler_t *this,
-							  hashtable_t *servers)
+static bool invoke_resolvconf(private_resolve_handler_t *this)
 {
 	process_t *process;
 	enumerator_t *enumerator;
 	dns_server_t *dns;
+	dns_domain_t *dom;
 	FILE *shell;
 	int in, out, retval;
-	bool install = servers->get_count(servers);
+	bool install = this->servers->get_count(this->servers) ||
+				   this->domains->get_count(this->domains);
 
 	process = process_start_shell(NULL, install ? &in : NULL, &out,
 								  NULL, "2>&1 %s %s %s", this->resolvconf,
@@ -183,12 +229,24 @@ static bool invoke_resolvconf(private_resolve_handler_t *this,
 		shell = fdopen(in, "w");
 		if (shell)
 		{
-			enumerator = servers->create_enumerator(servers);
+			enumerator = this->servers->create_enumerator(this->servers);
 			while (enumerator->enumerate(enumerator, NULL, &dns))
 			{
 				fprintf(shell, "nameserver %H\n", dns->server);
 			}
 			enumerator->destroy(enumerator);
+
+			if (this->domains->get_count(this->domains))
+			{
+				fprintf(shell, "search");
+				enumerator = this->domains->create_enumerator(this->domains);
+				while (enumerator->enumerate(enumerator, NULL, &dom))
+				{
+					fprintf(shell, " %s", dom->domain);
+				}
+				enumerator->destroy(enumerator);
+				fprintf(shell, "\n");
+			}
 			fclose(shell);
 		}
 		else
@@ -237,6 +295,67 @@ static bool invoke_resolvconf(private_resolve_handler_t *this,
 	return process->wait(process, &retval) && retval == EXIT_SUCCESS;
 }
 
+/**
+ * Install a received DNS search domain, reference counting duplicates.
+ */
+static bool handle_domain(private_resolve_handler_t *this, chunk_t data)
+{
+	dns_domain_t *found;
+	char *domain;
+	bool handled;
+
+	if (!data.len)
+	{
+		return FALSE;
+	}
+	domain = sanitize_domain(data);
+
+	this->mutex->lock(this->mutex);
+	found = this->domains->get(this->domains, domain);
+	if (!found)
+	{
+		INIT(found,
+			.domain = domain,
+			.refcount = 1,
+		);
+		this->domains->put(this->domains, found->domain, found);
+
+		if (this->resolvconf)
+		{
+			DBG1(DBG_IKE, "installing DNS search domain %s via resolvconf",
+				 domain);
+			handled = invoke_resolvconf(this);
+		}
+		else
+		{
+			DBG1(DBG_IKE, "installing DNS search domain %s to %s", domain,
+				 this->file);
+			handled = write_resolv_conf(this);
+		}
+		if (!handled)
+		{
+			this->domains->remove(this->domains, found->domain);
+			free(found->domain);
+			free(found);
+		}
+	}
+	else
+	{
+		DBG1(DBG_IKE, "DNS search domain %s already installed, increasing "
+			 "refcount", domain);
+		found->refcount++;
+		handled = TRUE;
+		free(domain);
+	}
+	this->mutex->unlock(this->mutex);
+
+	if (!handled)
+	{
+		DBG1(DBG_IKE, "adding DNS search domain failed");
+	}
+	return handled;
+}
+
 METHOD(attribute_handler_t, handle, bool,
 	private_resolve_handler_t *this, ike_sa_t *ike_sa,
 	configuration_attribute_type_t type, chunk_t data)
@@ -253,6 +372,8 @@ METHOD(attribute_handler_t, handle, bool,
 		case INTERNAL_IP6_DNS:
 			addr = host_create_from_chunk(AF_INET6, data, 0);
 			break;
+		case INTERNAL_DNS_DOMAIN:
+			return handle_domain(this, data);
 		default:
 			return FALSE;
 	}
@@ -276,12 +397,12 @@ METHOD(attribute_handler_t, handle, bool,
 		if (this->resolvconf)
 		{
 			DBG1(DBG_IKE, "installing DNS server %H via resolvconf", addr);
-			handled = invoke_resolvconf(this, this->servers);
+			handled = invoke_resolvconf(this);
 		}
 		else
 		{
 			DBG1(DBG_IKE, "installing DNS server %H to %s", addr, this->file);
-			handled = write_nameservers(this, this->servers);
+			handled = write_resolv_conf(this);
 		}
 		if (!handled)
 		{
@@ -307,6 +428,50 @@ METHOD(attribute_handler_t, handle, bool,
 	return handled;
 }
 
+/**
+ * Release a previously installed DNS search domain.
+ */
+static void release_domain(private_resolve_handler_t *this, chunk_t data)
+{
+	dns_domain_t *found;
+	char *domain;
+
+	domain = sanitize_domain(data);
+
+	this->mutex->lock(this->mutex);
+	found = this->domains->get(this->domains, domain);
+	if (found)
+	{
+		if (--found->refcount > 0)
+		{
+			DBG1(DBG_IKE, "DNS search domain %s still used, decreasing "
+				 "refcount", domain);
+		}
+		else
+		{
+			this->domains->remove(this->domains, found->domain);
+			free(found->domain);
+			free(found);
+
+			if (this->resolvconf)
+			{
+				DBG1(DBG_IKE, "removing DNS search domain %s via resolvconf",
+					 domain);
+				invoke_resolvconf(this);
+			}
+			else
+			{
+				DBG1(DBG_IKE, "removing DNS search domain %s from %s", domain,
+					 this->file);
+				write_resolv_conf(this);
+			}
+		}
+	}
+	this->mutex->unlock(this->mutex);
+
+	free(domain);
+}
+
 METHOD(attribute_handler_t, release, void,
 	private_resolve_handler_t *this, ike_sa_t *ike_sa,
 	configuration_attribute_type_t type, chunk_t data)
@@ -323,6 +488,9 @@ METHOD(attribute_handler_t, release, void,
 		case INTERNAL_IP6_DNS:
 			family = AF_INET6;
 			break;
+		case INTERNAL_DNS_DOMAIN:
+			release_domain(this, data);
+			return;
 		default:
 			return;
 	}
@@ -346,13 +514,13 @@ METHOD(attribute_handler_t, release, void,
 			if (this->resolvconf)
 			{
 				DBG1(DBG_IKE, "removing DNS server %H via resolvconf", addr);
-				invoke_resolvconf(this, this->servers);
+				invoke_resolvconf(this);
 			}
 			else
 			{
 				DBG1(DBG_IKE, "removing DNS server %H from %s", addr,
 					 this->file);
-				write_nameservers(this, this->servers);
+				write_resolv_conf(this);
 			}
 		}
 	}
@@ -371,6 +539,8 @@ typedef struct {
 	bool v4;
 	/** request IPv6 DNS? */
 	bool v6;
+	/** request DNS search domains? */
+	bool domain;
 } attribute_enumerator_t;
 
 METHOD(enumerator_t, attribute_enumerate, bool,
@@ -392,6 +562,13 @@ METHOD(enumerator_t, attribute_enumerate, bool,
 		*type = INTERNAL_IP6_DNS;
 		*data = chunk_empty;
 		this->v6 = FALSE;
+		return TRUE;
+	}
+	if (this->domain)
+	{
+		*type = INTERNAL_DNS_DOMAIN;
+		*data = chunk_empty;
+		this->domain = FALSE;
 		return TRUE;
 	}
 	return FALSE;
@@ -425,6 +602,10 @@ METHOD(attribute_handler_t, create_attribute_enumerator, enumerator_t*,
 	linked_list_t *vips)
 {
 	attribute_enumerator_t *enumerator;
+	bool v4, v6;
+
+	v4 = has_host_family(vips, AF_INET);
+	v6 = has_host_family(vips, AF_INET6);
 
 	INIT(enumerator,
 		.public = {
@@ -432,8 +613,9 @@ METHOD(attribute_handler_t, create_attribute_enumerator, enumerator_t*,
 			.venumerate = _attribute_enumerate,
 			.destroy = (void*)free,
 		},
-		.v4 = has_host_family(vips, AF_INET),
-		.v6 = has_host_family(vips, AF_INET6),
+		.v4 = v4,
+		.v6 = v6,
+		.domain = v4 || v6,
 	);
 	return &enumerator->public;
 }
@@ -442,6 +624,7 @@ METHOD(resolve_handler_t, destroy, void,
 	private_resolve_handler_t *this)
 {
 	this->servers->destroy(this->servers);
+	this->domains->destroy(this->domains);
 	this->mutex->destroy(this->mutex);
 	free(this);
 }
@@ -465,6 +648,7 @@ resolve_handler_t *resolve_handler_create()
 		},
 		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
 		.servers = hashtable_create(dns_server_hash, dns_server_equals, 4),
+		.domains = hashtable_create(hashtable_hash_str, hashtable_equals_str, 4),
 		.file = lib->settings->get_str(lib->settings,
 								"%s.plugins.resolve.file", RESOLV_CONF, lib->ns),
 		.resolvconf = lib->settings->get_str(lib->settings,

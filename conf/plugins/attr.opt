@@ -7,8 +7,8 @@ charon.plugins.attr.<attr>
 	subnet or arbitrary value.
 
 	**<attr>** can be either _address_, _netmask_, _dns_, _nbns_, _dhcp_,
-	_subnet_, _split-include_, _split-exclude_ or the numeric identifier of the
-	attribute type. The assigned value can be an IPv4/IPv6 address, a subnet in
-	CIDR notation or an arbitrary value depending on the attribute type.  For
-	some attribute types multiple values may be specified as a comma separated
-	list.
+	_subnet_, _split-include_, _split-exclude_, _dns-domain_ or the numeric
+	identifier of the attribute type. The assigned value can be an IPv4/IPv6
+	address, a subnet in CIDR notation or an arbitrary value depending on the
+	attribute type.  For some attribute types multiple values may be specified
+	as a comma separated list.
