@@ -266,20 +266,24 @@ bool public_key_has_fingerprint(public_key_t *public, chunk_t fingerprint);
 /**
  * ASN.1 encoding of public key info
  *
- * @param pubkey		public key blob
+ * @param pubkey		public key blob (cloned)
  * @param oid			OID of the public key type
- * @return				ASN.1 encoded public key info blob
+ * @param params		optional algorithm identifier parameters (cloned)
+ * @return				ASN.1 encoded public key info blob (allocated)
  */
-chunk_t public_key_info_encode(chunk_t pubkey, int oid);
+chunk_t public_key_info_encode(chunk_t pubkey, int oid, chunk_t *params);
 
 /**
  * ASN.1 decoding of public key info
  *
  * @param spki			ASN.1 encoded subjectPublicKeyInfo
- * @param pubkey		unwrapped public key blob
+ * @param[out] pubkey	unwrapped public key blob (points into \p spki)
+ * @param[out] params	algorithm identifier parameters (optional, points
+ *						into \p spki)
  * @return				type of the key (KEY_ANY if failure)
  */
-key_type_t public_key_info_decode(chunk_t spki, chunk_t *pubkey);
+key_type_t public_key_info_decode(chunk_t spki, chunk_t *pubkey,
+								  chunk_t *params);
 
 /**
  * Return OID for a given key type

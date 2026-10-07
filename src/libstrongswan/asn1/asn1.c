@@ -682,6 +682,10 @@ int asn1_parse_algorithmIdentifier(chunk_t blob, int level0, chunk_t *parameters
 					*parameters = blob;
 				}
 			}
+			else if (parameters)
+			{
+				*parameters = chunk_empty;
+			}
 		}
 	}
 	return alg;

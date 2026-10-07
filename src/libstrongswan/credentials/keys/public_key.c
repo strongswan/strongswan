@@ -120,12 +120,19 @@ bool public_key_has_fingerprint(public_key_t *public, chunk_t fingerprint)
 /**
  * See header.
  */
-chunk_t public_key_info_encode(chunk_t pubkey, int oid)
+chunk_t public_key_info_encode(chunk_t pubkey, int oid, chunk_t *params)
 {
-	return asn1_wrap(ASN1_SEQUENCE, "mm",
-						asn1_algorithmIdentifier(oid),
-						asn1_bitstring("c", pubkey)
-					 );
+	chunk_t algid;
+
+	if (params)
+	{
+		algid = asn1_algorithmIdentifier_params(oid, chunk_clone(*params));
+	}
+	else
+	{
+		algid = asn1_algorithmIdentifier(oid);
+	}
+	return asn1_wrap(ASN1_SEQUENCE, "mm", algid, asn1_bitstring("c", pubkey));
 }
 
 /**
@@ -143,7 +150,8 @@ static const asn1Object_t pkinfoObjects[] = {
 /**
  * See header.
  */
-key_type_t public_key_info_decode(chunk_t spki, chunk_t *pubkey)
+key_type_t public_key_info_decode(chunk_t spki, chunk_t *pubkey,
+								  chunk_t *params)
 {
 	asn1_parser_t *parser;
 	int oid = OID_UNKNOWN;
@@ -158,7 +166,7 @@ key_type_t public_key_info_decode(chunk_t spki, chunk_t *pubkey)
 		{
 			case PKINFO_SUBJECT_PUBLIC_KEY_ALGORITHM:
 				oid = asn1_parse_algorithmIdentifier(object,
-							parser->get_level(parser)+1, NULL);
+							parser->get_level(parser)+1, params);
 				break;
 			case PKINFO_SUBJECT_PUBLIC_KEY:
 				if (pubkey)
