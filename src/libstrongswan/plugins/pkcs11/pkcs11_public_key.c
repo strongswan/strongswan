@@ -482,6 +482,75 @@ static bool encode_rsa(private_pkcs11_public_key_t *this,
 	return success;
 }
 
+/**
+ * Encode ML-DSA key using a given encoding type
+ */
+static bool encode_ml_dsa(private_pkcs11_public_key_t *this,
+						  cred_encoding_type_t type, chunk_t *encoding)
+{
+	chunk_t pubkey, asn1;
+	bool success;
+
+	if (!this->lib->get_ck_attribute(this->lib, this->session, this->object,
+									 CKA_VALUE, &pubkey))
+	{
+		return FALSE;
+	}
+	/* encode as subjectPublicKeyInfo */
+	asn1 = public_key_info_encode(pubkey, key_type_to_oid(this->type));
+	chunk_free(&pubkey);
+
+	if (type == PUBKEY_SPKI_ASN1_DER)
+	{
+		*encoding = asn1;
+		return TRUE;
+	}
+	success = lib->encoding->encode(lib->encoding, type, NULL, encoding,
+									CRED_PART_PUB_ASN1_DER, asn1, CRED_PART_END);
+	chunk_free(&asn1);
+	return success;
+}
+
+/**
+ * Compute fingerprint of an ML-DSA key
+ */
+static bool fingerprint_ml_dsa(private_pkcs11_public_key_t *this,
+							   cred_encoding_type_t type, chunk_t *fp)
+{
+	hasher_t *hasher;
+	chunk_t asn1;
+
+	switch (type)
+	{
+		case KEYID_PUBKEY_SHA1:
+			if (!this->lib->get_ck_attribute(this->lib, this->session,
+						this->object, CKA_VALUE, &asn1))
+			{
+				return FALSE;
+			}
+			break;
+		case KEYID_PUBKEY_INFO_SHA1:
+			if (!encode_ml_dsa(this, PUBKEY_SPKI_ASN1_DER, &asn1))
+			{
+				return FALSE;
+			}
+			break;
+		default:
+			return FALSE;
+	}
+	hasher = lib->crypto->create_hasher(lib->crypto, HASH_SHA1);
+	if (!hasher || !hasher->allocate_hash(hasher, asn1, fp))
+	{
+		DESTROY_IF(hasher);
+		chunk_free(&asn1);
+		return FALSE;
+	}
+	hasher->destroy(hasher);
+	chunk_free(&asn1);
+	lib->encoding->cache(lib->encoding, type, this, fp);
+	return TRUE;
+}
+
 METHOD(public_key_t, get_encoding, bool,
 	private_pkcs11_public_key_t *this, cred_encoding_type_t type,
 	chunk_t *encoding)
@@ -492,6 +561,10 @@ METHOD(public_key_t, get_encoding, bool,
 			return encode_rsa(this, type, NULL, encoding);
 		case KEY_ECDSA:
 			return encode_ecdsa(this, type, encoding);
+		case KEY_ML_DSA_44:
+		case KEY_ML_DSA_65:
+		case KEY_ML_DSA_87:
+			return encode_ml_dsa(this, type, encoding);
 		default:
 			return FALSE;
 	}
@@ -510,6 +583,10 @@ METHOD(public_key_t, get_fingerprint, bool,
 			return encode_rsa(this, type, this, fp);
 		case KEY_ECDSA:
 			return fingerprint_ecdsa(this, type, fp);
+		case KEY_ML_DSA_44:
+		case KEY_ML_DSA_65:
+		case KEY_ML_DSA_87:
+			return fingerprint_ml_dsa(this, type, fp);
 		default:
 			return FALSE;
 	}
@@ -926,6 +1003,36 @@ static private_pkcs11_public_key_t *find_key_by_keyid(pkcs11_library_t *p11,
 					chunk_free(&n);
 					key_type = KEY_RSA;
 					found = TRUE;
+				}
+				break;
+			}
+			case CKK_ML_DSA:
+			{
+				CK_ULONG param_set = 0;
+				CK_ATTRIBUTE ps_attr[] = {
+					{CKA_PARAMETER_SET, &param_set, sizeof(param_set)},
+				};
+				if (p11->f->C_GetAttributeValue(session, object,
+												ps_attr, 1) == CKR_OK)
+				{
+					switch (param_set)
+					{
+						case CKP_ML_DSA_44:
+							key_type = KEY_ML_DSA_44;
+							keylen = get_public_key_size(key_type) * 8;
+							found = TRUE;
+							break;
+						case CKP_ML_DSA_65:
+							key_type = KEY_ML_DSA_65;
+							keylen = get_public_key_size(key_type) * 8;
+							found = TRUE;
+							break;
+						case CKP_ML_DSA_87:
+							key_type = KEY_ML_DSA_87;
+							keylen = get_public_key_size(key_type) * 8;
+							found = TRUE;
+							break;
+					}
 				}
 				break;
 			}

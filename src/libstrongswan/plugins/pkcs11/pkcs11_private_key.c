@@ -45,6 +45,7 @@
 
 #include <utils/debug.h>
 #include <asn1/asn1.h>
+#include <credentials/keys/signature_params.h>
 
 typedef struct private_pkcs11_private_key_t private_pkcs11_private_key_t;
 
@@ -194,6 +195,12 @@ CK_MECHANISM_PTR pkcs11_signature_scheme_to_mech(pkcs11_library_t *p11,
 		 KEY_ECDSA, 384,									HASH_SHA384},
 		{SIGN_ECDSA_521,				{CKM_ECDSA,				NULL, 0},
 		 KEY_ECDSA, 521,									HASH_SHA512},
+		{SIGN_ML_DSA_44,				{CKM_ML_DSA,			NULL, 0},
+		 KEY_ML_DSA_44, 0,									HASH_UNKNOWN},
+		{SIGN_ML_DSA_65,				{CKM_ML_DSA,			NULL, 0},
+		 KEY_ML_DSA_65, 0,									HASH_UNKNOWN},
+		{SIGN_ML_DSA_87,				{CKM_ML_DSA,			NULL, 0},
+		 KEY_ML_DSA_87, 0,									HASH_UNKNOWN},
 	};
 
 	CK_MECHANISM_PTR mechanism;
@@ -342,6 +349,41 @@ CK_MECHANISM_PTR pkcs11_signature_scheme_to_mech(pkcs11_library_t *p11,
 				}
 				mechanism->pParameter = rsa_pkcs_pss_params;
 				mechanism->ulParameterLen = sizeof(CK_RSA_PKCS_PSS_PARAMS);
+			}
+			else if (scheme == SIGN_ML_DSA_44 ||
+					 scheme == SIGN_ML_DSA_65 ||
+					 scheme == SIGN_ML_DSA_87)
+			{
+				if (params)
+				{
+					pqc_params_t pqc_params;
+					CK_SIGN_ADDITIONAL_CONTEXT *ctx_params;
+
+					if (!pqc_params_create(params, &pqc_params))
+					{
+						free(mechanism);
+						return NULL;
+					}
+					ctx_params = malloc(sizeof(*ctx_params) +
+										pqc_params.ctx.len);
+					ctx_params->hedgeVariant = pqc_params.deterministic ?
+						CKH_DETERMINISTIC_REQUIRED : CKH_HEDGE_REQUIRED;
+					ctx_params->ulContextLen = pqc_params.ctx.len;
+					if (pqc_params.ctx.len)
+					{
+						ctx_params->pContext = (CK_BYTE_PTR)(ctx_params + 1);
+						memcpy(ctx_params->pContext, pqc_params.ctx.ptr,
+							   pqc_params.ctx.len);
+					}
+					else
+					{
+						ctx_params->pContext = NULL;
+					}
+					pqc_params_free(&pqc_params);
+					mechanism->pParameter = ctx_params;
+					mechanism->ulParameterLen =
+							sizeof(CK_SIGN_ADDITIONAL_CONTEXT);
+				}
 			}
 			else
 			{
@@ -492,6 +534,18 @@ METHOD(private_key_t, sign, bool,
 	if (this->type == KEY_ECDSA)
 	{	/* signature is twice the length of the base point order */
 		len *= 2;
+	}
+	else if (this->type == KEY_ML_DSA_44)
+	{
+		len = 2420;
+	}
+	else if (this->type == KEY_ML_DSA_65)
+	{
+		len = 3309;
+	}
+	else if (this->type == KEY_ML_DSA_87)
+	{
+		len = 4627;
 	}
 	buf = malloc(len);
 	rv = this->lib->f->C_Sign(session, data.ptr, data.len, buf, &len);
@@ -877,6 +931,41 @@ static bool find_key(private_pkcs11_private_key_t *this, chunk_t keyid)
 				this->object = object;
 				found = TRUE;
 				break;
+			case CKK_ML_DSA:
+			{
+				CK_ULONG param_set = 0;
+				CK_ATTRIBUTE ps_attr[] = {
+					{CKA_PARAMETER_SET, &param_set, sizeof(param_set)},
+				};
+				if (this->lib->f->C_GetAttributeValue(this->session,
+						object, ps_attr, 1) == CKR_OK)
+				{
+					switch (param_set)
+					{
+						case CKP_ML_DSA_44:
+							this->type = KEY_ML_DSA_44;
+							found = TRUE;
+							break;
+						case CKP_ML_DSA_65:
+							this->type = KEY_ML_DSA_65;
+							found = TRUE;
+							break;
+						case CKP_ML_DSA_87:
+							this->type = KEY_ML_DSA_87;
+							found = TRUE;
+							break;
+					}
+				}
+				if (found)
+				{
+					if (attr[1].ulValueLen != CK_UNAVAILABLE_INFORMATION)
+					{
+						this->reauth = reauth;
+					}
+					this->object = object;
+				}
+				break;
+			}
 			default:
 				DBG1(DBG_CFG, "PKCS#11 key type %d not supported", type);
 				break;
