@@ -24,7 +24,6 @@
 
 #include <asn1/oid.h>
 #include <asn1/asn1.h>
-#include <asn1/asn1_parser.h>
 #include <utils/debug.h>
 
 typedef struct private_pkcs11_public_key_t private_pkcs11_public_key_t;
@@ -117,74 +116,22 @@ static bool keylen_from_ecparams(chunk_t ecparams, size_t *keylen)
 }
 
 /**
- * ASN.1 definition of a subjectPublicKeyInfo structure when used with ECDSA
- * we currently only support named curves.
- */
-static const asn1Object_t pkinfoObjects[] = {
-	{ 0, "subjectPublicKeyInfo",	ASN1_SEQUENCE,		ASN1_NONE	}, /* 0 */
-	{ 1,   "algorithmIdentifier",	ASN1_SEQUENCE,		ASN1_NONE	}, /* 1 */
-	{ 2,     "algorithm",			ASN1_OID,			ASN1_BODY	}, /* 2 */
-	{ 2,     "namedCurve",			ASN1_OID,			ASN1_RAW	}, /* 3 */
-	{ 1,   "subjectPublicKey",		ASN1_BIT_STRING,	ASN1_BODY	}, /* 4 */
-	{ 0, "exit",					ASN1_EOC,			ASN1_EXIT	}
-};
-#define PKINFO_SUBJECT_PUBLIC_KEY_ALGORITHM		2
-#define PKINFO_SUBJECT_PUBLIC_KEY_NAMEDCURVE	3
-#define PKINFO_SUBJECT_PUBLIC_KEY				4
-
-/**
- * Extract the DER encoded Parameters and ECPoint from the given DER encoded
- * subjectPublicKeyInfo.
+ * Determine the key length from the parameters and prepare the ECPoint from
+ * the given input.
  * Memory for ecpoint is allocated.
  */
-static bool parse_ecdsa_public_key(chunk_t blob, chunk_t *ecparams,
+static bool parse_ecdsa_public_key(chunk_t blob, chunk_t params,
 								   chunk_t *ecpoint, size_t *keylen)
 {
-	asn1_parser_t *parser;
-	chunk_t object;
-	int objectID;
-	bool success = FALSE;
-
-	parser = asn1_parser_create(pkinfoObjects, blob);
-
-	while (parser->iterate(parser, &objectID, &object))
+	if (!blob.len || !params.len || !keylen_from_ecparams(params, keylen))
 	{
-		switch (objectID)
-		{
-			case PKINFO_SUBJECT_PUBLIC_KEY_ALGORITHM:
-			{
-				if (asn1_known_oid(object) != OID_EC_PUBLICKEY)
-				{
-					goto end;
-				}
-				break;
-			}
-			case PKINFO_SUBJECT_PUBLIC_KEY_NAMEDCURVE:
-			{
-				*ecparams = object;
-				if (!keylen_from_ecparams(object, keylen))
-				{
-					goto end;
-				}
-				break;
-			}
-			case PKINFO_SUBJECT_PUBLIC_KEY:
-			{
-				if (object.len > 0 && *object.ptr == 0x00)
-				{	/* skip initial bit string octet defining 0 unused bits */
-					object = chunk_skip(object, 1);
-				}
-				/* the correct way to encode an EC_POINT in PKCS#11 is as
-				 * ASN.1 octet string */
-				*ecpoint = asn1_wrap(ASN1_OCTET_STRING, "c", object);
-				break;
-			}
-		}
+		return FALSE;
 	}
-	success = parser->success(parser);
-end:
-	parser->destroy(parser);
-	return success;
+
+	/* the correct way to encode an EC_POINT in PKCS#11 is as
+	 * ASN.1 octet string */
+	*ecpoint = asn1_wrap(ASN1_OCTET_STRING, "c", blob);
+	return TRUE;
 }
 
 
@@ -391,11 +338,8 @@ static bool encode_ecdsa(private_pkcs11_public_key_t *this,
 		chunk_t ecparams, ecpoint;
 		ecparams = chunk_create(attr[0].pValue, attr[0].ulValueLen);
 		ecpoint = chunk_create(attr[1].pValue, attr[1].ulValueLen);
-		/* encode as subjectPublicKeyInfo */
-		*encoding = asn1_wrap(ASN1_SEQUENCE, "mm",
-						asn1_wrap(ASN1_SEQUENCE, "mc",
-							asn1_build_known_oid(OID_EC_PUBLICKEY), ecparams),
-						asn1_bitstring("c", ecpoint));
+		*encoding = public_key_info_encode(ecpoint, OID_EC_PUBLICKEY,
+										   &ecparams);
 		success = TRUE;
 		if (type == PUBKEY_PEM)
 		{
@@ -424,7 +368,7 @@ static bool encode_cka_value(private_pkcs11_public_key_t *this,
 	{
 		return FALSE;
 	}
-	asn1 = public_key_info_encode(pubkey, key_type_to_oid(this->type));
+	asn1 = public_key_info_encode(pubkey, key_type_to_oid(this->type), NULL);
 	chunk_free(&pubkey);
 
 	if (type == PUBKEY_SPKI_ASN1_DER)
@@ -885,16 +829,26 @@ static private_pkcs11_public_key_t* create_ml_dsa_key(key_type_t key_type,
 pkcs11_public_key_t *pkcs11_public_key_load(key_type_t type, va_list args)
 {
 	private_pkcs11_public_key_t *this;
-	chunk_t n, e, blob;
+	chunk_t n, e, blob, pkcs1, params;
+	key_type_t parsed;
 	size_t keylen = 0;
 
-	n = e = blob = chunk_empty;
+	n = e = blob = params = chunk_empty;
 	while (TRUE)
 	{
 		switch (va_arg(args, builder_part_t))
 		{
-			case BUILD_BLOB_ASN1_DER:
+			case BUILD_BLOB:
 				blob = va_arg(args, chunk_t);
+				continue;
+			case BUILD_BLOB_ASN1_DER:
+				pkcs1 = va_arg(args, chunk_t);
+				parsed = public_key_info_decode(pkcs1, &blob, &params);
+				if (type != KEY_ANY && parsed != type)
+				{
+					return NULL;
+				}
+				type = parsed;
 				continue;
 			case BUILD_RSA_MODULUS:
 				n = va_arg(args, chunk_t);
@@ -909,6 +863,7 @@ pkcs11_public_key_t *pkcs11_public_key_load(key_type_t type, va_list args)
 		}
 		break;
 	}
+
 	if (type == KEY_RSA && e.ptr && n.ptr)
 	{
 		if (n.len && n.ptr[0] == 0)
@@ -933,15 +888,19 @@ pkcs11_public_key_t *pkcs11_public_key_load(key_type_t type, va_list args)
 		{
 			case KEY_ECDSA:
 			{
-				chunk_t ecparams, ecpoint;
+				chunk_t ecpoint = chunk_empty;
 
-				ecparams = ecpoint = chunk_empty;
-				if (parse_ecdsa_public_key(blob, &ecparams, &ecpoint, &keylen))
+				if (!lib->settings->get_bool(lib->settings,
+								"%s.plugins.pkcs11.use_ecc", FALSE, lib->ns))
 				{
-					this = find_ecdsa_key(ecparams, ecpoint, keylen);
+					return NULL;
+				}
+				if (parse_ecdsa_public_key(blob, params, &ecpoint, &keylen))
+				{
+					this = find_ecdsa_key(params, ecpoint, keylen);
 					if (!this)
 					{
-						this = create_ecdsa_key(ecparams, ecpoint, keylen);
+						this = create_ecdsa_key(params, ecpoint, keylen);
 					}
 					chunk_free(&ecpoint);
 					if (this)
@@ -956,11 +915,8 @@ pkcs11_public_key_t *pkcs11_public_key_load(key_type_t type, va_list args)
 			case KEY_ML_DSA_87:
 			{
 				CK_ML_DSA_PARAMETER_SET_TYPE param_set = CKP_ML_DSA_44;
-				key_type_t parsed;
-				chunk_t value;
 
-				parsed = public_key_info_decode(blob, &value);
-				if (parsed != type || value.len != get_public_key_size(type))
+				if (blob.len != get_public_key_size(type))
 				{
 					return NULL;
 				}
@@ -972,10 +928,10 @@ pkcs11_public_key_t *pkcs11_public_key_load(key_type_t type, va_list args)
 				{
 					param_set = CKP_ML_DSA_87;
 				}
-				this = find_ml_dsa_key(type, param_set, value);
+				this = find_ml_dsa_key(type, param_set, blob);
 				if (!this)
 				{
-					this = create_ml_dsa_key(type, param_set, value);
+					this = create_ml_dsa_key(type, param_set, blob);
 				}
 				if (this)
 				{

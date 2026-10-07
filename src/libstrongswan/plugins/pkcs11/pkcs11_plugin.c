@@ -229,11 +229,12 @@ METHOD(plugin_t, get_features, int,
 	};
 	static plugin_feature_t f_pubkey[] = {
 		PLUGIN_REGISTER(PUBKEY, pkcs11_public_key_load, TRUE),
+			PLUGIN_PROVIDE(PUBKEY, KEY_ANY),
 			PLUGIN_PROVIDE(PUBKEY, KEY_RSA),
+			PLUGIN_PROVIDE(PUBKEY, KEY_ECDSA),
 			PLUGIN_PROVIDE(PUBKEY, KEY_ML_DSA_44),
 			PLUGIN_PROVIDE(PUBKEY, KEY_ML_DSA_65),
 			PLUGIN_PROVIDE(PUBKEY, KEY_ML_DSA_87),
-			PLUGIN_PROVIDE(PUBKEY, KEY_ECDSA),
 	};
 	static plugin_feature_t f_manager[] = {
 		PLUGIN_CALLBACK((plugin_feature_callback_t)handle_certs, NULL),
@@ -255,8 +256,7 @@ METHOD(plugin_t, get_features, int,
 		if (lib->settings->get_bool(lib->settings,
 								"%s.plugins.pkcs11.use_pubkey", FALSE, lib->ns))
 		{
-			plugin_features_add(f, f_pubkey, countof(f_pubkey) - (use_ecc ? 0 : 1),
-								&count);
+			plugin_features_add(f, f_pubkey, countof(f_pubkey), &count);
 		}
 		if (lib->settings->get_bool(lib->settings,
 								"%s.plugins.pkcs11.use_hasher", FALSE, lib->ns))
