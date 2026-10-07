@@ -137,7 +137,7 @@ public_key_t *botan_public_key_load(key_type_t type, va_list args)
 	{
 		if (type == KEY_ANY)
 		{
-			type = public_key_info_decode(blob, NULL);
+			type = public_key_info_decode(blob, NULL, NULL);
 		}
 		if (type != KEY_ANY)
 		{

@@ -159,7 +159,7 @@ METHOD(public_key_t, get_encoding, bool,
 {
 	bool success = TRUE;
 
-	*encoding = public_key_info_encode(this->pubkey, OID_ED25519);
+	*encoding = public_key_info_encode(this->pubkey, OID_ED25519, NULL);
 
 	if (type != PUBKEY_SPKI_ASN1_DER)
 	{
@@ -340,7 +340,7 @@ bool curve25519_public_key_fingerprint(chunk_t pubkey,
 			key = chunk_clone(pubkey);
 			break;
 		case KEYID_PUBKEY_INFO_SHA1:
-			key = public_key_info_encode(pubkey, OID_ED25519);
+			key = public_key_info_encode(pubkey, OID_ED25519, NULL);
 			break;
 		default:
 			return FALSE;

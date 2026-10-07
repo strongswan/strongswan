@@ -32,7 +32,7 @@ static public_key_t *parse_public_key(chunk_t blob)
 	chunk_t pubkey;
 	key_type_t type;
 
-	type = public_key_info_decode(blob, &pubkey);
+	type = public_key_info_decode(blob, &pubkey, NULL);
 
 	switch (type)
 	{

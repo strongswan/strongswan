@@ -130,7 +130,8 @@ bool wolfssl_ml_dsa_fingerprint(MlDsaKey *key, key_type_t type,
 			encoding = chunk_clone(pubkey);
 			break;
 		case KEYID_PUBKEY_INFO_SHA1:
-			encoding = public_key_info_encode(pubkey, key_type_to_oid(type));
+			encoding = public_key_info_encode(pubkey, key_type_to_oid(type),
+											  NULL);
 			break;
 		default:
 			goto end;
@@ -190,7 +191,7 @@ METHOD(public_key_t, get_encoding, bool,
 	}
 
 	oid = key_type_to_oid(this->type);
-	*encoding = public_key_info_encode(pubkey, oid);
+	*encoding = public_key_info_encode(pubkey, oid, NULL);
 	success = TRUE;
 
 	if (type != PUBKEY_SPKI_ASN1_DER)
@@ -309,7 +310,7 @@ public_key_t *wolfssl_ml_dsa_public_key_load(key_type_t type, va_list args)
 				continue;
 			case BUILD_BLOB_ASN1_DER:
 				pkcs1 = va_arg(args, chunk_t);
-				type = public_key_info_decode(pkcs1, &blob);
+				type = public_key_info_decode(pkcs1, &blob, NULL);
 				continue;
 			case BUILD_END:
 				break;
