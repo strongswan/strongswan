@@ -80,6 +80,33 @@ void print_label(const char *prefix, const char *value)
 	}
 }
 
+/*
+ * Described in header
+ */
+void print_msg(vici_res_t *res, const char *prefix)
+{
+	chunk_t msg, line, sane;
+	char *pos;
+	int len;
+
+	msg.ptr = vici_find(res, &len, "msg");
+	msg.len = msg.ptr ? len : 0;
+	do
+	{
+		line = msg;
+		pos = memchr(msg.ptr, '\n', msg.len);
+		if (pos)
+		{
+			line.len = pos - (char*)msg.ptr;
+			msg = chunk_skip(msg, line.len + 1);
+		}
+		chunk_printable(line, &sane, ' ');
+		printf("%s%.*s\n", prefix, (int)sane.len, sane.ptr);
+		chunk_free(&sane);
+	}
+	while (pos);
+}
+
 /**
  * Cleanup library atexit()
  */

@@ -14,6 +14,7 @@
  * for more details.
  */
 
+#include "swanctl.h"
 #include "command.h"
 
 #include <errno.h>
@@ -33,7 +34,7 @@ CALLBACK(log_cb, void,
 		snprintf(prefix, sizeof(prefix), "%.2d[%s] ",
 				 vici_find_int(msg, 0, "thread"),
 				 vici_find_str(msg, "   ", "group"));
-		command_print_log(msg, prefix);
+		print_msg(msg, prefix);
 	}
 }
 

@@ -14,6 +14,7 @@
  * for more details.
  */
 
+#include "swanctl.h"
 #include "command.h"
 
 #include <errno.h>
@@ -31,7 +32,7 @@ CALLBACK(log_cb, void,
 
 		snprintf(prefix, sizeof(prefix), "[%s] ",
 				 vici_find_str(msg, "   ", "group"));
-		command_print_log(msg, prefix);
+		print_msg(msg, prefix);
 	}
 }
 
