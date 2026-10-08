@@ -1,0 +1,9 @@
+
+arg ALPINE_TAG=3.18.4
+
+# ------------------------------------------------------------------------
+from alpine:${ALPINE_TAG} as build
+
+run apk add --no-cache alpine-sdk gmp-dev iptables-dev openssl-dev libgcrypt-dev botan-dev
+workdir /build
+

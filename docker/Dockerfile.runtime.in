@@ -1,0 +1,15 @@
+
+copy docker/in-docker-build .
+run ./in-docker-build configure
+run ./in-docker-build make
+run ./in-docker-build install
+
+# ------------------------------------------------------------------------
+from alpine:${ALPINE_TAG}
+
+run apk add --no-cache iproute2 iptables gmp openssl libgcrypt botan
+
+copy docker/entrypoint.sh /
+entrypoint ["/entrypoint.sh"]
+
+copy --from=build /target/ /
