@@ -292,6 +292,36 @@ void command_register(command_t command)
 	registered++;
 }
 
+/*
+ * Described in header
+ */
+void command_print_log(vici_res_t *res, char *prefix)
+{
+	chunk_t msg, line, sane;
+	char *pos;
+	int len;
+
+	/* the message is not a printable string if it contains newlines (e.g. for
+	 * dumps of binary data), so we have to get the raw value */
+	msg.ptr = vici_find(res, &len, "msg");
+	msg.len = msg.ptr ? len : 0;
+	do
+	{
+		line = msg;
+		pos = msg.len ? memchr(msg.ptr, '\n', msg.len) : NULL;
+		if (pos)
+		{
+			line.len = pos - (char*)msg.ptr;
+			msg = chunk_skip(msg, line.len + 1);
+		}
+		chunk_printable(line, &sane, '?');
+		printf("%s%.*s\n", prefix, (int)sane.len,
+			   sane.len ? (char*)sane.ptr : "");
+		chunk_free(&sane);
+	}
+	while (pos);
+}
+
 /**
  * Print usage text, with an optional error
  */

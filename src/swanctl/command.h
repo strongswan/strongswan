@@ -108,6 +108,14 @@ int command_init(int argc, char *argv[]);
 int command_dispatch();
 
 /**
+ * Print a log message received via vici, each line with the given prefix.
+ *
+ * @param res		log message
+ * @param prefix	prefix to print before each line
+ */
+void command_print_log(vici_res_t *res, char *prefix);
+
+/**
  * Show usage information of active command.
  */
 int command_usage(char *error, ...);
