@@ -25,6 +25,7 @@
 #define SWANCTL_H_
 
 #include <settings/settings.h>
+#include <libvici.h>
 
 /**
  * Base directory for credentials and config
@@ -113,5 +114,16 @@ settings_t *load_swanctl_conf(char *file);
  * @param value		hex-encoded security label
  */
 void print_label(const char *prefix, const char *value);
+
+/**
+ * Print the "msg" value of a vici log message, each line with the given
+ * prefix.  The message is not a printable string if it contains newlines
+ * (e.g. for dumps of binary data), so the raw value is retrieved and any
+ * other non-printable characters are replaced.
+ *
+ * @param res		log message
+ * @param prefix	prefix to print before each line
+ */
+void print_msg(vici_res_t *res, const char *prefix);
 
 #endif /** SWANCTL_H_ @}*/
