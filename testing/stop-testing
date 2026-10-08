@@ -26,7 +26,7 @@ do
 	log_action "Guest $host"
 
 	if running_any $host; then
-		execute "virsh shutdown $host"
+		execute "virsh -c qemu:///system destroy $host"
 	else
 		echo_warn "...not running"
 	fi
