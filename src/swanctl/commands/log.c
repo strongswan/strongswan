@@ -14,6 +14,7 @@
  * for more details.
  */
 
+#include "swanctl.h"
 #include "command.h"
 
 #include <errno.h>
@@ -28,22 +29,12 @@ CALLBACK(log_cb, void,
 	}
 	else
 	{
-		char *current, *next;
+		char prefix[16];
 
-		current = vici_find_str(msg, NULL, "msg");
-		while (current)
-		{
-			next = strchr(current, '\n');
-			printf("%.2d[%s] ", vici_find_int(msg, 0, "thread"),
-				   vici_find_str(msg, "   ", "group"));
-			if (next == NULL)
-			{
-				printf("%s\n", current);
-				break;
-			}
-			printf("%.*s\n", (int)(next - current), current);
-			current = next + 1;
-		}
+		snprintf(prefix, sizeof(prefix), "%.2d[%s] ",
+				 vici_find_int(msg, 0, "thread"),
+				 vici_find_str(msg, "   ", "group"));
+		print_msg(msg, prefix);
 	}
 }
 
