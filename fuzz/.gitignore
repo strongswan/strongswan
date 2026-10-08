@@ -10,6 +10,11 @@ fuzz_ocsp_rsp_cus
 fuzz_ocsp_rsp_def
 fuzz_pa_tnc
 fuzz_pb_tnc
+fuzz_pkcs12_cus
+fuzz_pkcs12_def
+fuzz_pkcs7_cus
+fuzz_pkcs7_def
+fuzz_pkcs8_cus
 fuzz_radius
 fuzz_tls
 fuzz_vici
