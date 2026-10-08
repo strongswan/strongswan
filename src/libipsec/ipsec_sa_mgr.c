@@ -228,6 +228,7 @@ static bool wait_for_entry(private_ipsec_sa_mgr_t *this,
 	if (entry->awaits_deletion)
 	{
 		/* others may still be waiting, */
+		entry->locked = FALSE;
 		entry->condvar->signal(entry->condvar);
 		return FALSE;
 	}
