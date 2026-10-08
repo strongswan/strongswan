@@ -2,6 +2,7 @@ fuzz_certs_cus
 fuzz_certs_def
 fuzz_crls_cus
 fuzz_crls_def
+fuzz_eap
 fuzz_ids
 fuzz_ike
 fuzz_ocsp_req_cus
