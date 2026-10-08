@@ -48,6 +48,7 @@ METHOD(listener_t, alert, bool,
 	peer_cfg_t *peer_cfg;
 	certificate_t *cert;
 	time_t not_before, not_after;
+	bool received;
 	int num;
 
 	if (!this->socket->has_listeners(this->socket))
@@ -130,15 +131,17 @@ METHOD(listener_t, alert, bool,
 			break;
 		case ALERT_PROPOSAL_MISMATCH_IKE:
 			msg.type = htonl(ERROR_NOTIFY_PROPOSAL_MISMATCH_IKE);
+			received = va_arg(args, int);
 			list = va_arg(args, linked_list_t*);
-			snprintf(msg.str, sizeof(msg.str), "the received IKE_SA proposals "
-					 "did not match: %#P", list);
+			snprintf(msg.str, sizeof(msg.str), "the %s IKE_SA proposals did "
+						 "not match: %#P", received ? "received" : "configured", list);
 			break;
 		case ALERT_PROPOSAL_MISMATCH_CHILD:
 			msg.type = htonl(ERROR_NOTIFY_PROPOSAL_MISMATCH_CHILD);
+			received = va_arg(args, int);
 			list = va_arg(args, linked_list_t*);
-			snprintf(msg.str, sizeof(msg.str), "the received CHILD_SA proposals "
-					 "did not match: %#P", list);
+			snprintf(msg.str, sizeof(msg.str), "the %s CHILD_SA proposals did "
+						 "not match: %#P", received ? "received" : "configured", list);
 			break;
 		case ALERT_TS_MISMATCH:
 			msg.type = htonl(ERROR_NOTIFY_TS_MISMATCH);
