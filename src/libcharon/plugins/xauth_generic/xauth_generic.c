@@ -84,6 +84,7 @@ METHOD(xauth_method_t, process_peer, status_t,
 							PLV1_CONFIGURATION_ATTRIBUTE, XAUTH_USER_NAME,
 							this->peer->get_encoding(this->peer)));
 				break;
+			case XAUTH_PASSCODE:
 			case XAUTH_NEXT_PIN:
 				type = SHARED_PIN;
 				/* FALL */
