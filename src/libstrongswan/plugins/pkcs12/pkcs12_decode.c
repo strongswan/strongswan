@@ -14,6 +14,8 @@
  * for more details.
  */
 
+#include <inttypes.h>
+
 #include "pkcs12_decode.h"
 
 #include <utils/debug.h>
@@ -21,6 +23,9 @@
 #include <asn1/asn1.h>
 #include <asn1/asn1_parser.h>
 #include <credentials/sets/mem_cred.h>
+
+/** maximum accepted iteration count in the parsed MacData */
+#define PKCS12_ITERATIONS_MAX		1000000
 
 typedef struct private_pkcs12_t private_pkcs12_t;
 
@@ -505,6 +510,16 @@ static bool parse_PFX(private_pkcs12_t *this, chunk_t blob)
 			case PFX_ITERATIONS:
 			{
 				iterations = object.len ? asn1_parse_integer_uint64(object) : 1;
+				if (iterations > PKCS12_ITERATIONS_MAX)
+				{
+					DBG1(DBG_ASN, "  PKCS#12 iteration count %" PRIu64
+						 " exceeds maximum of %u", iterations,
+						 PKCS12_ITERATIONS_MAX);
+					/* an excessive iteration count would keep the MAC
+					 * verification busy for a very long time, reject it
+					 * (same limit as PKCS#5, CVE-2026-78129) */
+					goto end_parse;
+				}
 				break;
 			}
 		}
