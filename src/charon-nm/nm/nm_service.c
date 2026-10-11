@@ -692,6 +692,13 @@ static bool add_auth_cfg_cert(NMStrongswanPluginPrivate *priv,
 		}
 		else
 		{
+			if (!*err)
+			{
+				g_set_error(err, NM_VPN_PLUGIN_ERROR,
+							NM_VPN_PLUGIN_ERROR_BAD_ARGUMENTS,
+							agent ? "SSH agent socket is missing."
+								  : "Private key file is missing.");
+			}
 			DESTROY_IF(cert);
 			return FALSE;
 		}
