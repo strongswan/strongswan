@@ -78,6 +78,7 @@ METHOD(thread_value_t, destroy, void,
 thread_value_t *thread_value_create(thread_cleanup_t destructor)
 {
 	private_thread_value_t *this;
+	int err;
 
 	INIT(this,
 		.public = {
@@ -88,7 +89,11 @@ thread_value_t *thread_value_create(thread_cleanup_t destructor)
 		.destructor = destructor,
 	);
 
-	pthread_key_create(&this->key, destructor);
+	err = pthread_key_create(&this->key, destructor);
+	if (err)
+	{
+		DBG1(DBG_LIB, "!!! PTHREAD KEY CREATE ERROR: %s !!!", strerror(err));
+	}
 	return &this->public;
 }
 
