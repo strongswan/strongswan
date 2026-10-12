@@ -9,7 +9,15 @@ libcharon_tests_SOURCES = \
   suites/test_message_chapoly.c \
   libcharon_tests.h libcharon_tests.c
 
+if USE_IKEV2
+libcharon_tests_SOURCES += \
+  suites/test_eap_fortigate.c \
+  ../plugins/eap_identity/eap_identity.c \
+  ../plugins/eap_gtc/eap_gtc.c
+endif
+
 libcharon_tests_CFLAGS = \
+  -DTEST_TMPDIR=\""$(abs_top_builddir)/tmp"\" \
   -I$(top_srcdir)/src/libcharon \
   -I$(top_srcdir)/src/libstrongswan \
   -I$(top_srcdir)/src/libstrongswan/tests \

@@ -27,3 +27,7 @@ TEST_SUITE(ike_cfg_suite_create)
 TEST_SUITE(peer_cfg_suite_create)
 TEST_SUITE(mem_pool_suite_create)
 TEST_SUITE_DEPEND(message_chapoly_suite_create, AEAD, ENCR_CHACHA20_POLY1305, 32)
+
+#if defined(USE_IKEV2) && defined(__linux__)
+TEST_SUITE(eap_fortigate_suite_create)
+#endif
