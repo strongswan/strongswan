@@ -599,7 +599,8 @@ static bool add_auth_cfg_cert(NMStrongswanPluginPrivate *priv,
 	{
 		char *pin;
 
-		pin = (char*)nm_setting_vpn_get_secret(vpn, "password");
+		pin = (char*)(nm_setting_vpn_get_secret(vpn, "pin") ?:
+					  nm_setting_vpn_get_secret(vpn, "password"));
 		if (pin)
 		{
 			id = find_smartcard_key(priv, pin);
@@ -663,7 +664,9 @@ static bool add_auth_cfg_cert(NMStrongswanPluginPrivate *priv,
 		{
 			char *secret;
 
-			secret = (char*)nm_setting_vpn_get_secret(vpn, "password");
+			secret = (char*)(nm_setting_vpn_get_secret(vpn,
+								"userkey-password") ?:
+							 nm_setting_vpn_get_secret(vpn, "password"));
 			if (secret)
 			{
 				priv->creds->set_key_password(priv->creds, secret);
@@ -1219,7 +1222,8 @@ static gboolean need_secrets(NMVpnServicePlugin *plugin, NMConnection *connectio
 			}
 			else if (streq(cert_source, "smartcard"))
 			{
-				need_secret = !nm_setting_vpn_get_secret(settings, "password");
+				need_secret = !nm_setting_vpn_get_secret(settings, "pin") &&
+							  !nm_setting_vpn_get_secret(settings, "password");
 			}
 			else
 			{
@@ -1245,7 +1249,10 @@ static gboolean need_secrets(NMVpnServicePlugin *plugin, NMConnection *connectio
 							key->destroy(key);
 							need_secret = FALSE;
 						}
-						else if (nm_setting_vpn_get_secret(settings, "password"))
+						else if (nm_setting_vpn_get_secret(settings,
+										"userkey-password") ||
+								 nm_setting_vpn_get_secret(settings,
+										"password"))
 						{
 							need_secret = FALSE;
 						}
