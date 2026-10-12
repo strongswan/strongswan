@@ -212,6 +212,11 @@ static void update_sensitive (StrongswanPluginUiWidgetPrivate *priv)
 			update_pass_field (priv, TRUE);
 			update_cert_fields (priv, FALSE);
 			break;
+		case 4:
+			update_user_field (priv, TRUE);
+			update_pass_field (priv, TRUE);
+			update_cert_fields (priv, TRUE);
+			break;
 	}
 
 }
@@ -438,7 +443,8 @@ init_plugin_ui (StrongswanPluginUiWidget *self, NMConnection *connection, GError
 		(nm_setting_vpn_get_secret (settings, "password") ||
 		 (nm_setting_get_secret_flags (NM_SETTING (settings), "password",
 									   &flags, NULL) && flags)) &&
-		method && g_strcmp0 (method, "eap") != 0 && g_strcmp0 (method, "psk") != 0)
+		method && g_strcmp0 (method, "eap") != 0 && g_strcmp0 (method, "psk") != 0 &&
+		g_strcmp0 (method, "cert-eap") != 0)
 	{
 		secret = "password";
 	}
@@ -455,8 +461,11 @@ init_plugin_ui (StrongswanPluginUiWidget *self, NMConnection *connection, GError
 	widget = GTK_WIDGET (gtk_builder_get_object (priv->builder, "passwd-entry"));
 	value = nm_setting_vpn_get_secret (settings, "password");
 	/* ignore legacy password for certificate configs */
-	if (value && method && (g_strcmp0 (method, "eap") == 0 || g_strcmp0 (method, "psk") == 0))
+	if (value && method && (g_strcmp0 (method, "eap") == 0 ||
+		g_strcmp0 (method, "psk") == 0 || g_strcmp0 (method, "cert-eap") == 0))
+	{
 		gtk_editable_set_text (GTK_EDITABLE (widget), value);
+	}
 	g_signal_connect (G_OBJECT (widget), "changed", G_CALLBACK (settings_changed_cb), self);
 	init_password_icon (self, settings, "password", "passwd-entry",
 						NM_SETTING_SECRET_FLAG_NOT_SAVED);
@@ -466,6 +475,7 @@ init_plugin_ui (StrongswanPluginUiWidget *self, NMConnection *connection, GError
 	gtk_combo_box_text_append_text (GTK_COMBO_BOX_TEXT (widget), _("Certificate"));
 	gtk_combo_box_text_append_text (GTK_COMBO_BOX_TEXT (widget), _("EAP-TLS"));
 	gtk_combo_box_text_append_text (GTK_COMBO_BOX_TEXT (widget), _("Pre-shared key"));
+	gtk_combo_box_text_append_text (GTK_COMBO_BOX_TEXT (widget), _("Certificate + EAP (Username/Password)"));
 	if (method) {
 		if (g_strcmp0 (method, "eap") == 0) {
 			gtk_combo_box_set_active (GTK_COMBO_BOX (widget), 0);
@@ -482,6 +492,9 @@ init_plugin_ui (StrongswanPluginUiWidget *self, NMConnection *connection, GError
 		}
 		if (g_strcmp0 (method, "psk") == 0) {
 			gtk_combo_box_set_active (GTK_COMBO_BOX (widget), 3);
+		}
+		if (g_strcmp0 (method, "cert-eap") == 0) {
+			gtk_combo_box_set_active (GTK_COMBO_BOX (widget), 4);
 		}
 	}
 	if (gtk_combo_box_get_active (GTK_COMBO_BOX (widget)) == -1)
@@ -743,6 +756,12 @@ update_connection (NMVpnEditor *iface,
 			save_entry (settings, priv->builder, "user-entry", "user");
 			save_password_and_flags (settings, priv->builder, "passwd-entry", "password");
 			str = "psk";
+			break;
+		case 4:
+			save_entry (settings, priv->builder, "user-entry", "user");
+			save_password_and_flags (settings, priv->builder, "passwd-entry", "password");
+			save_cert (settings, priv->builder);
+			str = "cert-eap";
 			break;
 	}
 	nm_setting_vpn_add_data_item (settings, "method", str);
