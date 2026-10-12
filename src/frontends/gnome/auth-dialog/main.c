@@ -106,6 +106,7 @@ static void keyfile_print_stdout (GKeyFile *keyfile)
 }
 
 static gboolean get_secrets(const char *type, const char *cert_source, const char *uuid, const char *name,
+							const char *secret_name,
 							gboolean retry, gboolean allow_interaction, gboolean external_ui_mode,
 							const char *in_pw, char **out_pw, NMSettingSecretFlags flags)
 {
@@ -123,7 +124,7 @@ static gboolean get_secrets(const char *type, const char *cert_source, const cha
 		}
 		else
 		{
-			pw = keyring_lookup_secret (uuid, "password");
+			pw = keyring_lookup_secret (uuid, secret_name);
 		}
 	}
 	if (flags & NM_SETTING_SECRET_FLAG_NOT_REQUIRED)
@@ -165,7 +166,7 @@ static gboolean get_secrets(const char *type, const char *cert_source, const cha
 		g_key_file_set_string (keyfile, UI_KEYFILE_GROUP, "Description", prompt);
 		g_key_file_set_string (keyfile, UI_KEYFILE_GROUP, "Title", _("Authenticate VPN"));
 
-		keyfile_add_entry_info (keyfile, "password", pw ?: "", _("Password:"), TRUE, allow_interaction);
+		keyfile_add_entry_info (keyfile, secret_name, pw ?: "", _("Password:"), TRUE, allow_interaction);
 
 		keyfile_print_stdout (keyfile);
 		g_key_file_unref (keyfile);
@@ -254,6 +255,7 @@ int main (int argc, char *argv[])
 	NMSettingSecretFlags flags = NM_SETTING_SECRET_FLAG_NONE;
 	GOptionContext *context;
 	char *agent, *type, *cert_source;
+	const char *secret_name = "password";
 	int status = 0;
 	GOptionEntry entries[] = {
 		{ "reprompt", 'r', 0, G_OPTION_ARG_NONE, &retry, "Reprompt for passwords", NULL},
@@ -350,7 +352,17 @@ int main (int argc, char *argv[])
 		}
 		else
 		{
+			NMSettingSecretFlags new_flags = NM_SETTING_SECRET_FLAG_NONE;
+
 			need_secret = TRUE;
+			secret_name = !strcmp(cert_source, "smartcard") ? "pin" : "userkey-password";
+			/* fallback to the legacy field for connections that were saved
+			 * before the rename, otherwise stored passwords/flags won't be used
+			 * and the returned flagless password is stored in the connection */
+			if (!nm_vpn_service_plugin_get_secret_flags (data, secret_name, &new_flags))
+			{
+				secret_name = "password";
+			}
 		}
 	}
 
@@ -358,15 +370,15 @@ int main (int argc, char *argv[])
 		!strcmp(type, "eap") ||
 		!strcmp(type, "psk"))
 	{
-		nm_vpn_service_plugin_get_secret_flags (secrets, "password", &flags);
-		if (!get_secrets(type, cert_source, uuid, name, retry, allow_interaction,
-						 external_ui_mode, g_hash_table_lookup (secrets, "password"), &pass, flags))
+		nm_vpn_service_plugin_get_secret_flags (data, secret_name, &flags);
+		if (!get_secrets(type, cert_source, uuid, name, secret_name, retry, allow_interaction,
+						 external_ui_mode, g_hash_table_lookup (secrets, secret_name), &pass, flags))
 		{
 			status = 1;
 		}
 		else if (!external_ui_mode)
 		{
-			print_secret("password", pass);
+			print_secret(secret_name, pass);
 			wait_for_quit ();
 		}
 	}
