@@ -168,7 +168,6 @@ static void update_cert_fields (StrongswanPluginUiWidgetPrivate *priv, gboolean 
 			gtk_combo_box_set_active (GTK_COMBO_BOX (widget), 0);
 			/* FALL */
 		case 0:
-			update_pass_field (priv, TRUE);
 			cert = key = TRUE;
 			break;
 		case 1:
@@ -184,6 +183,8 @@ static void update_cert_fields (StrongswanPluginUiWidgetPrivate *priv, gboolean 
 	gtk_widget_set_sensitive (GTK_WIDGET (gtk_builder_get_object (priv->builder, "usercert-button")), enabled && cert);
 	gtk_widget_set_sensitive (GTK_WIDGET (gtk_builder_get_object (priv->builder, "userkey-label")), enabled && key);
 	gtk_widget_set_sensitive (GTK_WIDGET (gtk_builder_get_object (priv->builder, "userkey-button")), enabled && key);
+	gtk_widget_set_sensitive (GTK_WIDGET (gtk_builder_get_object (priv->builder, "userkey-password-label")), enabled && key);
+	gtk_widget_set_sensitive (GTK_WIDGET (gtk_builder_get_object (priv->builder, "userkey-password-entry")), enabled && key);
 }
 
 static void update_sensitive (StrongswanPluginUiWidgetPrivate *priv)
@@ -312,7 +313,8 @@ password_storage_changed_cb (GObject *entry, GParamSpec *pspec, gpointer user_da
 
 static void
 init_password_icon (StrongswanPluginUiWidget *self, NMSettingVpn *settings,
-					const char *secret_key, const char *entry_name)
+					const char *secret_key, const char *entry_name,
+					NMSettingSecretFlags empty_flags)
 {
 	StrongswanPluginUiWidgetPrivate *priv = STRONGSWAN_PLUGIN_UI_WIDGET_GET_PRIVATE (self);
 	GtkWidget *entry;
@@ -327,7 +329,7 @@ init_password_icon (StrongswanPluginUiWidget *self, NMSettingVpn *settings,
 	nma_utils_setup_password_storage (entry, 0, NM_SETTING (settings), secret_key, TRUE, FALSE);
 
 	/* If there's no password and no flags in the setting,
-	 * initialize flags as "always-ask".
+	 * initialize flags as given by the caller.
 	 */
 	if (settings)
 	{
@@ -337,7 +339,7 @@ init_password_icon (StrongswanPluginUiWidget *self, NMSettingVpn *settings,
 	value = gtk_editable_get_text (GTK_EDITABLE (entry));
 	if ((!value || !*value) && (pw_flags == NM_SETTING_SECRET_FLAG_NONE))
 	{
-		nma_utils_update_password_storage (entry, NM_SETTING_SECRET_FLAG_NOT_SAVED,
+		nma_utils_update_password_storage (entry, empty_flags,
 										   NM_SETTING (settings), secret_key);
 	}
 
@@ -378,7 +380,7 @@ init_plugin_ui (StrongswanPluginUiWidget *self, NMConnection *connection, GError
 	StrongswanPluginUiWidgetPrivate *priv = STRONGSWAN_PLUGIN_UI_WIDGET_GET_PRIVATE (self);
 	NMSettingVpn *settings;
 	GtkWidget *widget;
-	const char *value, *method;
+	const char *value, *method, *secret;
 
 	settings = NM_SETTING_VPN(nm_connection_get_setting(connection, NM_TYPE_SETTING_VPN));
 
@@ -428,7 +430,22 @@ init_plugin_ui (StrongswanPluginUiWidget *self, NMConnection *connection, GError
 	if (value)
 		gtk_editable_set_text (GTK_EDITABLE (widget), value);
 	g_signal_connect (G_OBJECT (widget), "changed", G_CALLBACK (settings_changed_cb), self);
-	init_password_icon (self, settings, "password", "passwd-entry");
+	init_password_icon (self, settings, "password", "passwd-entry",
+						NM_SETTING_SECRET_FLAG_NOT_SAVED);
+
+	/* fallback to the password for old certificate configs */
+	secret = "userkey-password";
+	if (!nm_setting_vpn_get_secret (settings, "userkey-password") &&
+		nm_setting_vpn_get_secret (settings, "password") &&
+		method && g_strcmp0 (method, "eap") != 0 && g_strcmp0 (method, "psk") != 0)
+		secret = "password";
+	widget = GTK_WIDGET (gtk_builder_get_object (priv->builder, "userkey-password-entry"));
+	value = nm_setting_vpn_get_secret (settings, secret);
+	if (value)
+		gtk_editable_set_text (GTK_EDITABLE (widget), value);
+	g_signal_connect (G_OBJECT (widget), "changed", G_CALLBACK (settings_changed_cb), self);
+	init_password_icon (self, settings, secret, "userkey-password-entry",
+						NM_SETTING_SECRET_FLAG_NOT_REQUIRED);
 
 	widget = GTK_WIDGET (gtk_builder_get_object (priv->builder, "method-combo"));
 	gtk_combo_box_text_append_text (GTK_COMBO_BOX_TEXT (widget), _("EAP (Username/Password)"));
@@ -650,8 +667,8 @@ save_cert (NMSettingVpn *settings, GtkBuilder *builder)
 	{
 		default:
 		case 0:
-			save_password_and_flags (settings, builder, "passwd-entry",
-									 "password");
+			save_password_and_flags (settings, builder, "userkey-password-entry",
+									 "userkey-password");
 			cert = key = TRUE;
 			str = "file";
 			break;
@@ -660,7 +677,7 @@ save_cert (NMSettingVpn *settings, GtkBuilder *builder)
 			str = "agent";
 			break;
 		case 2:
-			nm_setting_set_secret_flags (NM_SETTING (settings), "password",
+			nm_setting_set_secret_flags (NM_SETTING (settings), "pin",
 										 NM_SETTING_SECRET_FLAG_NOT_SAVED, NULL);
 			str = "smartcard";
 			break;
@@ -772,6 +789,8 @@ dispose (GObject *object)
 	GtkWidget *widget;
 
 	widget = GTK_WIDGET (gtk_builder_get_object (priv->builder, "passwd-entry"));
+	g_signal_handlers_disconnect_by_func (G_OBJECT (widget), G_CALLBACK (password_storage_changed_cb), plugin);
+	widget = GTK_WIDGET (gtk_builder_get_object (priv->builder, "userkey-password-entry"));
 	g_signal_handlers_disconnect_by_func (G_OBJECT (widget), G_CALLBACK (password_storage_changed_cb), plugin);
 
 	if (priv->widget)
