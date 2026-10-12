@@ -386,10 +386,10 @@ macos)
 			--enable-revocation --enable-socket-default --enable-sshkey
 			--enable-stroke --enable-swanctl --enable-unity --enable-updown
 			--enable-x509 --enable-xauth-generic --enable-drbg"
-	DEPS="automake autoconf libtool bison gperf pkgconf openssl@3 curl"
+	DEPS="automake autoconf libtool bison gperf pkgconf openssl@4 curl"
 	BREW_PREFIX=$(brew --prefix)
 	export PATH=$BREW_PREFIX/opt/bison/bin:$PATH
-	for pkg in openssl@3 curl
+	for pkg in openssl@4 curl
 	do
 		PKG_CONFIG_PATH=$BREW_PREFIX/opt/$pkg/lib/pkgconfig:$PKG_CONFIG_PATH
 		CPPFLAGS="-I$BREW_PREFIX/opt/$pkg/include $CPPFLAGS"
