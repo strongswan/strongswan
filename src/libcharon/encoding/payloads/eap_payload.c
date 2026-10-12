@@ -21,6 +21,7 @@
 #include "eap_payload.h"
 
 #include <daemon.h>
+#include <sa/ike_sa.h>
 #include <eap/eap.h>
 #include <bio/bio_writer.h>
 
@@ -136,8 +137,17 @@ METHOD(payload_t, verify, status_t,
 		{
 			if (this->data.len != 4)
 			{
-				DBG1(DBG_ENC, "EAP Success/Failure has data");
-				return FAILED;
+				/* Fortinet sends Success + GTC type, optionally followed by a
+				 * capability byte whose only defined bit is push (bit 0). */
+				if (code != EAP_SUCCESS ||
+					(this->data.len != 5 && this->data.len != 6) ||
+					this->data.ptr[4] != EAP_GTC ||
+					(this->data.len == 6 && this->data.ptr[5] > 1) || !charon ||
+					!ike_sa_is_fortigate_mfa(charon->bus->get_sa(charon->bus)))
+				{
+					DBG1(DBG_ENC, "EAP Success/Failure has unsupported data");
+					return FAILED;
+				}
 			}
 			break;
 		}
@@ -193,7 +203,7 @@ METHOD(eap_payload_t, get_data, chunk_t,
 METHOD(eap_payload_t, set_data, void,
 	private_eap_payload_t *this, chunk_t data)
 {
-	free(this->data.ptr);
+	chunk_clear(&this->data);
 	this->data = chunk_clone(data);
 	this->payload_length = this->data.len + 4;
 }
@@ -315,7 +325,7 @@ METHOD(eap_payload_t, is_expanded, bool,
 METHOD2(payload_t, eap_payload_t, destroy, void,
 	private_eap_payload_t *this)
 {
-	chunk_free(&this->data);
+	chunk_clear(&this->data);
 	free(this);
 }
 

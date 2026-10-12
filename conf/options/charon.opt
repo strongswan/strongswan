@@ -150,6 +150,29 @@ charon.force_eap_only_authentication = no
 	Violate RFC 5998 and use EAP-only authentication even if the peer did not
 	send an EAP_ONLY_AUTHENTICATION notify during IKE_AUTH.
 
+charon.fortigate_fct_file
+	File containing nonsecret endpoint metadata for the Fortinet MFA flow.
+
+	The selected connection sends the file's contents in a proprietary
+	FORTICLIENT_CONNECT notification during IKE_AUTH. The file must contain
+	1 to 4096 bytes of endpoint metadata. It must not contain a password, PSK
+	or one-time code. Required when _fortigate_mfa_connection_ is configured.
+
+charon.fortigate_mfa_connection
+	Connection name selected for Fortinet's proprietary IKEv2 MFA flow.
+
+	Enables MSCHAPv2-to-GTC continuation for exactly this connection name.
+	Other connections retain standard EAP handling. The initial gateway PSK
+	and MSCHAPv2 authenticator response must be verified before continuation.
+	The flow permits a second Identity exchange and supports runtime code
+	entry or FortiToken Mobile push if advertised by the gateway.
+
+	The selected connection sends FortiClient vendor IDs and endpoint metadata
+	and does not advertise EAP-only authentication. Final AUTH uses the IKE
+	session keys instead of the EAP MSK after the second factor completes;
+	the original gateway PSK verification remains mandatory. Requires
+	_fortigate_fct_file_ and the eap-gtc plugin's _otp_helper_ option.
+
 charon.fragment_size = 1280
 	Maximum size (complete IP datagram size in bytes) of a sent IKE fragment
 	when using proprietary IKEv1 or standardized IKEv2 fragmentation, defaults

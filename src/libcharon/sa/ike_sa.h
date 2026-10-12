@@ -271,6 +271,12 @@ enum ike_condition_t {
 	COND_OCSP_REQUEST = (1<<15),
 
 	/**
+	 * Validated Fortinet MFA continuation advertised mobile push support.
+	 * Temporary: cleared when the EAP authentication finishes or aborts.
+	 */
+	COND_FORTIGATE_MFA_PUSH = (1<<16),
+
+	/**
 	 * MSB marker to separate private conditions
 	 */
 	COND_PRIVATE_MARKER = (1<<31),
@@ -1277,6 +1283,26 @@ struct ike_sa_t {
 	 */
 	void (*destroy) (ike_sa_t *this);
 };
+
+/**
+ * Check if an IKE_SA is selected for the Fortinet MFA compatibility flow.
+ *
+ * @param this			IKE_SA to check, or NULL
+ * @return				TRUE if the configured connection name matches
+ */
+static inline bool ike_sa_is_fortigate_mfa(ike_sa_t *this)
+{
+	char *selected, *name;
+
+	if (!this)
+	{
+		return FALSE;
+	}
+	selected = lib->settings->get_str(lib->settings,
+						"%s.fortigate_mfa_connection", NULL, lib->ns);
+	name = this->get_name(this);
+	return selected && *selected && name && streq(selected, name);
+}
 
 /**
  * Creates an ike_sa_t object with a specific ID and IKE version.

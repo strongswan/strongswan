@@ -139,6 +139,12 @@ static vid_data_t vids[] = {
 	  "\x5b\x36\x2b\xc8\x20\xf7\x00\x01"},
 	{ "Fortigate", 0, NULL, FALSE, 16,
 	  "\x1d\x6e\x17\x8f\x6c\x2c\x0b\xe2\x84\x98\x54\x65\x45\x0f\xe9\xd4"},
+	{ "FortiClient connect license", 0, "fortigate_mfa_connection", FALSE, 16,
+	  "\x4c\x53\x42\x7b\x6d\x46\x5d\x1b\x33\x7b\xb7\x55\xa3\x7a\x7f\xef"},
+	{ "Fortinet Endpoint Control", 0, "fortigate_mfa_connection", FALSE, 16,
+	  "\xb4\xf0\x1c\xa9\x51\xe9\xda\x8d\x0b\xaf\xbb\xd3\x4a\xd3\x04\x4e"},
+	{ "FortiClient EAP Extension", 0, "fortigate_mfa_connection", FALSE, 16,
+	  "\xc1\xdc\x43\x50\x47\x6b\x98\xa4\x29\xb9\x17\x81\x91\x4c\xa4\x3e"},
 	{ "Checkpoint Firewall", 0, NULL, TRUE, 20,
 	  "\xf4\xed\x19\xe0\xc1\x14\xeb\x51\x6f\xaa\xac\x0e\xe3\x7d\xaf\x28\x07\xb4\x38\x1f"},
 	{ "NetScreen Technologies", 0, NULL, TRUE, 20,
@@ -160,8 +166,16 @@ METHOD(task_t, build, status_t,
 
 		if (vids[i].setting)
 		{
-			send_vid = lib->settings->get_bool(lib->settings, "%s.%s", send_vid,
-											   lib->ns, vids[i].setting);
+			if (streq(vids[i].setting, "fortigate_mfa_connection"))
+			{
+				send_vid = this->initiator &&
+						   ike_sa_is_fortigate_mfa(this->ike_sa);
+			}
+			else
+			{
+				send_vid = lib->settings->get_bool(lib->settings, "%s.%s",
+										 send_vid, lib->ns, vids[i].setting);
+			}
 		}
 		if (send_vid)
 		{

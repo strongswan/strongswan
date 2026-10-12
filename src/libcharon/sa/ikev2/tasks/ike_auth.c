@@ -835,9 +835,34 @@ METHOD(task_t, build_i, status_t,
 			message->add_notify(message, FALSE, MULTIPLE_AUTH_SUPPORTED,
 								chunk_empty);
 		}
-		/* indicate support for EAP-only authentication */
-		message->add_notify(message, FALSE, EAP_ONLY_AUTHENTICATION,
-							chunk_empty);
+		/* FortiClient does not advertise EAP-only on the selected connection;
+		 * the initial gateway AUTH must still verify against its PSK. */
+		if (!ike_sa_is_fortigate_mfa(this->ike_sa))
+		{
+			message->add_notify(message, FALSE, EAP_ONLY_AUTHENTICATION,
+								chunk_empty);
+		}
+		else
+		{
+			char *path;
+			chunk_t *fct;
+
+			path = lib->settings->get_str(lib->settings,
+							"%s.fortigate_fct_file", NULL, lib->ns);
+			fct = path ? chunk_map(path, FALSE) : NULL;
+			if (!fct || !fct->len || fct->len > 4096)
+			{
+				if (fct)
+				{
+					chunk_unmap(fct);
+				}
+				DBG1(DBG_IKE, "Fortinet MFA requires valid endpoint metadata");
+				return FAILED;
+			}
+			message->add_notify(message, FALSE, INITIAL_CONTACT, chunk_empty);
+			message->add_notify(message, FALSE, (notify_type_t)0xF100, *fct);
+			chunk_unmap(fct);
+		}
 		/* indicate support for RFC 6311 Message ID synchronization */
 		message->add_notify(message, FALSE, IKEV2_MESSAGE_ID_SYNC_SUPPORTED,
 							chunk_empty);

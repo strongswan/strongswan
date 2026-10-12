@@ -1,2 +1,27 @@
 charon.plugins.eap-gtc.backend = pam
 	XAuth backend to be used for credential verification.
+
+charon.plugins.eap-gtc.otp_helper
+	Absolute executable path to the runtime Fortinet MFA helper (Linux only).
+
+	Used only for the connection selected by _fortigate_mfa_connection_, after
+	verified MSCHAPv2 continuation. There is no default helper or fallback to
+	the stored EAP password on this path. The executable is invoked directly,
+	without a shell, with **--ike-id** followed by the IKE_SA's numeric ID and
+	**--connection** followed by its connection name. **--push-capable** is
+	included only if the gateway advertised push in the validated continuation.
+
+	A successful helper exits with status zero and writes a 4 to 8 digit ASCII
+	code, optionally followed by LF or CRLF, to stdout. Alternatively, exactly
+	**PUSH\n** is a private local decision marker accepted only when push was
+	advertised; it becomes an empty EAP-GTC response, not text on the wire.
+	Empty output, cancellation, invalid output or an unsuccessful exit fails
+	authentication. Further GTC requests receive empty responses after push is
+	selected, without invoking the helper again.
+
+	The helper has a 125 second deadline. Its stdin and stderr are redirected
+	to /dev/null, stdout uses a private pipe, and other daemon descriptors are
+	closed. The helper inherits the daemon's privileges and may communicate
+	with a foreground broker to obtain the runtime decision. No secret is
+	passed in its arguments. Helper mode fails closed on non-Linux platforms;
+	ordinary EAP-GTC behavior is unchanged.

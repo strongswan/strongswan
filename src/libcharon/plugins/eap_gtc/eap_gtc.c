@@ -14,10 +14,23 @@
  * for more details.
  */
 
+#define _GNU_SOURCE
 #include "eap_gtc.h"
 
 #include <daemon.h>
 #include <library.h>
+#include <sa/ike_sa.h>
+
+#ifdef __linux__
+#include <errno.h>
+#include <fcntl.h>
+#include <poll.h>
+#include <signal.h>
+#include <stdio.h>
+#include <sys/wait.h>
+#include <time.h>
+#include <unistd.h>
+#endif /* __linux__ */
 
 #define GTC_REQUEST_MSG "password"
 
@@ -47,6 +60,16 @@ struct private_eap_gtc_t {
 	 * EAP message identifier
 	 */
 	uint8_t identifier;
+
+	/**
+	 * This method has entered the selected Fortinet credential path.
+	 */
+	bool forti_selected;
+
+	/**
+	 * Empty GTC responses continue an explicitly approved push wait.
+	 */
+	bool forti_push_wait;
 };
 
 typedef struct eap_gtc_header_t eap_gtc_header_t;
@@ -93,23 +116,265 @@ METHOD(eap_method_t, initiate_server, status_t,
 	return NEED_MORE;
 }
 
+#ifdef __linux__
+
+/**
+ * Get monotonic time in milliseconds for the bounded helper exchange.
+ */
+static int64_t monotonic_milliseconds(void)
+{
+	struct timespec now;
+
+	if (clock_gettime(CLOCK_MONOTONIC, &now))
+	{
+		return -1;
+	}
+	return (int64_t)now.tv_sec * 1000 + now.tv_nsec / 1000000;
+}
+
+/**
+ * Run an absolute helper without a shell, bound its wait and erase its output.
+ */
+static bool fortigate_otp_read(ike_sa_t *sa, chunk_t *out)
+{
+	char *helper, *connection, id[16], buf[32] = {0};
+	int fds[2], status = 0;
+	pid_t pid, waited;
+	int64_t deadline, now;
+	size_t used = 0, i;
+	bool ok = FALSE, eof = FALSE;
+	bool push_capable = sa->has_condition(sa, COND_FORTIGATE_MFA_PUSH);
+
+	helper = lib->settings->get_str(lib->settings,
+			"%s.plugins.eap-gtc.otp_helper", NULL, lib->ns);
+	if (!helper || helper[0] != '/' || pipe2(fds, O_CLOEXEC))
+	{
+		DBG1(DBG_IKE, "FortiGate MFA requires an absolute-path OTP helper");
+		return FALSE;
+	}
+	now = monotonic_milliseconds();
+	if (now < 0)
+	{
+		close(fds[0]);
+		close(fds[1]);
+		return FALSE;
+	}
+	deadline = now + 125000;
+	snprintf(id, sizeof(id), "%u", sa->get_unique_id(sa));
+	connection = sa->get_name(sa);
+	pid = fork();
+	if (!pid)
+	{
+		int nullfd = open("/dev/null", O_RDWR);
+		if (nullfd < 0 || dup2(fds[1], STDOUT_FILENO) < 0 ||
+			dup2(nullfd, STDIN_FILENO) < 0 || dup2(nullfd, STDERR_FILENO) < 0)
+		{
+			_exit(127);
+		}
+		/* Do not leak daemon/VICI/UDP descriptors into the token agent. */
+		closefrom(3);
+		if (push_capable)
+		{
+			execl(helper, helper, "--ike-id", id, "--connection", connection,
+				  "--push-capable", (char*)NULL);
+		}
+		else
+		{
+			execl(helper, helper, "--ike-id", id, "--connection",
+				  connection, (char*)NULL);
+		}
+		_exit(127);
+	}
+	close(fds[1]);
+	if (pid < 0)
+	{
+		close(fds[0]);
+		return FALSE;
+	}
+	DBG1(DBG_IKE, "FortiGate MFA: waiting for the runtime token agent");
+	while (used < sizeof(buf))
+	{
+		struct pollfd fd = { .fd = fds[0], .events = POLLIN };
+		ssize_t got;
+		int ready;
+
+		now = monotonic_milliseconds();
+		if (now < 0 || now >= deadline)
+		{
+			break;
+		}
+		ready = poll(&fd, 1, deadline - now);
+		if (ready < 0 && errno == EINTR)
+		{
+			continue;
+		}
+		if (ready <= 0 || (fd.revents & (POLLERR | POLLNVAL)))
+		{
+			break;
+		}
+		got = read(fds[0], buf + used, sizeof(buf) - used);
+		if (got < 0 && errno == EINTR)
+		{
+			continue;
+		}
+		if (!got)
+		{
+			eof = TRUE;
+			break;
+		}
+		if (got < 0)
+		{
+			break;
+		}
+		used += got;
+	}
+	close(fds[0]);
+	if (!eof)
+	{
+		kill(pid, SIGKILL);
+	}
+	/* EOF alone does not guarantee exit; keep the same bounded deadline. */
+	do
+	{
+		waited = waitpid(pid, &status, WNOHANG);
+		if (!waited || (waited < 0 && errno == EINTR))
+		{
+			now = monotonic_milliseconds();
+			if (now < 0 || now >= deadline)
+			{
+				kill(pid, SIGKILL);
+				while (waitpid(pid, &status, 0) < 0 && errno == EINTR)
+				{
+				}
+				eof = FALSE;
+				break;
+			}
+			poll(NULL, 0, 10);
+		}
+	} while (!waited || (waited < 0 && errno == EINTR));
+	if (eof && waited == pid && WIFEXITED(status) && !WEXITSTATUS(status))
+	{
+		/* Typed local decision, not text to put in the EAP payload. No output,
+		 * cancellation or a failed helper must never be mistaken for push. */
+		if (push_capable && used == 5 && memeq(buf, "PUSH\n", 5))
+		{
+			*out = chunk_empty;
+			ok = TRUE;
+		}
+		else
+		{
+			if (used && buf[used - 1] == '\n')
+			{
+				used--;
+			}
+			if (used && buf[used - 1] == '\r')
+			{
+				used--;
+			}
+			ok = used >= 4 && used <= 8;
+			for (i = 0; ok && i < used; i++)
+			{
+				ok = buf[i] >= '0' && buf[i] <= '9';
+			}
+			if (ok)
+			{
+				*out = chunk_clone(chunk_create(buf, used));
+			}
+		}
+	}
+	memwipe(buf, sizeof(buf));
+	if (!ok)
+	{
+		DBG1(DBG_IKE, "FortiGate MFA token request cancelled, invalid, "
+			 "or timed out");
+	}
+	return ok;
+}
+
+#else /* !__linux__ */
+
+/**
+ * The runtime helper currently requires Linux process and pipe facilities.
+ */
+static bool fortigate_otp_read(ike_sa_t *sa, chunk_t *out)
+{
+	(void)sa;
+	(void)out;
+	DBG1(DBG_IKE, "Fortinet MFA runtime helpers are only supported on Linux");
+	return FALSE;
+}
+
+#endif /* __linux__ */
+
 METHOD(eap_method_t, process_peer, status_t,
 	private_eap_gtc_t *this, eap_payload_t *in, eap_payload_t **out)
 {
 	eap_gtc_header_t *res;
-	shared_key_t *shared;
-	chunk_t key;
+	shared_key_t *shared = NULL;
+	chunk_t key = chunk_empty;
+	ike_sa_t *sa = charon->bus->get_sa(charon->bus);
+	bool token = ike_sa_is_fortigate_mfa(sa);
 	size_t len;
 
-	shared = lib->credmgr->get_shared(lib->credmgr, SHARED_EAP,
-									  this->peer, this->server);
-	if (shared == NULL)
+	if (token)
 	{
-		DBG1(DBG_IKE, "no EAP key found for '%Y' - '%Y'",
-			 this->peer, this->server);
+		this->forti_selected = TRUE;
+	}
+	if (this->forti_selected && !token)
+	{
+		/* Keep this one-way even after a failed push request. Removing the
+		 * opt-in must never route this method to an ordinary EAP password. */
+		this->forti_push_wait = FALSE;
 		return FAILED;
 	}
-	key = shared->get_key(shared);
+	if (token)
+	{
+		chunk_t request = in->get_data(in);
+
+		if (request.len < 5 || request.ptr[0] != EAP_REQUEST ||
+			request.ptr[4] != EAP_GTC ||
+			untoh16(request.ptr + 2) != request.len)
+		{
+			this->forti_push_wait = FALSE;
+			return FAILED;
+		}
+		if (this->forti_push_wait)
+		{
+			if (!sa->has_condition(sa, COND_FORTIGATE_MFA_PUSH))
+			{
+				this->forti_push_wait = FALSE;
+				return FAILED;
+			}
+			/* FortiClient answers each subsequent GTC request with no data
+			 * while the gateway waits for the mobile push approval. */
+			key = chunk_empty;
+		}
+		else
+		{
+			if (!fortigate_otp_read(sa, &key))
+			{
+				return FAILED;
+			}
+			this->forti_push_wait = key.len == 0;
+			if (this->forti_push_wait)
+			{
+				DBG1(DBG_IKE, "FortiGate MFA: requesting "
+					 "FortiToken Mobile push");
+			}
+		}
+	}
+	else
+	{
+		shared = lib->credmgr->get_shared(lib->credmgr, SHARED_EAP,
+										  this->peer, this->server);
+		if (shared == NULL)
+		{
+			DBG1(DBG_IKE, "no EAP key found for '%Y' - '%Y'",
+				 this->peer, this->server);
+			return FAILED;
+		}
+		key = shared->get_key(shared);
+	}
 	len = key.len;
 
 	/* TODO: According to the draft we should "SASLprep" password, RFC4013. */
@@ -120,12 +385,26 @@ METHOD(eap_method_t, process_peer, status_t,
 	res->code = EAP_RESPONSE;
 	res->identifier = this->identifier;
 	res->type = EAP_GTC;
-	memcpy(res->data, key.ptr, len);
+	if (len)
+	{
+		memcpy(res->data, key.ptr, len);
+	}
 
-	shared->destroy(shared);
+	if (token)
+	{
+		chunk_clear(&key);
+	}
+	else
+	{
+		shared->destroy(shared);
+	}
 
 	*out = eap_payload_create_data(chunk_create((void*)res,
 								   sizeof(eap_gtc_header_t) + len));
+	if (token)
+	{
+		memwipe(res, sizeof(eap_gtc_header_t) + len);
+	}
 	return NEED_MORE;
 }
 

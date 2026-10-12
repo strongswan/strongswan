@@ -114,7 +114,70 @@ struct private_eap_authenticator_t {
 	 * EAP identity of peer
 	 */
 	identification_t *eap_identity;
+
+	/**
+	 * Exact verified MSCHAPv2 Success ACK, never an EAP password.
+	 */
+	chunk_t forti_last_response;
+
+	/**
+	 * Validated MSCHAPv2 -> GTC transition, allowed once.
+	 */
+	bool forti_continue;
+
+	/**
+	 * GTC response sent and final Success accepted.
+	 */
+	bool forti_gtc_answered;
+	bool forti_complete;
 };
+
+
+/**
+ * Clear only the per-SA capability established by our selected flow.
+ */
+static void fortigate_mfa_clear_push(private_eap_authenticator_t *this)
+{
+	if (this->forti_continue || this->forti_complete ||
+		ike_sa_is_fortigate_mfa(this->ike_sa))
+	{
+		this->ike_sa->set_condition(this->ike_sa,
+								   COND_FORTIGATE_MFA_PUSH, FALSE);
+	}
+}
+
+/**
+ * Require a completed initial gateway PSK AUTH, not EAP-only.
+ */
+static bool fortigate_remote_psk_verified(private_eap_authenticator_t *this)
+{
+	enumerator_t *enumerator;
+	auth_cfg_t *cfg;
+	bool verified = FALSE;
+
+	enumerator = this->ike_sa->create_auth_cfg_enumerator(this->ike_sa, FALSE);
+	while (enumerator->enumerate(enumerator, &cfg))
+	{
+		if ((uintptr_t)cfg->get(cfg, AUTH_RULE_AUTH_CLASS) == AUTH_CLASS_PSK)
+		{
+			verified = TRUE;
+			break;
+		}
+	}
+	enumerator->destroy(enumerator);
+	return verified;
+}
+
+/**
+ * This ACK is produced only after the MSCHAPv2 peer verifies the server's
+ * authenticator response. An MSK alone does not prove the method is complete.
+ */
+static bool fortigate_mschap_ack(chunk_t data)
+{
+	return data.len == 6 && data.ptr[0] == EAP_RESPONSE &&
+		   untoh16(data.ptr + 2) == 6 && data.ptr[4] == EAP_MSCHAPV2 &&
+		   data.ptr[5] == 3;
+}
 
 /**
  * load an EAP method
@@ -389,6 +452,48 @@ static eap_payload_t* client_process_eap(private_eap_authenticator_t *this,
 
 	type = in->get_type(in, &vendor);
 
+	if (ike_sa_is_fortigate_mfa(this->ike_sa) &&
+		(vendor || (this->forti_continue ?
+			(type != EAP_GTC && (type != EAP_IDENTITY || in->is_expanded(in) ||
+								this->method || this->forti_gtc_answered)) :
+			(type != EAP_IDENTITY && type != EAP_MSCHAPV2))))
+	{
+		DBG1(DBG_IKE, "Fortinet MFA requested an unsupported EAP method "
+			 "or stage");
+		return NULL;
+	}
+	if (this->forti_continue && !vendor && type == EAP_IDENTITY)
+	{
+		eap_method_t *identity;
+		pen_t response_vendor;
+
+		/* FortiGate may begin the second factor with Identity before GTC.
+		 * Use the same peer identity as the verified MSCHAPv2 exchange; do
+		 * not replace the retained MSK, method or continuation state. */
+		identity = load_method(this, EAP_IDENTITY, 0, EAP_PEER);
+		if (!identity)
+		{
+			DBG1(DBG_IKE, "Fortinet MFA: second-factor Identity method "
+				 "unavailable");
+			return NULL;
+		}
+		out = NULL;
+		if (identity->process(identity, in, &out) != SUCCESS || !out ||
+			out->get_code(out) != EAP_RESPONSE || out->is_expanded(out) ||
+			out->get_type(out, &response_vendor) != EAP_IDENTITY ||
+			response_vendor ||
+			out->get_identifier(out) != in->get_identifier(in))
+		{
+			DESTROY_IF(out);
+			out = NULL;
+		}
+		identity->destroy(identity);
+		if (out)
+		{
+			DBG1(DBG_IKE, "Fortinet MFA: answering second-factor EAP Identity");
+		}
+		return out;
+	}
 	if (!vendor && type == EAP_IDENTITY)
 	{
 		DESTROY_IF(this->eap_identity);
@@ -435,7 +540,7 @@ static eap_payload_t* client_process_eap(private_eap_authenticator_t *this,
 		auth = this->ike_sa->get_auth_cfg(this->ike_sa, TRUE);
 		conf_type = (uintptr_t)auth->get(auth, AUTH_RULE_EAP_TYPE);
 		conf_vendor = (uintptr_t)auth->get(auth, AUTH_RULE_EAP_VENDOR);
-		if (conf_type != EAP_NAK &&
+		if (!this->forti_continue && conf_type != EAP_NAK &&
 		   (conf_type != type || conf_vendor != vendor))
 		{
 			if (conf_vendor)
@@ -516,16 +621,25 @@ static bool verify_auth(private_eap_authenticator_t *this, message_t *message,
 
 	other_id = this->ike_sa->get_other_id(this->ike_sa);
 	keymat = (keymat_v2_t*)this->ike_sa->get_keymat(this->ike_sa);
+	/* Only a completed, validated Fortinet flow uses SK_pr. The initial
+	 * gateway PSK AUTH remains verified by the stock PSK authenticator. */
 	if (!keymat->get_psk_sig(keymat, TRUE, init, nonce, this->int_auth,
-							 this->msk, this->ppk, other_id, this->reserved,
-							 &auth_data))
+			this->forti_complete ? chunk_empty : this->msk,
+			this->ppk, other_id, this->reserved, &auth_data))
 	{
 		return FALSE;
 	}
 	if (!auth_data.len || !chunk_equals_const(auth_data, recv_auth_data))
 	{
-		DBG1(DBG_IKE, "verification of AUTH payload with%s EAP MSK failed",
-			 this->msk.ptr ? "" : "out");
+		if (this->forti_complete)
+		{
+			DBG1(DBG_IKE, "verification of Fortinet post-MFA AUTH failed");
+		}
+		else
+		{
+			DBG1(DBG_IKE, "verification of AUTH payload with%s EAP MSK failed",
+				 this->msk.ptr ? "" : "out");
+		}
 		chunk_free(&auth_data);
 		return FALSE;
 	}
@@ -563,9 +677,11 @@ static bool build_auth(private_eap_authenticator_t *this, message_t *message,
 	DBG1(DBG_IKE, "authentication of '%Y' (myself) with %N",
 		 my_id, auth_class_names, AUTH_CLASS_EAP);
 
+	/* FortiClient uses SK_pi for the post-MFA AUTH, not the EAP MSK.
+	 * Enable this only after the validated, complete Fortinet sequence. */
 	if (!keymat->get_psk_sig(keymat, FALSE, init, nonce, this->int_auth,
-							 this->msk, this->ppk, my_id, this->reserved,
-							 &auth_data))
+			this->forti_complete ? chunk_empty : this->msk,
+			this->ppk, my_id, this->reserved, &auth_data))
 	{
 		return FALSE;
 	}
@@ -578,8 +694,8 @@ static bool build_auth(private_eap_authenticator_t *this, message_t *message,
 	if (this->no_ppk_auth)
 	{
 		if (!keymat->get_psk_sig(keymat, FALSE, init, nonce, this->int_auth,
-								 this->msk, chunk_empty, my_id, this->reserved,
-								 &auth_data))
+				this->forti_complete ? chunk_empty : this->msk,
+				chunk_empty, my_id, this->reserved, &auth_data))
 		{
 			DBG1(DBG_IKE, "failed adding NO_PPK_AUTH notify");
 			return FALSE;
@@ -663,10 +779,20 @@ METHOD(authenticator_t, process_client, status_t,
 {
 	eap_payload_t *eap_payload;
 
+	if ((this->forti_continue || this->forti_complete) &&
+		!ike_sa_is_fortigate_mfa(this->ike_sa))
+	{
+		fortigate_mfa_clear_push(this);
+		DBG1(DBG_IKE, "Fortinet MFA connection opt-in changed during "
+			 "authentication");
+		return FAILED;
+	}
+
 	if (this->eap_complete)
 	{
 		if (!verify_auth(this, message, this->sent_nonce, this->received_init))
 		{
+			fortigate_mfa_clear_push(this);
 			return FAILED;
 		}
 		if (this->require_mutual && !this->method->is_mutual(this->method))
@@ -677,6 +803,7 @@ METHOD(authenticator_t, process_client, status_t,
 				 "MSK deriving EAP method, but %N is not",
 				 eap_type_names, this->method->get_type(this->method, &vendor));
 #endif
+			fortigate_mfa_clear_push(this);
 			return FAILED;
 		}
 		return SUCCESS;
@@ -695,6 +822,7 @@ METHOD(authenticator_t, process_client, status_t,
 				{
 					return NEED_MORE;
 				}
+				fortigate_mfa_clear_push(this);
 				return FAILED;
 			}
 			case EAP_SUCCESS:
@@ -707,20 +835,96 @@ METHOD(authenticator_t, process_client, status_t,
 				{
 					DBG1(DBG_IKE, "received unexpected %N",
 						 eap_code_names, eap_payload->get_code(eap_payload));
+					fortigate_mfa_clear_push(this);
 					return FAILED;
 				}
-				switch (this->method->get_msk(this->method, &this->msk))
+				if (eap_payload->get_data(eap_payload).len != 4)
 				{
-					case SUCCESS:
-						this->msk = chunk_clone(this->msk);
-						break;
-					case NOT_SUPPORTED:
-						break;
-					case FAILED:
-					default:
-						DBG1(DBG_IKE, "received %N but failed to establish MSK",
-							 eap_code_names, eap_payload->get_code(eap_payload));
+					chunk_t data, msk;
+
+					data = eap_payload->get_data(eap_payload);
+					type = this->method->get_type(this->method, &vendor);
+					if (!ike_sa_is_fortigate_mfa(this->ike_sa) ||
+						this->forti_continue || this->forti_complete ||
+						(data.len != 5 && data.len != 6) ||
+						data.ptr[0] != EAP_SUCCESS ||
+						untoh16(data.ptr + 2) != data.len ||
+						data.ptr[4] != EAP_GTC ||
+						(data.len == 6 && data.ptr[5] > 1) ||
+						vendor || type != EAP_MSCHAPV2 ||
+						!fortigate_mschap_ack(this->forti_last_response) ||
+						data.ptr[1] != this->forti_last_response.ptr[1] ||
+						!fortigate_remote_psk_verified(this) ||
+						this->require_mutual ||
+						this->method->get_msk(this->method, &msk) != SUCCESS ||
+						!msk.len)
+					{
+						DBG1(DBG_IKE, "rejected invalid or unverified Fortinet "
+							 "MFA continuation");
+						fortigate_mfa_clear_push(this);
 						return FAILED;
+					}
+					chunk_clear(&this->msk);
+					this->msk = chunk_clone(msk);
+					this->method->destroy(this->method);
+					this->method = NULL;
+					this->forti_continue = TRUE;
+					this->ike_sa->set_condition(this->ike_sa,
+						COND_FORTIGATE_MFA_PUSH,
+						data.len == 6 && data.ptr[5] == 1);
+					/* Repeat the exact verified MSCHAPv2 ACK in a NEW request,
+					 * allowing the gateway to start the second factor. */
+					this->eap_payload = eap_payload_create_data(
+												this->forti_last_response);
+					DBG1(DBG_IKE, "Fortinet MFA: continuing MSCHAPv2 "
+						 "with EAP-GTC");
+					DBG1(DBG_IKE, "Fortinet MFA: %s",
+						 data.len == 6 && data.ptr[5] == 1 ?
+						 "FortiToken Mobile push advertised" :
+						 "OTP only, push not advertised");
+					return NEED_MORE;
+				}
+				if (this->forti_continue)
+				{
+					type = this->method->get_type(this->method, &vendor);
+					if (vendor || type != EAP_GTC ||
+						!this->forti_gtc_answered ||
+						eap_payload->get_identifier(eap_payload) !=
+							this->method->get_identifier(this->method))
+					{
+						DBG1(DBG_IKE, "rejected unexpected final Fortinet "
+							 "MFA Success");
+						fortigate_mfa_clear_push(this);
+						return FAILED;
+					}
+				}
+				if (!this->forti_continue)
+				{
+					switch (this->method->get_msk(this->method, &this->msk))
+					{
+						case SUCCESS:
+							this->msk = chunk_clone(this->msk);
+							break;
+						case NOT_SUPPORTED:
+							break;
+						case FAILED:
+						default:
+							DBG1(DBG_IKE, "received %N but failed to "
+								 "establish MSK", eap_code_names,
+								 eap_payload->get_code(eap_payload));
+							fortigate_mfa_clear_push(this);
+							return FAILED;
+					}
+				}
+				else
+				{
+					/* Keep the verified MSCHAPv2 MSK: GTC derives none.
+					 * Commit completion only after final validation. */
+					this->forti_complete = TRUE;
+					fortigate_mfa_clear_push(this);
+					this->forti_continue = FALSE;
+					this->forti_gtc_answered = FALSE;
+					chunk_clear(&this->forti_last_response);
 				}
 				type = this->method->get_type(this->method, &vendor);
 				if (vendor)
@@ -748,18 +952,47 @@ METHOD(authenticator_t, process_client, status_t,
 			{
 				DBG1(DBG_IKE, "received %N, EAP authentication failed",
 					 eap_code_names, eap_payload->get_code(eap_payload));
+				fortigate_mfa_clear_push(this);
 				return FAILED;
 			}
 		}
 	}
+	fortigate_mfa_clear_push(this);
 	return FAILED;
 }
 
 METHOD(authenticator_t, build_client, status_t,
 	private_eap_authenticator_t *this, message_t *message)
 {
+	if ((this->forti_continue || this->forti_complete) &&
+		!ike_sa_is_fortigate_mfa(this->ike_sa))
+	{
+		fortigate_mfa_clear_push(this);
+		DBG1(DBG_IKE, "Fortinet MFA connection opt-in changed during "
+			 "authentication");
+		return FAILED;
+	}
 	if (this->eap_payload)
 	{
+		if (ike_sa_is_fortigate_mfa(this->ike_sa))
+		{
+			chunk_t data;
+
+			data = this->eap_payload->get_data(this->eap_payload);
+			if (!this->forti_continue)
+			{
+				chunk_clear(&this->forti_last_response);
+				if (fortigate_mschap_ack(data))
+				{
+					this->forti_last_response = chunk_clone(data);
+				}
+			}
+			if (this->forti_continue && data.len >= 5 &&
+				data.ptr[0] == EAP_RESPONSE && data.ptr[4] == EAP_GTC)
+			{
+				this->forti_gtc_answered = TRUE;
+			}
+		}
 		message->add_payload(message, (payload_t*)this->eap_payload);
 		this->eap_payload = NULL;
 		return NEED_MORE;
@@ -806,10 +1039,12 @@ METHOD(authenticator_t, set_int_auth, void,
 METHOD(authenticator_t, destroy, void,
 	private_eap_authenticator_t *this)
 {
+	fortigate_mfa_clear_push(this);
 	DESTROY_IF(this->method);
 	DESTROY_IF(this->eap_payload);
 	DESTROY_IF(this->eap_identity);
-	chunk_free(&this->msk);
+	chunk_clear(&this->forti_last_response);
+	chunk_clear(&this->msk);
 	free(this);
 }
 
@@ -841,6 +1076,7 @@ eap_authenticator_t *eap_authenticator_create_builder(ike_sa_t *ike_sa,
 		.sent_nonce = sent_nonce,
 	);
 	memcpy(this->reserved, reserved, sizeof(this->reserved));
+	fortigate_mfa_clear_push(this);
 
 	return &this->public;
 }
