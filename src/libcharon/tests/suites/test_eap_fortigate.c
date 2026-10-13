@@ -572,6 +572,30 @@ START_TEST(test_mfa_flow)
 }
 END_TEST
 
+START_TEST(test_push_denied)
+{
+	message_t *message;
+
+	write_helper("PUSH\n", TRUE, 0);
+	continuation(2);
+	identity(21);
+	gtc(23, TRUE);
+	ck_assert(fixture.conditions & COND_FORTIGATE_MFA_PUSH);
+
+	ck_assert_int_eq(receive(chunk_from_chars(EAP_FAILURE, 23, 0, 4)), FAILED);
+	ck_assert(!(fixture.conditions & COND_FORTIGATE_MFA_PUSH));
+	ck_assert_int_eq(fixture.msk_queries, 1);
+	ck_assert_int_eq(fixture.signatures, 0);
+	ck_assert(!fixture.verified);
+
+	message = build();
+	ck_assert(!message->get_payload(message, PLV2_AUTH));
+	ck_assert(!message->get_payload(message, PLV2_EAP));
+	ck_assert_int_eq(fixture.signatures, 0);
+	message->destroy(message);
+}
+END_TEST
+
 START_TEST(test_mfa_gates)
 {
 	chunk_t marker = extended_success(2);
@@ -880,6 +904,7 @@ Suite *eap_fortigate_suite_create()
 	tcase_add_checked_fixture(tc, setup, teardown);
 	tcase_add_loop_test(tc, test_standard_success, 0, 2);
 	tcase_add_loop_test(tc, test_mfa_flow, 0, 3);
+	tcase_add_test(tc, test_push_denied);
 	tcase_add_loop_test(tc, test_mfa_gates, 0, 11);
 	tcase_add_loop_test(tc, test_unselected_continuation, 0, 3);
 	tcase_add_loop_test(tc, test_mfa_stage, 0, countof(stages));

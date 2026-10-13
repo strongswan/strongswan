@@ -19,9 +19,9 @@ charon.plugins.eap-gtc.otp_helper
 	authentication. Further GTC requests receive empty responses after push is
 	selected, without invoking the helper again. Push remains selected for the
 	entire attempt; GTC request text is ignored and never triggers an automatic
-	switch to OTP. If gateway policy permits OTP after push denial or timeout,
-	start a fresh manual attempt after the current attempt ends. The gateway's
-	exact denial and expiry exchanges have not been validated.
+	switch to OTP. EAP Failure from the gateway terminates authentication. If
+	gateway policy permits OTP after push denial or timeout, start a fresh
+	manual attempt after the current attempt ends.
 
 	The helper has a 125 second deadline. Its stdin and stderr are redirected
 	to /dev/null, stdout uses a private pipe, and other daemon descriptors are
