@@ -17,11 +17,26 @@ charon.plugins.eap-gtc.otp_helper
 	advertised; it becomes an empty EAP-GTC response, not text on the wire.
 	Empty output, cancellation, invalid output or an unsuccessful exit fails
 	authentication. Further GTC requests receive empty responses after push is
-	selected, without invoking the helper again.
+	selected, without invoking the helper again. Push remains selected for the
+	entire attempt; GTC request text is ignored and never triggers an automatic
+	switch to OTP. If gateway policy permits OTP after push denial or timeout,
+	start a fresh manual attempt after the current attempt ends. The gateway's
+	exact denial and expiry exchanges have not been validated.
 
 	The helper has a 125 second deadline. Its stdin and stderr are redirected
 	to /dev/null, stdout uses a private pipe, and other daemon descriptors are
-	closed. The helper inherits the daemon's privileges and may communicate
+	closed. The child resets its signal mask and SIGPIPE disposition before
+	execution. The helper inherits the daemon's privileges and may communicate
 	with a foreground broker to obtain the runtime decision. No secret is
 	passed in its arguments. Helper mode fails closed on non-Linux platforms;
 	ordinary EAP-GTC behavior is unchanged.
+
+	The helper runs synchronously while its IKE_SA remains checked out and a
+	daemon worker is occupied. Blocking VICI **list-sas** enumeration and
+	termination of this SA can therefore wait for the helper, up to its
+	125 second deadline. The helper and broker must not perform these blocking
+	operations to obtain context or cancel. Use the initiation event's SA ID
+	and connection name, then cancel through the helper/broker protocol.
+	**list-sas --noblock** may omit the busy SA; omission is not proof that
+	the SA no longer exists. An asynchronous credential interface would be
+	needed to release the SA and worker while awaiting user input.

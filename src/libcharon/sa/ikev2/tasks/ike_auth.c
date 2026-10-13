@@ -856,10 +856,9 @@ METHOD(task_t, build_i, status_t,
 				{
 					chunk_unmap(fct);
 				}
-				DBG1(DBG_IKE, "Fortinet MFA requires valid endpoint metadata");
+				DBG1(DBG_IKE, "Fortinet MFA: valid endpoint metadata required");
 				return FAILED;
 			}
-			message->add_notify(message, FALSE, INITIAL_CONTACT, chunk_empty);
 			message->add_notify(message, FALSE, (notify_type_t)0xF100, *fct);
 			chunk_unmap(fct);
 		}

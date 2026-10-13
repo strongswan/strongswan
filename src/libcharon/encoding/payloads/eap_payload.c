@@ -21,7 +21,6 @@
 #include "eap_payload.h"
 
 #include <daemon.h>
-#include <sa/ike_sa.h>
 #include <eap/eap.h>
 #include <bio/bio_writer.h>
 
@@ -137,15 +136,15 @@ METHOD(payload_t, verify, status_t,
 		{
 			if (this->data.len != 4)
 			{
-				/* Fortinet sends Success + GTC type, optionally followed by a
-				 * capability byte whose only defined bit is push (bit 0). */
+				/* Validate Fortinet's extended Success shape here. The EAP
+				 * authenticator enforces opt-in and authentication state. */
 				if (code != EAP_SUCCESS ||
 					(this->data.len != 5 && this->data.len != 6) ||
 					this->data.ptr[4] != EAP_GTC ||
-					(this->data.len == 6 && this->data.ptr[5] > 1) || !charon ||
-					!ike_sa_is_fortigate_mfa(charon->bus->get_sa(charon->bus)))
+					(this->data.len == 6 && this->data.ptr[5] > 1))
 				{
-					DBG1(DBG_ENC, "EAP Success/Failure has unsupported data");
+					DBG1(DBG_ENC, "Fortinet MFA: unsupported "
+						 "EAP Success/Failure data");
 					return FAILED;
 				}
 			}

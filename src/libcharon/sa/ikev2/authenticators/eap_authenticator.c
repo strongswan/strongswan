@@ -439,6 +439,36 @@ failure:
 }
 
 /**
+ * Check the permitted request methods for the selected Fortinet MFA stage.
+ */
+static bool fortigate_eap_stage_allowed(private_eap_authenticator_t *this,
+									   eap_payload_t *in, eap_type_t type,
+									   pen_t vendor)
+{
+	if (!ike_sa_is_fortigate_mfa(this->ike_sa))
+	{
+		return TRUE;
+	}
+	if (vendor)
+	{
+		return FALSE;
+	}
+	if (!this->forti_continue)
+	{
+		return type == EAP_IDENTITY || type == EAP_MSCHAPV2;
+	}
+	if (type == EAP_GTC)
+	{
+		return TRUE;
+	}
+	if (type != EAP_IDENTITY || in->is_expanded(in))
+	{
+		return FALSE;
+	}
+	return !this->method && !this->forti_gtc_answered;
+}
+
+/**
  * Processing method for a peer
  */
 static eap_payload_t* client_process_eap(private_eap_authenticator_t *this,
@@ -452,14 +482,9 @@ static eap_payload_t* client_process_eap(private_eap_authenticator_t *this,
 
 	type = in->get_type(in, &vendor);
 
-	if (ike_sa_is_fortigate_mfa(this->ike_sa) &&
-		(vendor || (this->forti_continue ?
-			(type != EAP_GTC && (type != EAP_IDENTITY || in->is_expanded(in) ||
-								this->method || this->forti_gtc_answered)) :
-			(type != EAP_IDENTITY && type != EAP_MSCHAPV2))))
+	if (!fortigate_eap_stage_allowed(this, in, type, vendor))
 	{
-		DBG1(DBG_IKE, "Fortinet MFA requested an unsupported EAP method "
-			 "or stage");
+		DBG1(DBG_IKE, "Fortinet MFA: unsupported EAP method or stage");
 		return NULL;
 	}
 	if (this->forti_continue && !vendor && type == EAP_IDENTITY)
@@ -633,7 +658,7 @@ static bool verify_auth(private_eap_authenticator_t *this, message_t *message,
 	{
 		if (this->forti_complete)
 		{
-			DBG1(DBG_IKE, "verification of Fortinet post-MFA AUTH failed");
+			DBG1(DBG_IKE, "Fortinet MFA: final AUTH verification failed");
 		}
 		else
 		{
@@ -783,7 +808,7 @@ METHOD(authenticator_t, process_client, status_t,
 		!ike_sa_is_fortigate_mfa(this->ike_sa))
 	{
 		fortigate_mfa_clear_push(this);
-		DBG1(DBG_IKE, "Fortinet MFA connection opt-in changed during "
+		DBG1(DBG_IKE, "Fortinet MFA: connection opt-in changed during "
 			 "authentication");
 		return FAILED;
 	}
@@ -859,8 +884,8 @@ METHOD(authenticator_t, process_client, status_t,
 						this->method->get_msk(this->method, &msk) != SUCCESS ||
 						!msk.len)
 					{
-						DBG1(DBG_IKE, "rejected invalid or unverified Fortinet "
-							 "MFA continuation");
+						DBG1(DBG_IKE, "Fortinet MFA: rejected invalid or "
+							 "unverified continuation");
 						fortigate_mfa_clear_push(this);
 						return FAILED;
 					}
@@ -892,8 +917,8 @@ METHOD(authenticator_t, process_client, status_t,
 						eap_payload->get_identifier(eap_payload) !=
 							this->method->get_identifier(this->method))
 					{
-						DBG1(DBG_IKE, "rejected unexpected final Fortinet "
-							 "MFA Success");
+						DBG1(DBG_IKE, "Fortinet MFA: rejected unexpected "
+							 "final Success");
 						fortigate_mfa_clear_push(this);
 						return FAILED;
 					}
@@ -968,7 +993,7 @@ METHOD(authenticator_t, build_client, status_t,
 		!ike_sa_is_fortigate_mfa(this->ike_sa))
 	{
 		fortigate_mfa_clear_push(this);
-		DBG1(DBG_IKE, "Fortinet MFA connection opt-in changed during "
+		DBG1(DBG_IKE, "Fortinet MFA: connection opt-in changed during "
 			 "authentication");
 		return FAILED;
 	}

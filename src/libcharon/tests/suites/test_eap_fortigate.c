@@ -30,7 +30,11 @@
 #include <sa/ikev2/keymat_v2.h>
 
 #include <errno.h>
+#include <pthread.h>
+#include <signal.h>
 #include <sys/stat.h>
+#include <sys/wait.h>
+#include <time.h>
 
 #define CONNECTION "fortigate-test"
 #define PRINCIPAL "eap-user"
@@ -53,7 +57,10 @@ static struct {
 	uint8_t ack_operation;
 	unsigned int msk_queries, signatures;
 	chunk_t signature_key;
-	char *directory, *helper;
+	char *directory, *helper, *ready, *returned;
+	sigset_t saved_mask;
+	struct sigaction saved_pipe;
+	bool signals_saved;
 	eap_method_t *(*factory)(eap_manager_t*, eap_type_t, pen_t, eap_role_t,
 							identification_t*, identification_t*);
 } fixture;
@@ -261,18 +268,30 @@ START_SETUP(setup)
 			chunk_clone(chunk_from_str("static-password"))),
 			identification_create_from_string("%any"), NULL);
 	lib->credmgr->add_set(lib->credmgr, &fixture.creds->set);
-	ck_assert(!mkdir(TEST_TMPDIR, 0700) || errno == EEXIST);
-	ck_assert(asprintf(&fixture.directory, "%s/fortigate-mfa-XXXXXX",
-					  TEST_TMPDIR) > 0);
+	fixture.directory = strdup("/tmp/strongswan-fortigate-XXXXXX");
 	ck_assert(mkdtemp(fixture.directory));
 	ck_assert(asprintf(&fixture.helper, "%s/helper", fixture.directory) > 0);
+	ck_assert(asprintf(&fixture.ready, "%s.ready", fixture.helper) > 0);
+	ck_assert(asprintf(&fixture.returned, "%s.returned", fixture.helper) > 0);
 	lib->settings->set_str(lib->settings, "%s.plugins.eap-gtc.otp_helper",
 						  fixture.helper, lib->ns);
 }
 END_SETUP
 
+
+static void restore_signals()
+{
+	if (fixture.signals_saved)
+	{
+		sigaction(SIGPIPE, &fixture.saved_pipe, NULL);
+		pthread_sigmask(SIG_SETMASK, &fixture.saved_mask, NULL);
+		fixture.signals_saved = FALSE;
+	}
+}
+
 START_TEARDOWN(teardown)
 {
+	restore_signals();
 	fixture.auth->authenticator.destroy(&fixture.auth->authenticator);
 	ck_assert(!(fixture.conditions & COND_FORTIGATE_MFA_PUSH));
 	charon->bus->set_sa(charon->bus, NULL);
@@ -286,9 +305,13 @@ START_TEARDOWN(teardown)
 	fixture.other_id->destroy(fixture.other_id);
 	chunk_clear(&fixture.signature_key);
 	unlink(fixture.helper);
+	unlink(fixture.ready);
+	unlink(fixture.returned);
 	ck_assert_int_eq(rmdir(fixture.directory), 0);
 	free(fixture.directory);
 	free(fixture.helper);
+	free(fixture.ready);
+	free(fixture.returned);
 }
 END_TEARDOWN
 
@@ -440,8 +463,8 @@ static struct {
 	{{3, 13, 0, 5, 6}, 5, TRUE, TRUE, SUCCESS},
 	{{3, 13, 0, 6, 6, 0}, 6, TRUE, TRUE, SUCCESS},
 	{{3, 13, 0, 6, 6, 1}, 6, TRUE, TRUE, SUCCESS},
-	{{3, 13, 0, 5, 6}, 5, FALSE, TRUE, FAILED},
-	{{3, 13, 0, 6, 6, 1}, 6, TRUE, FALSE, FAILED},
+	{{3, 13, 0, 5, 6}, 5, FALSE, TRUE, SUCCESS},
+	{{3, 13, 0, 6, 6, 1}, 6, TRUE, FALSE, SUCCESS},
 	{{3, 13, 0, 6, 6, 2}, 6, TRUE, TRUE, FAILED},
 	{{3, 13, 0, 6, 6, 0x80}, 6, TRUE, TRUE, FAILED},
 	{{3, 13, 0, 7, 6, 1, 0}, 7, TRUE, TRUE, FAILED},
@@ -466,6 +489,49 @@ START_TEST(test_payload)
 	ck_assert_int_eq(payload->payload_interface.verify(
 			&payload->payload_interface), payloads[_i].expected);
 	payload->destroy(payload);
+}
+END_TEST
+
+
+START_TEST(test_payload_without_daemon)
+{
+	daemon_t *saved;
+	eap_payload_t *payload;
+	status_t status;
+	int variant;
+
+	select_connection(NULL);
+	charon->bus->set_sa(charon->bus, NULL);
+	for (variant = 0; variant < 3; variant++)
+	{
+		payload = eap_payload_create_data(extended_success(variant));
+		saved = charon;
+		if (_i)
+		{
+			charon = NULL;
+		}
+		status = payload->payload_interface.verify(&payload->payload_interface);
+		charon = saved;
+		payload->destroy(payload);
+		ck_assert_int_eq(status, SUCCESS);
+	}
+}
+END_TEST
+
+START_TEST(test_unselected_continuation)
+{
+	eap_payload_t *payload;
+	chunk_t marker = extended_success(_i);
+
+	select_connection(NULL);
+	prime_mschap();
+	payload = eap_payload_create_data(marker);
+	ck_assert_int_eq(payload->payload_interface.verify(
+			&payload->payload_interface), SUCCESS);
+	payload->destroy(payload);
+	ck_assert_int_eq(receive(marker), FAILED);
+	ck_assert_int_eq(fixture.signatures, 0);
+	ck_assert(!(fixture.conditions & COND_FORTIGATE_MFA_PUSH));
 }
 END_TEST
 
@@ -693,6 +759,99 @@ START_TEST(test_gtc_scope)
 }
 END_TEST
 
+
+/** Execute the probe through the real plugin under charon's signal state. */
+START_TEST(test_gtc_helper_signals)
+{
+	eap_method_t *method;
+	eap_payload_t *in, *out = NULL;
+	struct sigaction ignore = { .sa_handler = SIG_IGN }, current_pipe;
+	sigset_t blocked, before, after;
+	struct timespec start, end;
+	status_t status = FAILED;
+	int blocked_result, ignored_result, mask_result, pipe_result, signal;
+	FILE *file;
+	int pid = 0, scanned, waited_errno;
+	pid_t waited;
+	int64_t elapsed;
+
+	ck_assert_int_eq(symlink(TEST_HELPER_PROBE, fixture.helper), 0);
+	_set_condition(&fixture.sa, COND_FORTIGATE_MFA_PUSH, _i != 0);
+	method = &eap_gtc_create_peer(fixture.other_id, fixture.my_id)
+											 ->eap_method_interface;
+	in = eap_payload_create_data(chunk_from_chars(EAP_REQUEST, 23, 0, 6,
+												EAP_GTC, '?'));
+	ck_assert_int_eq(sigemptyset(&ignore.sa_mask), 0);
+	ck_assert_int_eq(sigemptyset(&blocked), 0);
+	ck_assert_int_eq(sigaddset(&blocked, SIGINT), 0);
+	ck_assert_int_eq(sigaddset(&blocked, SIGTERM), 0);
+	ck_assert_int_eq(sigaddset(&blocked, SIGHUP), 0);
+	ck_assert_int_eq(sigaction(SIGPIPE, NULL, &fixture.saved_pipe), 0);
+	ck_assert_int_eq(pthread_sigmask(SIG_SETMASK, NULL,
+								   &fixture.saved_mask), 0);
+	ck_assert_int_eq(clock_gettime(CLOCK_MONOTONIC, &start), 0);
+	fixture.signals_saved = TRUE;
+	blocked_result = pthread_sigmask(SIG_BLOCK, &blocked, NULL);
+	ignored_result = sigaction(SIGPIPE, &ignore, NULL);
+	pthread_sigmask(SIG_SETMASK, NULL, &before);
+	if (!blocked_result && !ignored_result)
+	{
+		status = method->process(method, in, &out);
+	}
+	mask_result = pthread_sigmask(SIG_SETMASK, NULL, &after);
+	pipe_result = sigaction(SIGPIPE, NULL, &current_pipe);
+	restore_signals();
+	ck_assert_int_eq(clock_gettime(CLOCK_MONOTONIC, &end), 0);
+	ck_assert_int_eq(blocked_result, 0);
+	ck_assert_int_eq(ignored_result, 0);
+	ck_assert_int_eq(mask_result, 0);
+	ck_assert_int_eq(pipe_result, 0);
+	for (signal = 1; signal < NSIG; signal++)
+	{
+		ck_assert_int_eq(sigismember(&before, signal),
+						 sigismember(&after, signal));
+	}
+	ck_assert(current_pipe.sa_handler == SIG_IGN);
+	elapsed = (end.tv_sec - start.tv_sec) * 1000 +
+			  (end.tv_nsec - start.tv_nsec) / 1000000;
+	ck_assert_msg(elapsed < 2000, "helper took %lld ms", (long long)elapsed);
+	if (_i)
+	{
+		ck_assert_int_eq(status, FAILED);
+		ck_assert(!out);
+		file = fopen(fixture.ready, "r");
+		ck_assert(file);
+		scanned = fscanf(file, "%d", &pid);
+		fclose(file);
+		ck_assert_int_eq(scanned, 1);
+		ck_assert(pid > 1);
+		ck_assert(access(fixture.returned, F_OK) < 0 && errno == ENOENT);
+		waited = waitpid(pid, NULL, WNOHANG);
+		waited_errno = errno;
+		if (!waited)
+		{
+			/* Clean up even if a future plugin forgets to reap its helper. */
+			kill(pid, SIGKILL);
+			while (waitpid(pid, NULL, 0) < 0 && errno == EINTR)
+			{
+			}
+		}
+		ck_assert(waited < 0 && waited_errno == ECHILD);
+	}
+	else
+	{
+		ck_assert_int_eq(status, NEED_MORE);
+		ck_assert(out);
+		ck_assert_chunk_eq(out->get_data(out), chunk_from_chars(EAP_RESPONSE,
+				23, 0, 11, EAP_GTC, '1', '2', '3', '4', '5', '6'));
+		out->destroy(out);
+	}
+	in->destroy(in);
+	method->destroy(method);
+	_set_condition(&fixture.sa, COND_FORTIGATE_MFA_PUSH, FALSE);
+}
+END_TEST
+
 START_TEST(test_identity_unavailable)
 {
 	continuation(2);
@@ -714,6 +873,7 @@ Suite *eap_fortigate_suite_create()
 	tc = tcase_create("payload");
 	tcase_add_checked_fixture(tc, setup, teardown);
 	tcase_add_loop_test(tc, test_payload, 0, countof(payloads));
+	tcase_add_loop_test(tc, test_payload_without_daemon, 0, 2);
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("authentication");
@@ -721,14 +881,17 @@ Suite *eap_fortigate_suite_create()
 	tcase_add_loop_test(tc, test_standard_success, 0, 2);
 	tcase_add_loop_test(tc, test_mfa_flow, 0, 3);
 	tcase_add_loop_test(tc, test_mfa_gates, 0, 11);
+	tcase_add_loop_test(tc, test_unselected_continuation, 0, 3);
 	tcase_add_loop_test(tc, test_mfa_stage, 0, countof(stages));
 	tcase_add_test(tc, test_identity_unavailable);
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("GTC helper");
+	tcase_set_timeout(tc, 5);
 	tcase_add_checked_fixture(tc, setup, teardown);
 	tcase_add_loop_test(tc, test_gtc_helper, 0, countof(helpers));
 	tcase_add_loop_test(tc, test_gtc_scope, 0, 3);
+	tcase_add_loop_test(tc, test_gtc_helper_signals, 0, 2);
 	suite_add_tcase(s, tc);
 	return s;
 }

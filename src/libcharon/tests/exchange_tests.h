@@ -21,3 +21,7 @@ TEST_SUITE(child_create_suite_create)
 TEST_SUITE(child_delete_suite_create)
 TEST_SUITE(child_rekey_suite_create)
 TEST_SUITE(childless_suite_create)
+
+#if defined(USE_IKEV2) && defined(__linux__)
+TEST_SUITE(fortigate_initial_contact_suite_create)
+#endif

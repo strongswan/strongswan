@@ -134,6 +134,11 @@ static int64_t monotonic_milliseconds(void)
 
 /**
  * Run an absolute helper without a shell, bound its wait and erase its output.
+ *
+ * This synchronous exchange retains a checked-out IKE_SA and a worker thread.
+ * The helper/broker must not issue blocking VICI state or termination requests
+ * for that SA. Use initiation event context and the private helper protocol to
+ * cancel. Non-blocking enumeration may omit the busy SA, not prove its absence.
  */
 static bool fortigate_otp_read(ike_sa_t *sa, chunk_t *out)
 {
@@ -143,13 +148,15 @@ static bool fortigate_otp_read(ike_sa_t *sa, chunk_t *out)
 	int64_t deadline, now;
 	size_t used = 0, i;
 	bool ok = FALSE, eof = FALSE;
+	sigset_t blocked_signals, helper_signals;
+	struct sigaction pipe_action = { .sa_handler = SIG_DFL };
 	bool push_capable = sa->has_condition(sa, COND_FORTIGATE_MFA_PUSH);
 
 	helper = lib->settings->get_str(lib->settings,
 			"%s.plugins.eap-gtc.otp_helper", NULL, lib->ns);
 	if (!helper || helper[0] != '/' || pipe2(fds, O_CLOEXEC))
 	{
-		DBG1(DBG_IKE, "FortiGate MFA requires an absolute-path OTP helper");
+		DBG1(DBG_IKE, "Fortinet MFA requires an absolute-path OTP helper");
 		return FALSE;
 	}
 	now = monotonic_milliseconds();
@@ -162,10 +169,24 @@ static bool fortigate_otp_read(ike_sa_t *sa, chunk_t *out)
 	deadline = now + 125000;
 	snprintf(id, sizeof(id), "%u", sa->get_unique_id(sa));
 	connection = sa->get_name(sa);
+	if (sigfillset(&blocked_signals) || sigemptyset(&helper_signals) ||
+		sigemptyset(&pipe_action.sa_mask))
+	{
+		close(fds[0]);
+		close(fds[1]);
+		return FALSE;
+	}
 	pid = fork();
 	if (!pid)
 	{
-		int nullfd = open("/dev/null", O_RDWR);
+		int nullfd;
+
+		/* Keep inherited handlers from running during descriptor setup. */
+		if (sigprocmask(SIG_SETMASK, &blocked_signals, NULL))
+		{
+			_exit(127);
+		}
+		nullfd = open("/dev/null", O_RDWR);
 		if (nullfd < 0 || dup2(fds[1], STDOUT_FILENO) < 0 ||
 			dup2(nullfd, STDIN_FILENO) < 0 || dup2(nullfd, STDERR_FILENO) < 0)
 		{
@@ -173,6 +194,13 @@ static bool fortigate_otp_read(ike_sa_t *sa, chunk_t *out)
 		}
 		/* Do not leak daemon/VICI/UDP descriptors into the token agent. */
 		closefrom(3);
+		/* Workers block signals and the daemon ignores SIGPIPE. Do not carry
+		 * that state into the helper; these calls are async-signal-safe. */
+		if (sigaction(SIGPIPE, &pipe_action, NULL) ||
+			sigprocmask(SIG_SETMASK, &helper_signals, NULL))
+		{
+			_exit(127);
+		}
 		if (push_capable)
 		{
 			execl(helper, helper, "--ike-id", id, "--connection", connection,
@@ -191,7 +219,7 @@ static bool fortigate_otp_read(ike_sa_t *sa, chunk_t *out)
 		close(fds[0]);
 		return FALSE;
 	}
-	DBG1(DBG_IKE, "FortiGate MFA: waiting for the runtime token agent");
+	DBG1(DBG_IKE, "Fortinet MFA: waiting for the runtime token agent");
 	while (used < sizeof(buf))
 	{
 		struct pollfd fd = { .fd = fds[0], .events = POLLIN };
@@ -285,7 +313,7 @@ static bool fortigate_otp_read(ike_sa_t *sa, chunk_t *out)
 	memwipe(buf, sizeof(buf));
 	if (!ok)
 	{
-		DBG1(DBG_IKE, "FortiGate MFA token request cancelled, invalid, "
+		DBG1(DBG_IKE, "Fortinet MFA token request cancelled, invalid, "
 			 "or timed out");
 	}
 	return ok;
@@ -345,8 +373,8 @@ METHOD(eap_method_t, process_peer, status_t,
 				this->forti_push_wait = FALSE;
 				return FAILED;
 			}
-			/* FortiClient answers each subsequent GTC request with no data
-			 * while the gateway waits for the mobile push approval. */
+			/* Push stays selected for this attempt. Request text is ignored;
+			 * do not infer an OTP fallback from a subsequent GTC prompt. */
 			key = chunk_empty;
 		}
 		else
@@ -358,7 +386,7 @@ METHOD(eap_method_t, process_peer, status_t,
 			this->forti_push_wait = key.len == 0;
 			if (this->forti_push_wait)
 			{
-				DBG1(DBG_IKE, "FortiGate MFA: requesting "
+				DBG1(DBG_IKE, "Fortinet MFA: requesting "
 					 "FortiToken Mobile push");
 			}
 		}

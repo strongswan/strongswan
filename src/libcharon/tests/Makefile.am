@@ -10,6 +10,9 @@ libcharon_tests_SOURCES = \
   libcharon_tests.h libcharon_tests.c
 
 if USE_IKEV2
+check_PROGRAMS += fortigate_helper_probe
+fortigate_helper_probe_SOURCES = utils/fortigate_helper_probe.c
+
 libcharon_tests_SOURCES += \
   suites/test_eap_fortigate.c \
   ../plugins/eap_identity/eap_identity.c \
@@ -17,7 +20,7 @@ libcharon_tests_SOURCES += \
 endif
 
 libcharon_tests_CFLAGS = \
-  -DTEST_TMPDIR=\""$(abs_top_builddir)/tmp"\" \
+  -DTEST_HELPER_PROBE=\""$(abs_builddir)/fortigate_helper_probe"\" \
   -I$(top_srcdir)/src/libcharon \
   -I$(top_srcdir)/src/libstrongswan \
   -I$(top_srcdir)/src/libstrongswan/tests \
@@ -51,6 +54,10 @@ exchange_tests_SOURCES = \
   utils/mock_sender.h utils/mock_sender.c \
   utils/sa_asserts.h \
   exchange_tests.h exchange_tests.c
+
+if USE_IKEV2
+exchange_tests_SOURCES += suites/test_fortigate_initial_contact.c
+endif
 
 exchange_tests_CFLAGS = \
   -I$(top_srcdir)/src/libcharon \
