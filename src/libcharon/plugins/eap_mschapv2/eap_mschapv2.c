@@ -658,7 +658,7 @@ static char* sanitize(char *str)
 
 	while (pos && *pos)
 	{
-		if (!isprint(*pos))
+		if (!isprint((u_char)*pos))
 		{
 			*pos = '?';
 		}
