@@ -93,7 +93,7 @@ char *path_dirname(const char *path)
 #ifdef WIN32
 		if (path && strlen(path))
 		{
-			if ((isalpha(path[0]) && path[1] == ':'))
+			if ((isalpha((u_char)path[0]) && path[1] == ':'))
 			{	/* if just a drive letter given, return that as dirname */
 				return chunk_clone(chunk_from_chars(path[0], ':', 0)).ptr;
 			}
@@ -151,7 +151,7 @@ bool path_absolute(const char *path)
 	{	/* UNC */
 		return TRUE;
 	}
-	if (strlen(path) && isalpha(path[0]) && path[1] == ':')
+	if (strlen(path) && isalpha((u_char)path[0]) && path[1] == ':')
 	{	/* drive letter */
 		return TRUE;
 	}

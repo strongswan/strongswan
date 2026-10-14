@@ -193,7 +193,7 @@ void closefrom(int low_fd)
 			for (offset = 0; offset < len; offset += entry->d_reclen)
 			{
 				entry = (struct linux_dirent64*)(buffer + offset);
-				if (!isdigit(entry->d_name[0]))
+				if (!isdigit((u_char)entry->d_name[0]))
 				{
 					continue;
 				}
@@ -229,7 +229,7 @@ void closefrom(int low_fd)
 #endif
 		while ((entry = readdir(dir)))
 		{
-			if (!isdigit(entry->d_name[0]))
+			if (!isdigit((u_char)entry->d_name[0]))
 			{
 				continue;
 			}

@@ -1208,7 +1208,7 @@ int builtin_vfprintf(FILE *stream, const char *format, va_list ap)
 		{
 			if (pos[0] == '\e' && pos[1] == '[' && pos[4] == 'm')
 			{
-				if (isdigit(pos[3]))
+				if (isdigit((u_char)pos[3]))
 				{
 					if (pos[2] == '3' || pos[2] == '4')
 					{
