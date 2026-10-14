@@ -692,6 +692,12 @@ static bool add_auth_cfg_cert(NMStrongswanPluginPrivate *priv,
 		}
 		else
 		{
+			if (err && !*err)
+			{
+				g_set_error(err, NM_VPN_PLUGIN_ERROR,
+							NM_VPN_PLUGIN_ERROR_BAD_ARGUMENTS,
+							"Private key is missing.");
+			}
 			DESTROY_IF(cert);
 			return FALSE;
 		}
