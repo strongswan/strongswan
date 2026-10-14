@@ -274,9 +274,13 @@ static void
 chooser_button_update (GtkLabel *label, GtkFileChooser *chooser)
 {
 	GFile *file;
+	char *path;
 
 	file = gtk_file_chooser_get_file (GTK_FILE_CHOOSER (chooser));
 	chooser_button_update_file (label, file);
+	path = g_file_get_path(file);
+	if (path)
+		g_object_set_data_full (G_OBJECT (chooser), "path", path, g_free);
 	g_clear_object (&file);
 }
 
@@ -362,8 +366,7 @@ init_chooser (GtkBuilder *builder, NMSettingVpn *settings, const char *setting,
 	{
 		file = g_file_new_for_path (value);
 		gtk_file_chooser_set_file (GTK_FILE_CHOOSER (widget), file, NULL);
-		/* Store the path as fallback, because if the file doesn't exist or is
-		 * inaccessible to the current user, the chooser won't return it later */
+		/* Store the path as fallback in case the selection isn't changed explicitly */
 		g_object_set_data_full (G_OBJECT (widget), "path", g_strdup (value), g_free);
 	}
 	g_signal_connect (G_OBJECT (widget), "response",
@@ -607,23 +610,14 @@ save_file_chooser (NMSettingVpn *settings, GtkBuilder *builder,
 				   const char *name, const char *key)
 {
 	GtkWidget *chooser;
-	GFile *file;
 	char *str = NULL;
 
 	chooser = GTK_WIDGET (gtk_builder_get_object (builder, name));
-	file = gtk_file_chooser_get_file (GTK_FILE_CHOOSER (chooser));
-	if (file) {
-		str = g_file_get_path (file);
-	} else {
-		/* Use the fallback as the chooser won't return a file if it's missing
-		 * or the folder is inaccessible to the current user */
-		str = g_strdup (g_object_get_data (G_OBJECT (chooser), "path"));
-	}
+	str = g_strdup (g_object_get_data (G_OBJECT (chooser), "path"));
 	if (str && strlen(str)) {
 		nm_setting_vpn_add_data_item (settings, key, str);
 	}
 	g_free (str);
-	g_clear_object (&file);
 }
 
 static void
