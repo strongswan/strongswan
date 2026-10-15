@@ -34,6 +34,14 @@
 #define TIME_32_BIT_SIGNED_MAX	0x7fffffff
 
 /**
+ * Time that is used to e.g. represent a never expiring PGP key.  Either
+ * Jan 19 03:14:07 UTC 2038 or Dec 31 23:59:59 UTC 9999 (just because it can
+ * reasonably be represented when printing).
+ */
+#define TIME_NEVER (sizeof(time_t) == 4 ? TIME_32_BIT_SIGNED_MAX \
+										: (time_t)253402300799ULL)
+
+/**
  * The clock that should be used for time_monotonic() and conditional variables
  */
 #ifdef HAVE_CLOCK_GETTIME

@@ -167,8 +167,7 @@ METHOD(certificate_t, get_validity, bool,
 	}
 	if (!expiry)
 	{
-		/* Jan 19 03:14:07 UTC 2038 */
-		until = TIME_32_BIT_SIGNED_MAX;
+		until = TIME_NEVER;
 	}
 	else
 	{
