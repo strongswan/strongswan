@@ -281,6 +281,23 @@ static bool is_encrypted_attribute(simaka_attribute_t type)
 }
 
 /**
+ * Determine if an attribute is never sent encrypted
+ */
+static bool is_unencrypted_attribute(simaka_attribute_t type)
+{
+	switch (type)
+	{
+		case AT_MAC:
+		case AT_IV:
+		case AT_ENCR_DATA:
+		case AT_RESULT_IND:
+			return TRUE;
+		default:
+			return FALSE;
+	}
+}
+
+/**
  * Error handling for invalid length
  */
 static bool invalid_length(simaka_attribute_t type)
@@ -329,7 +346,16 @@ static bool parse_attributes(private_simaka_message_t *this, chunk_t in)
 		}
 		hdr = (attr_hdr_t*)in.ptr;
 
-		if (is_encrypted_attribute(hdr->type) && !this->encrypted)
+		if (this->encrypted)
+		{
+			if (is_unencrypted_attribute(hdr->type))
+			{
+				DBG1(DBG_LIB, "received encrypted %N", simaka_attribute_names,
+					 hdr->type);
+				return FALSE;
+			}
+		}
+		else if (is_encrypted_attribute(hdr->type))
 		{
 			DBG1(DBG_LIB, "received unencrypted %N", simaka_attribute_names,
 				 hdr->type);
