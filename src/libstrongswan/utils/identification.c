@@ -118,6 +118,32 @@ static const x501rdn_t x501rdns[] = {
 	{"TCGID", 				OID_TCGID,					ASN1_PRINTABLESTRING},
 };
 
+
+/**
+ * coding of Tagged ASN1 Strings
+ */
+typedef struct {
+	const char* str;
+	size_t str_len;
+	asn1_t type;
+} asn1_string_type_t;
+
+static const asn1_string_type_t asn1_string_types[] = {
+	{ "UTF8STRING:",		11, ASN1_UTF8STRING			},
+	{ "NUMERICSTRING:",		14, ASN1_NUMERICSTRING 		},
+	{ "PRINTABLESTRING:",	16, ASN1_PRINTABLESTRING	},
+	{ "T61STRING:",			10, ASN1_T61STRING			},
+	{ "IA5STRING:",			10, ASN1_IA5STRING			},
+	{ "GRAPHICSTRING:",		14, ASN1_GRAPHICSTRING		},
+	{ "VISIBLESTRING:",		14, ASN1_VISIBLESTRING		},
+	{ "GENERALSTRING:",		14, ASN1_GENERALSTRING		},
+	{ "UNIVERSALSTRING:",	16, ASN1_UNIVERSALSTRING	},
+	{ "BMPSTRING:",			10, ASN1_BMPSTRING			},
+};
+
+
+#define ASN1_STRING_TYPE_COUNT (sizeof(asn1_string_types)/sizeof(asn1_string_types[0]))
+
 /**
  * maximum number of RDNs in atodn()
  */
@@ -441,7 +467,8 @@ static status_t atodn(char *src, chunk_t *dn)
 	int dn_len = 0;
 	int whitespace = 0;
 	int i = 0;
-	asn1_t rdn_type;
+	int j = 0;
+	asn1_t rdn_type = ASN1_INVALID;
 	state_t state = SEARCH_OID;
 	status_t status = SUCCESS;
 	char sep = '\0';
@@ -503,6 +530,16 @@ static status_t atodn(char *src, chunk_t *dn)
 				}
 				else if (*src != sep && *src != '\0')
 				{
+					for (j = 0; j < ASN1_STRING_TYPE_COUNT; j++)
+					{
+						asn1_string_type_t name_type = asn1_string_types[j];
+						if (strncmp(src, name_type.str, name_type.str_len) == 0)
+						{
+							rdn_type = name_type.type;
+							src += name_type.str_len;
+							break;
+						}
+					}
 					name.ptr = src;
 					name.len = 1;
 					whitespace = 0;
@@ -525,10 +562,12 @@ static status_t atodn(char *src, chunk_t *dn)
 				else
 				{
 					name.len -= whitespace;
-					rdn_type = (x501rdns[i].type == ASN1_PRINTABLESTRING
-								&& !asn1_is_printablestring(name))
-								? ASN1_UTF8STRING : x501rdns[i].type;
-
+					if (rdn_type == ASN1_INVALID)
+					{
+						rdn_type = (x501rdns[i].type == ASN1_PRINTABLESTRING
+									&& !asn1_is_printablestring(name))
+									? ASN1_UTF8STRING : x501rdns[i].type;
+					}
 					if (rdn_count < RDN_MAX)
 					{
 						chunk_t rdn_oid;
