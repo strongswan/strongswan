@@ -642,7 +642,7 @@ METHOD(certificate_printer_t, print, void,
 		{
 			fprintf(f, "  created:   %T\n", &notBefore, this->utc);
 			fprintf(f, "  until:     %T%s\n", &notAfter, this->utc,
-				(notAfter == TIME_32_BIT_SIGNED_MAX) ?" expires never" : "");
+				(notAfter == TIME_NEVER) ?" expires never" : "");
 		}
 		else
 		{
