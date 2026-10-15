@@ -670,6 +670,40 @@ save_cert (NMSettingVpn *settings, GtkBuilder *builder)
 	}
 }
 
+/*
+ * Data items the editor presents and therefore owns.  Everything else on the
+ * connection was set some other way (nmcli, a hand-written keyfile) and must
+ * survive a save.
+ */
+static const char *editor_managed_keys[] = {
+	"address", "certificate", "cert-source", "encap", "esp", "ike", "ipcomp",
+	"local-identity", "local-ts", "method", "proposal", "remote-identity",
+	"remote-ts", "server-port", "user", "usercert", "userkey", "virtual",
+	/* secrets and the flags that accompany them */
+	"password", "password-flags",
+};
+
+/*
+ * Copy one data item across unless the editor owns that key.  Owned keys are
+ * skipped rather than copied, otherwise clearing a field in the UI would be
+ * silently undone by the value it used to have.
+ */
+static void
+carry_over_unmanaged (const char *key, const char *value, gpointer user_data)
+{
+	NMSettingVpn *settings = user_data;
+	guint i;
+
+	for (i = 0; i < G_N_ELEMENTS (editor_managed_keys); i++)
+	{
+		if (g_strcmp0 (key, editor_managed_keys[i]) == 0)
+		{
+			return;
+		}
+	}
+	nm_setting_vpn_add_data_item (settings, key, value);
+}
+
 static gboolean
 update_connection (NMVpnEditor *iface,
 				   NMConnection *connection,
@@ -677,7 +711,7 @@ update_connection (NMVpnEditor *iface,
 {
 	StrongswanPluginUiWidget *self = STRONGSWAN_PLUGIN_UI_WIDGET (iface);
 	StrongswanPluginUiWidgetPrivate *priv = STRONGSWAN_PLUGIN_UI_WIDGET_GET_PRIVATE (self);
-	NMSettingVpn *settings;
+	NMSettingVpn *settings, *existing;
 	GtkWidget *widget;
 	gboolean active;
 	char *str;
@@ -755,6 +789,17 @@ update_connection (NMVpnEditor *iface,
 	save_entry (settings, priv->builder, "local-ts-entry", "local-ts");
 	save_entry (settings, priv->builder, "remote-ts-entry", "remote-ts");
 
+	/* This function builds a fresh NMSettingVpn from the widgets, so a data
+	 * item with no widget behind it would be dropped here, silently
+	 * discarding configuration made with nmcli.  Carry those over from the
+	 * connection being edited. */
+	existing = nm_connection_get_setting_vpn (connection);
+	if (existing)
+	{
+		nm_setting_vpn_foreach_data_item (existing, carry_over_unmanaged,
+										  settings);
+	}
+
 	nm_connection_add_setting (connection, NM_SETTING (settings));
 	return TRUE;
 }
@@ -766,14 +811,23 @@ dispose (GObject *object)
 	StrongswanPluginUiWidgetPrivate *priv = STRONGSWAN_PLUGIN_UI_WIDGET_GET_PRIVATE (plugin);
 	GtkWidget *widget;
 
-	widget = GTK_WIDGET (gtk_builder_get_object (priv->builder, "passwd-entry"));
-	g_signal_handlers_disconnect_by_func (G_OBJECT (widget), G_CALLBACK (password_storage_changed_cb), plugin);
+	if (priv->builder)
+	{
+		widget = GTK_WIDGET (gtk_builder_get_object (priv->builder, "passwd-entry"));
+		g_signal_handlers_disconnect_by_func (G_OBJECT (widget), G_CALLBACK (password_storage_changed_cb), plugin);
+	}
 
 	if (priv->widget)
+	{
 		g_object_unref (priv->widget);
+		priv->widget = NULL;
+	}
 
 	if (priv->builder)
+	{
 		g_object_unref (priv->builder);
+		priv->builder = NULL;
+	}
 
 	G_OBJECT_CLASS (strongswan_plugin_ui_widget_parent_class)->dispose (object);
 }
