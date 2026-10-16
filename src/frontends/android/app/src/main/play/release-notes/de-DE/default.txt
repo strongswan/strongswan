@@ -1,3 +1,7 @@
+# 2.6.3 #
+
+- Verbessert das Verhalten bei Wechseln zwischen verschiedenen Netzwerken
+
 # 2.6.2 #
 
 - Fixt randlose Anzeige von Settings und App-Auswahl
@@ -7,9 +11,3 @@
 - Aktualisiert OpenSSL, um ML-KEM zu unterstützen (muss explizit in Proposal konfiguriert werden)
 - Behebt eine Schwachstelle im eap-mschapv2 Plugin
 - Korrigiert den Dateinamen beim Log-Export
-
-# 2.6.0 #
-
-- Auswahl von Benutzer-Zertifikaten in verwalteten Profilen (Vorauswahl via Alias ist möglich)
-- Fixt Lesen von Split-Tunneling Settings in verwalteten Profilen
-- Anpassungen für randlose Anzeige
