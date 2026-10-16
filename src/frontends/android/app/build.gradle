@@ -5,8 +5,8 @@ android {
 
     defaultConfig {
         applicationId "org.strongswan.android"
-        compileSdk = 36
-        minSdkVersion 21
+        compileSdk = 37
+        minSdkVersion 23
         targetSdkVersion 36
 
         versionCode 96
@@ -45,13 +45,13 @@ android {
 }
 
 dependencies {
-    implementation 'androidx.appcompat:appcompat:1.7.1'
-    implementation 'androidx.core:core:1.17.0'
-    implementation 'androidx.lifecycle:lifecycle-process:2.9.4'
+    implementation 'androidx.appcompat:appcompat:1.8.0'
+    implementation 'androidx.core:core:1.19.1'
+    implementation 'androidx.lifecycle:lifecycle-process:2.11.0'
     implementation 'androidx.preference:preference:1.2.1'
     implementation 'androidx.localbroadcastmanager:localbroadcastmanager:1.1.0'
-    implementation 'com.google.android.material:material:1.13.0'
+    implementation 'com.google.android.material:material:1.14.0'
     testImplementation 'junit:junit:4.13.2'
-    testImplementation 'org.assertj:assertj-core:3.27.6'
-    testImplementation 'org.mockito:mockito-core:5.20.0'
+    testImplementation 'org.assertj:assertj-core:3.27.7'
+    testImplementation 'org.mockito:mockito-core:5.24.0'
 }
