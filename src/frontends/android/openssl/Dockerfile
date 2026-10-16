@@ -5,7 +5,7 @@
 #
 #   ANDROID_NDK_ROOT=~/android-ndk OPENSSL_SRC=~/openssl ./build.sh
 
-FROM debian:bullseye
+FROM debian:trixie
 
 ARG packages="jq make perl"
 
