@@ -67,6 +67,14 @@ bool openssl_fingerprint(EVP_PKEY *key, cred_encoding_type_t type, chunk_t *fp);
 private_key_t *openssl_wrap_private_key(EVP_PKEY *key, bool engine);
 
 /**
+ * Wrap the given OpenSSL public key in a type-specific public key object.
+ *
+ * @param key		key object to wrap
+ * @returns			created object or NULL if key type is not supported
+ */
+public_key_t *openssl_wrap_public_key(EVP_PKEY *key);
+
+/**
  * Concatenates two bignums into a chunk, thereby enforcing the length of
  * a single BIGNUM, if necessary, by prepending it with zeros.
  *
