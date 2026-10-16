@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2023 Tobias Brunner
+ * Copyright (C) 2012-2026 Tobias Brunner
  *
  * Copyright (C) secunet Security Networks AG
  *
@@ -26,7 +26,7 @@
 #include <threading/mutex.h>
 
 /** delay before firing roam events (ms) */
-#define ROAM_DELAY 100
+#define ROAM_DELAY 500
 #define ROAM_DELAY_RECHECK 1000
 
 typedef struct private_android_net_t private_android_net_t;
@@ -49,6 +49,11 @@ struct private_android_net_t {
 	timeval_t next_roam;
 
 	/**
+	 * Whether a roam event job is currently scheduled
+	 */
+	bool roam_scheduled;
+
+	/**
 	 * Mutex to check and update roam event time, and other private members
 	 */
 	mutex_t *mutex;
@@ -67,12 +72,59 @@ struct private_android_net_t {
 /**
  * callback function that raises the delayed roam event
  */
-static job_requeue_t roam_event()
+CALLBACK(roam_event, job_requeue_t,
+	private_android_net_t *this)
 {
+	timeval_t now, diff;
+
+	time_monotonic(&now);
+	this->mutex->lock(this->mutex);
+	if (timercmp(&now, &this->next_roam, <))
+	{
+		/* another event got triggered in the meantime, reschedule */
+		timersub(&this->next_roam, &now, &diff);
+		this->mutex->unlock(this->mutex);
+		return JOB_RESCHEDULE_MS(diff.tv_sec * 1000 + diff.tv_usec / 1000);
+	}
+	this->roam_scheduled = FALSE;
+	this->mutex->unlock(this->mutex);
+
 	/* this will fail if no connection is up */
 	charonservice->bypass_socket(charonservice, -1, FALSE);
 	charon->kernel->roam(charon->kernel, TRUE);
 	return JOB_REQUEUE_NONE;
+}
+
+/**
+ * Schedule a roam event after the given delay in ms. The mutex must be locked
+ * when calling this, it is unlocked automatically.
+ */
+static void schedule_roam_unlock(private_android_net_t *this, u_int delay)
+{
+	timeval_t now, next, diff;
+	job_t *job;
+	u_int schedule = 0;
+
+	time_monotonic(&now);
+	next = now;
+	timeval_add_ms(&next, delay);
+	if (timercmp(&next, &this->next_roam, >))
+	{	/* only ever increase the target time */
+		this->next_roam = next;
+	}
+	if (!this->roam_scheduled)
+	{
+		timersub(&this->next_roam, &now, &diff);
+		schedule = diff.tv_sec * 1000 + diff.tv_usec / 1000;
+		this->roam_scheduled = schedule > 0;
+	}
+	this->mutex->unlock(this->mutex);
+
+	if (schedule)
+	{
+		job = (job_t*)callback_job_create(roam_event, this, NULL, NULL);
+		lib->scheduler->schedule_job_ms(lib->scheduler, job, schedule);
+	}
 }
 
 /**
@@ -81,24 +133,9 @@ static job_requeue_t roam_event()
 static void connectivity_cb(private_android_net_t *this,
 							bool disconnected)
 {
-	timeval_t now;
-	job_t *job;
-
-	time_monotonic(&now);
 	this->mutex->lock(this->mutex);
 	this->connected = !disconnected;
-	if (!timercmp(&now, &this->next_roam, >))
-	{
-		this->mutex->unlock(this->mutex);
-		return;
-	}
-	timeval_add_ms(&now, ROAM_DELAY);
-	this->next_roam = now;
-	this->mutex->unlock(this->mutex);
-
-	job = (job_t*)callback_job_create((callback_job_cb_t)roam_event, NULL,
-									   NULL, NULL);
-	lib->scheduler->schedule_job_ms(lib->scheduler, job, ROAM_DELAY);
+	schedule_roam_unlock(this, ROAM_DELAY);
 }
 
 METHOD(kernel_net_t, get_source_addr, host_t*,
@@ -110,8 +147,6 @@ METHOD(kernel_net_t, get_source_addr, host_t*,
 		struct sockaddr_in6 sin6;
 	} addr = {};
 	socklen_t addrlen = *dst->get_sockaddr_len(dst);
-	timeval_t now;
-	job_t *job;
 	host_t *host = NULL;
 	int skt;
 
@@ -133,19 +168,13 @@ METHOD(kernel_net_t, get_source_addr, host_t*,
 		}
 		else
 		{
-			time_monotonic(&now);
 			this->mutex->lock(this->mutex);
-			if (this->connected && timercmp(&now, &this->next_roam, >))
-			{	/* we were not able to find a source address but reportedly are
+			if (this->connected)
+			{
+				/* we were not able to find a source address but reportedly are
 				 * connected, trigger a recheck in case an IP address appears
 				 * delayed but the callback is not triggered again */
-				timeval_add_ms(&now, ROAM_DELAY_RECHECK);
-				this->next_roam = now;
-				this->mutex->unlock(this->mutex);
-				job = (job_t*)callback_job_create((callback_job_cb_t)roam_event,
-												  NULL, NULL, NULL);
-				lib->scheduler->schedule_job_ms(lib->scheduler, job,
-												ROAM_DELAY_RECHECK);
+				schedule_roam_unlock(this, ROAM_DELAY_RECHECK);
 			}
 			else
 			{

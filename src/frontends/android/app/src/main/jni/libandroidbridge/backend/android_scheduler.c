@@ -24,7 +24,7 @@
 
 /**
  * Threshold in milliseconds up to which the default scheduler is used.
- * This includes the roaming events (100 ms) and initial retransmits.
+ * This includes the roaming events and initial retransmits.
  */
 #define DEFAULT_SCHEDULER_THRESHOLD 3000
 
