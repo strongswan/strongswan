@@ -479,11 +479,7 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
 				intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
 				intent.setAction(VpnProfileControlActivity.START_PROFILE);
 				intent.putExtra(VpnProfileControlActivity.EXTRA_VPN_PROFILE_UUID, profile.getUUID().toString());
-				int flags = PendingIntent.FLAG_UPDATE_CURRENT;
-				if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M)
-				{
-					flags |= PendingIntent.FLAG_IMMUTABLE;
-				}
+				int flags = PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE;
 				PendingIntent pending = PendingIntent.getActivity(getApplicationContext(), 0, intent,
 																  flags);
 				builder.addAction(R.drawable.ic_notification_connecting, getString(R.string.retry), pending);
@@ -515,11 +511,7 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
 		}
 		builder.setContentTitle(getString(s));
 
-		int flags = PendingIntent.FLAG_UPDATE_CURRENT;
-		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M)
-		{
-			flags |= PendingIntent.FLAG_IMMUTABLE;
-		}
+		int flags = PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE;
 		if (!publicVersion)
 		{
 			if (add_action)
@@ -850,11 +842,7 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
 			 * we just use our main Activity */
 			Context context = getApplicationContext();
 			Intent intent = new Intent(context, MainActivity.class);
-			int flags = PendingIntent.FLAG_UPDATE_CURRENT;
-			if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M)
-			{
-				flags |= PendingIntent.FLAG_IMMUTABLE;
-			}
+			int flags = PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE;
 			PendingIntent pending = PendingIntent.getActivity(context, 0, intent, flags);
 			builder.setConfigureIntent(pending);
 
@@ -1412,12 +1400,7 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
 	 */
 	private static String getAndroidVersion()
 	{
-		String version = "Android " + Build.VERSION.RELEASE + " - " + Build.DISPLAY;
-		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M)
-		{
-			version += "/" + Build.VERSION.SECURITY_PATCH;
-		}
-		return version;
+		return "Android " + Build.VERSION.RELEASE + " - " + Build.DISPLAY + "/" + Build.VERSION.SECURITY_PATCH;
 	}
 
 	/**

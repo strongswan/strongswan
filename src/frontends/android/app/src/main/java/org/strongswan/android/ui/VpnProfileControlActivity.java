@@ -282,23 +282,20 @@ public class VpnProfileControlActivity extends AppCompatActivity
 	 */
 	private boolean checkPowerWhitelist()
 	{
-		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M)
+		PowerManager pm = (PowerManager)this.getSystemService(Context.POWER_SERVICE);
+		SharedPreferences pref = PreferenceManager.getDefaultSharedPreferences(this);
+		if (!pm.isIgnoringBatteryOptimizations(this.getPackageName()) &&
+			!pref.getBoolean(Constants.PREF_IGNORE_POWER_WHITELIST, false))
 		{
-			PowerManager pm = (PowerManager)this.getSystemService(Context.POWER_SERVICE);
-			SharedPreferences pref = PreferenceManager.getDefaultSharedPreferences(this);
-			if (!pm.isIgnoringBatteryOptimizations(this.getPackageName()) &&
-				!pref.getBoolean(Constants.PREF_IGNORE_POWER_WHITELIST, false))
-			{
-				if (getSupportFragmentManager().isStateSaved())
-				{	/* we might get called via service connection and manual onActivityResult()
-					 * call when the activity is not active anymore and fragment transactions
-					 * would cause an illegalStateException */
-					return false;
-				}
-				PowerWhitelistRequired whitelist = new PowerWhitelistRequired();
-				whitelist.show(getSupportFragmentManager(), DIALOG_TAG);
+			if (getSupportFragmentManager().isStateSaved())
+			{	/* we might get called via service connection and manual onActivityResult()
+				 * call when the activity is not active anymore and fragment transactions
+				 * would cause an illegalStateException */
 				return false;
 			}
+			PowerWhitelistRequired whitelist = new PowerWhitelistRequired();
+			whitelist.show(getSupportFragmentManager(), DIALOG_TAG);
+			return false;
 		}
 		return true;
 	}
