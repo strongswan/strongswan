@@ -91,9 +91,12 @@ static bool derive_secret(private_pkcs11_dh_t *this, chunk_t other)
 {
 	CK_OBJECT_CLASS klass = CKO_SECRET_KEY;
 	CK_KEY_TYPE type = CKK_GENERIC_SECRET;
+	CK_BBOOL ck_false = CK_FALSE, ck_true = CK_TRUE;
 	CK_ATTRIBUTE attr[] = {
 		{ CKA_CLASS, &klass, sizeof(klass) },
 		{ CKA_KEY_TYPE, &type, sizeof(type) },
+		{ CKA_SENSITIVE, &ck_false, sizeof(ck_false) },
+		{ CKA_EXTRACTABLE, &ck_true, sizeof(ck_true) },
 	};
 	CK_MECHANISM mech = {
 		this->mech_derive,
