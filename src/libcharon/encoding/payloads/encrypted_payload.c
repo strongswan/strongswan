@@ -983,7 +983,7 @@ METHOD(encrypted_payload_t, frag_decrypt, status_t,
 			 "transform missing");
 		return INVALID_STATE;
 	}
-	free(this->plain.ptr);
+	chunk_free(&this->plain);
 	assoc = append_header_frag(this, assoc);
 	status = decrypt_content("encrypted fragment payload", this->aead,
 							 this->encrypted, assoc, &this->plain);
