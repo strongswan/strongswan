@@ -513,7 +513,7 @@ METHOD(encrypted_payload_t, encrypt, status_t,
 		return INVALID_STATE;
 	}
 
-	free(this->encrypted.ptr);
+	chunk_free(&this->encrypted);
 	generator = generator_create();
 	plain = generate(this, generator);
 	assoc = append_header(this, assoc);
@@ -961,7 +961,7 @@ METHOD(encrypted_payload_t, frag_encrypt, status_t,
 			 "transform missing");
 		return INVALID_STATE;
 	}
-	free(this->encrypted.ptr);
+	chunk_free(&this->encrypted);
 	assoc = append_header_frag(this, assoc);
 	/* IKEv2 message IDs are not unique if fragmentation is used, hence include
 	 * the fragment number to make it unique */
@@ -983,7 +983,7 @@ METHOD(encrypted_payload_t, frag_decrypt, status_t,
 			 "transform missing");
 		return INVALID_STATE;
 	}
-	free(this->plain.ptr);
+	chunk_free(&this->plain);
 	assoc = append_header_frag(this, assoc);
 	status = decrypt_content("encrypted fragment payload", this->aead,
 							 this->encrypted, assoc, &this->plain);
