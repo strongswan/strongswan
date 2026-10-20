@@ -80,6 +80,11 @@ struct private_pkcs11_dh_t {
 	 */
 	CK_MECHANISM_TYPE mech_derive;
 
+	/**
+	 * Length of the shared secret to derive, 0 to let the token decide
+	 */
+	CK_ULONG secret_len;
+
 };
 
 /**
@@ -97,6 +102,7 @@ static bool derive_secret(private_pkcs11_dh_t *this, chunk_t other)
 		{ CKA_KEY_TYPE, &type, sizeof(type) },
 		{ CKA_SENSITIVE, &ck_false, sizeof(ck_false) },
 		{ CKA_EXTRACTABLE, &ck_true, sizeof(ck_true) },
+		{ CKA_VALUE_LEN, &this->secret_len, sizeof(this->secret_len) },
 	};
 	CK_MECHANISM mech = {
 		this->mech_derive,
@@ -110,8 +116,14 @@ static bool derive_secret(private_pkcs11_dh_t *this, chunk_t other)
 		other.len,
 		other.ptr,
 	};
+	CK_ULONG attr_count = countof(attr);
 	CK_OBJECT_HANDLE secret;
 	CK_RV rv;
+
+	if (!this->secret_len)
+	{	/* CKA_VALUE_LEN is the last attribute, only pass it if we know it */
+		attr_count--;
+	}
 
 	switch (this->group)
 	{
@@ -130,7 +142,7 @@ static bool derive_secret(private_pkcs11_dh_t *this, chunk_t other)
 	}
 
 	rv = this->lib->f->C_DeriveKey(this->session, &mech, this->pri_key,
-								   attr, countof(attr), &secret);
+								   attr, attr_count, &secret);
 	if (rv != CKR_OK)
 	{
 		DBG1(DBG_CFG, "C_DeriveKey() error: %N", ck_rv_names, rv);
@@ -401,6 +413,9 @@ static pkcs11_dh_t *create_modp(key_exchange_method_t group, size_t exp_len,
 
 	if (this)
 	{
+		/* some tokens, like SoftHSM, require CKA_VALUE_LEN to derive a generic
+		 * secret, which for MODP is the length of the prime */
+		this->secret_len = p.len;
 		if (generate_key_pair_modp(this, exp_len, g, p))
 		{
 			return &this->public;
