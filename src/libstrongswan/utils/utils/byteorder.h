@@ -247,12 +247,26 @@ static inline void htoule32(void *p, uint32_t v)
 }
 
 /**
+ * Read a 16-bit value from an unaligned address without byte order conversion.
+ *
+ * @param p			unaligned address to read value from
+ * @return			value
+ */
+static inline uint16_t uread16(const void *p)
+{
+	uint16_t ret;
+
+	memcpy(&ret, p, sizeof(ret));
+	return ret;
+}
+
+/**
  * Read a 32-bit value from an unaligned address without byte order conversion.
  *
  * @param p			unaligned address to read value from
- * @return			host order value
+ * @return			value
  */
-static inline uint32_t uread32(void *p)
+static inline uint32_t uread32(const void *p)
 {
 	uint32_t ret;
 
@@ -264,9 +278,9 @@ static inline uint32_t uread32(void *p)
  * Read a 64-bit value from an unaligned address without byte order conversion.
  *
  * @param p			unaligned address to read value from
- * @return			host order value
+ * @return			value
  */
-static inline uint64_t uread64(void *p)
+static inline uint64_t uread64(const void *p)
 {
 	uint64_t ret;
 
