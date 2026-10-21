@@ -521,6 +521,43 @@ void backtrace_deinit() {}
 
 #endif /* HAVE_DLADDR */
 
+#if defined(HAVE_DLADDR) && (defined(HAVE_BACKTRACE) || \
+		defined(HAVE_LIBUNWIND_H) || defined(WIN32) || defined(HAVE_BFD_H))
+/**
+ * Get the address of a stack frame depending on the type of object file it
+ * was loaded from.  Runtime addresses of position-independent objects (shared
+ * libraries, PIE executables) are adjusted by their load address, while for
+ * executables linked to a fixed address the runtime address matches the address
+ * in the object file.
+ *
+ * For non-ELF objects (e.g. Mach-O on macOS) we return the raw address, which
+ * is correct for e.g. the atos call on macOS, but could be incorrect when
+ * used with BFD (expects file-relative addresses), which is probably not that
+ * common.
+ *
+ * Don't use the ElfW() macro as it's not portable.
+ */
+static void *get_file_addr(void *addr, Dl_info *info)
+{
+	const char magic[] = { 0x7f, 'E', 'L', 'F' };
+	const uint8_t *ehdr = info->dli_fbase;
+
+	if (!memeq(ehdr, magic, sizeof(magic)))
+	{
+		return addr;
+	}
+	/* e_type is located right after the 16 byte e_ident, in both ELF32 and
+	 * ELF64, the byte order is the same as our current process, ET_EXEC (2)
+	 * marks executables linked to a fixed address (ET_DYN (3) would be for
+	 * position-independent objects) */
+	if (uread16(ehdr + 16) == 2)
+	{
+		return addr;
+	}
+	return (void*)(addr - info->dli_fbase);
+}
+#endif /* HAVE_DLADDR/HAVE_BACKTRACE/HAVE_LIBUNWIND_H/WIN32/HAVE_BFD_H */
+
 METHOD(backtrace_t, log_, void,
 	private_backtrace_t *this, FILE *file, bool detailed)
 {
@@ -536,12 +573,8 @@ METHOD(backtrace_t, log_, void,
 
 		if (dladdr(this->frames[i], &info))
 		{
-			void *ptr = this->frames[i];
+			void *ptr = get_file_addr(this->frames[i], &info);
 
-			if (strstr(info.dli_fname, ".so"))
-			{
-				ptr = (void*)(this->frames[i] - info.dli_fbase);
-			}
 			if (info.dli_sname)
 			{
 				println(file, "  %s%s%s @ %p (%s%s%s+0x%tx) [%p]",
@@ -692,12 +725,8 @@ METHOD(backtrace_t, contains_function, bool,
 #ifdef HAVE_BFD_H
 			else if (info.dli_fname[0])
 			{
-				void *ptr = this->frames[i];
+				void *ptr = get_file_addr(this->frames[i], &info);
 
-				if (strstr(info.dli_fname, ".so"))
-				{
-					ptr = (void*)(this->frames[i] - info.dli_fbase);
-				}
 				if (contains_function_bfd((char*)info.dli_fname, ptr,
 										  function, count))
 				{
