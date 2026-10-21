@@ -70,6 +70,9 @@ ARG_WITH_SET([rubygemdir],           ["gem environment gemdir"], [path to instal
 ARG_WITH_SET([testable-ke],          [yes], [make key exchange implementations testable by providing a set_seed() method])
 ARG_WITH_SET([plugins-packaged-separately], [no], [changes e.g. log messages for distributions that package plugins separately])
 
+AC_DEFINE_UNQUOTED(IPSEC_ROUTING_TABLE, [$routing_table], [routing table for IPsec routes])
+AC_DEFINE_UNQUOTED(IPSEC_ROUTING_TABLE_PRIO, [$routing_table_prio], [priority for IPsec routing table])
+
 if test -n "$PKG_CONFIG"; then
 	systemdsystemunitdir_default=$($PKG_CONFIG --variable=systemdsystemunitdir systemd)
 fi
