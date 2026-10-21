@@ -117,6 +117,8 @@ struct route_entry_t {
 	uint8_t prefixlen;
 	/** Reference to exclude route, if any */
 	exclude_route_t *exclude;
+	/** Whether the route was installed for a bypass policy */
+	bool pass;
 };
 
 /**
@@ -144,7 +146,8 @@ static bool route_entry_equals(route_entry_t *a, route_entry_t *b)
 		{
 			return a->if_name && b->if_name && streq(a->if_name, b->if_name) &&
 				   chunk_equals(a->dst_net, b->dst_net) &&
-				   a->prefixlen == b->prefixlen;
+				   a->prefixlen == b->prefixlen &&
+				   a->pass == b->pass;
 		}
 	}
 	return FALSE;
@@ -158,6 +161,8 @@ typedef struct policy_entry_t policy_entry_t;
 struct policy_entry_t {
 	/** Direction of this policy: in, out, forward */
 	uint8_t direction;
+	/** Whether this is a bypass policy */
+	bool pass;
 	/** Parameters of installed policy */
 	struct {
 		/** Subnet and port */
@@ -178,11 +183,13 @@ struct policy_entry_t {
  */
 static policy_entry_t *create_policy_entry(traffic_selector_t *src_ts,
 										   traffic_selector_t *dst_ts,
-										   policy_dir_t dir)
+										   policy_dir_t dir,
+										   policy_type_t type)
 {
 	policy_entry_t *this;
 	INIT(this,
 		.direction = dir,
+		.pass = type == POLICY_PASS,
 	);
 
 	src_ts->to_subnet(src_ts, &this->src.net, &this->src.mask);
@@ -217,6 +224,7 @@ CALLBACK(policy_entry_equals, bool,
 
 	VA_ARGS_VGET(args, b);
 	return a->direction == b->direction &&
+		   a->pass == b->pass &&
 		   a->src.proto == b->src.proto &&
 		   a->dst.proto == b->dst.proto &&
 		   a->src.mask == b->src.mask &&
@@ -460,6 +468,7 @@ static bool install_route(private_kernel_libipsec_ipsec_t *this,
 		.src_ip = src_ip,
 		.dst_net = chunk_clone(policy->dst.net->get_address(policy->dst.net)),
 		.prefixlen = policy->dst.mask,
+		.pass = policy->pass,
 	);
 #ifndef __linux__
 	/* on Linux we can't install a gateway */
@@ -480,7 +489,7 @@ static bool install_route(private_kernel_libipsec_ipsec_t *this,
 		/* uninstall previously installed route */
 		if (charon->kernel->del_route(charon->kernel, old->dst_net,
 									  old->prefixlen, old->gateway, old->src_ip,
-									  old->if_name, FALSE) != SUCCESS)
+									  old->if_name, old->pass) != SUCCESS)
 		{
 			DBG1(DBG_KNL, "error uninstalling route installed with policy "
 				 "%R === %R %N", src_ts, dst_ts, policy_dir_names,
@@ -491,7 +500,7 @@ static bool install_route(private_kernel_libipsec_ipsec_t *this,
 		policy->route = NULL;
 	}
 
-	if (!this->allow_peer_ts && dst_ts->is_host(dst_ts, dst))
+	if (!route->pass && !this->allow_peer_ts && dst_ts->is_host(dst_ts, dst))
 	{
 		DBG1(DBG_KNL, "can't install route for %R === %R %N, conflicts with "
 			 "IKE traffic", src_ts, dst_ts, policy_dir_names,
@@ -501,7 +510,7 @@ static bool install_route(private_kernel_libipsec_ipsec_t *this,
 		return FALSE;
 	}
 	/* if remote traffic selector covers the IKE peer, add an exclude route */
-	if (!this->allow_peer_ts && dst_ts->includes(dst_ts, dst))
+	if (!route->pass && !this->allow_peer_ts && dst_ts->includes(dst_ts, dst))
 	{
 		/* add exclude route for peer */
 		add_exclude_route(this, route, src, dst);
@@ -512,7 +521,8 @@ static bool install_route(private_kernel_libipsec_ipsec_t *this,
 
 	switch (charon->kernel->add_route(charon->kernel, route->dst_net,
 									  route->prefixlen, route->gateway,
-									  route->src_ip, route->if_name, FALSE))
+									  route->src_ip, route->if_name,
+									  route->pass))
 	{
 		case ALREADY_DONE:
 			/* route exists, do not uninstall */
@@ -542,6 +552,24 @@ METHOD(kernel_ipsec_t, add_policy, status_t,
 	policy_entry_t *policy, *found = NULL;
 	status_t status;
 
+	/* on Linux, bypass policies only work if a separate routing table is used,
+	 * they don't work on other platforms at all */
+	if (data->type == POLICY_PASS)
+	{
+#ifdef __linux__
+		if (!lib->settings->get_int(lib->settings, "%s.routing_table",
+									IPSEC_ROUTING_TABLE, lib->ns))
+#endif
+		{
+			if (id->dir == POLICY_OUT)
+			{
+				DBG1(DBG_KNL, "bypass policies not supported by this kernel "
+					 "backend/configuration");
+			}
+			return NOT_SUPPORTED;
+		}
+	}
+
 	status = ipsec->policies->add_policy(ipsec->policies, data->src, data->dst,
 										 id->src_ts, id->dst_ts, id->dir,
 										 data->type, data->sa, id->mark,
@@ -551,7 +579,7 @@ METHOD(kernel_ipsec_t, add_policy, status_t,
 		return status;
 	}
 	/* we track policies in order to install routes */
-	policy = create_policy_entry(id->src_ts, id->dst_ts, id->dir);
+	policy = create_policy_entry(id->src_ts, id->dst_ts, id->dir, data->type);
 
 	this->mutex->lock(this->mutex);
 	if (this->policies->find_first(this->policies, policy_entry_equals,
@@ -593,7 +621,7 @@ METHOD(kernel_ipsec_t, del_policy, status_t,
 										 data->type, data->sa, id->mark,
 										 data->prio);
 
-	policy = create_policy_entry(id->src_ts, id->dst_ts, id->dir);
+	policy = create_policy_entry(id->src_ts, id->dst_ts, id->dir, data->type);
 
 	this->mutex->lock(this->mutex);
 	if (!this->policies->find_first(this->policies, policy_entry_equals,
@@ -618,7 +646,7 @@ METHOD(kernel_ipsec_t, del_policy, status_t,
 
 		if (charon->kernel->del_route(charon->kernel, route->dst_net,
 								route->prefixlen, route->gateway, route->src_ip,
-								route->if_name, FALSE) != SUCCESS)
+								route->if_name, route->pass) != SUCCESS)
 		{
 			DBG1(DBG_KNL, "error uninstalling route installed with "
 				 "policy %R === %R %N", id->src_ts, id->dst_ts,
@@ -649,7 +677,8 @@ METHOD(kernel_ipsec_t, flush_policies, status_t,
 
 			charon->kernel->del_route(charon->kernel, route->dst_net,
 									  route->prefixlen, route->gateway,
-									  route->src_ip, route->if_name, FALSE);
+									  route->src_ip, route->if_name,
+									  route->pass);
 			remove_exclude_route(this, route);
 		}
 		policy_entry_destroy(pol);
