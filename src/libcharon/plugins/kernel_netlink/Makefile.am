@@ -1,9 +1,7 @@
 AM_CPPFLAGS = \
 	-I${linux_headers} \
 	-I$(top_srcdir)/src/libstrongswan \
-	-I$(top_srcdir)/src/libcharon \
-	-DROUTING_TABLE=${routing_table} \
-	-DROUTING_TABLE_PRIO=${routing_table_prio}
+	-I$(top_srcdir)/src/libcharon
 
 AM_CFLAGS = \
 	$(PLUGIN_CFLAGS)

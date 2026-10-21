@@ -71,14 +71,6 @@
 /** maximum recursion when searching for addresses in get_route() */
 #define MAX_ROUTE_RECURSION 2
 
-#ifndef ROUTING_TABLE
-#define ROUTING_TABLE 0
-#endif
-
-#ifndef ROUTING_TABLE_PRIO
-#define ROUTING_TABLE_PRIO 0
-#endif
-
 ENUM(rt_msg_names, RTM_NEWLINK, RTM_GETRULE,
 	"RTM_NEWLINK",
 	"RTM_DELLINK",
@@ -3105,9 +3097,9 @@ kernel_netlink_net_t *kernel_netlink_net_create()
 		.condvar = rwlock_condvar_create(),
 		.roam_lock = spinlock_create(),
 		.routing_table = lib->settings->get_int(lib->settings,
-						"%s.routing_table", ROUTING_TABLE, lib->ns),
+						"%s.routing_table", IPSEC_ROUTING_TABLE, lib->ns),
 		.routing_table_prio = lib->settings->get_int(lib->settings,
-						"%s.routing_table_prio", ROUTING_TABLE_PRIO, lib->ns),
+						"%s.routing_table_prio", IPSEC_ROUTING_TABLE_PRIO, lib->ns),
 		.process_route = lib->settings->get_bool(lib->settings,
 						"%s.process_route", TRUE, lib->ns),
 		.install_routes = lib->settings->get_bool(lib->settings,
