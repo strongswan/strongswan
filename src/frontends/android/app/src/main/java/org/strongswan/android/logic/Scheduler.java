@@ -29,8 +29,9 @@ import java.util.ArrayList;
 import java.util.PriorityQueue;
 import java.util.UUID;
 
-import androidx.annotation.RequiresApi;
+import androidx.annotation.Keep;
 
+@Keep
 public class Scheduler extends BroadcastReceiver
 {
 	private final String EXECUTE_JOB = "org.strongswan.android.Scheduler.EXECUTE_JOB";
@@ -91,11 +92,7 @@ public class Scheduler extends BroadcastReceiver
 		/* using component/class doesn't work with dynamic broadcast receivers */
 		Intent intent = new Intent(EXECUTE_JOB);
 		intent.setPackage(mContext.getPackageName());
-		int flags = 0;
-		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M)
-		{
-			flags |= PendingIntent.FLAG_IMMUTABLE;
-		}
+		int flags = PendingIntent.FLAG_IMMUTABLE;
 		return PendingIntent.getBroadcast(mContext, 0, intent, flags);
 	}
 
@@ -106,7 +103,6 @@ public class Scheduler extends BroadcastReceiver
 	 * @param id job ID
 	 * @param ms delta in milliseconds when the job should be executed
 	 */
-	@RequiresApi(api = Build.VERSION_CODES.M)
 	public void scheduleJob(String id, long ms)
 	{
 		synchronized (this)
@@ -122,7 +118,6 @@ public class Scheduler extends BroadcastReceiver
 		}
 	}
 
-	@RequiresApi(api = Build.VERSION_CODES.M)
 	@Override
 	public void onReceive(Context context, Intent intent)
 	{

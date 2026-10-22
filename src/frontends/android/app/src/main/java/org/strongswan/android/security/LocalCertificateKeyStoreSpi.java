@@ -30,6 +30,9 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.Enumeration;
 
+import androidx.annotation.Keep;
+
+@Keep
 public class LocalCertificateKeyStoreSpi extends KeyStoreSpi
 {
 	private final LocalCertificateStore mStore = new LocalCertificateStore();

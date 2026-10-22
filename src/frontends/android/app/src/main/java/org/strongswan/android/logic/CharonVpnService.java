@@ -18,7 +18,6 @@
 
 package org.strongswan.android.logic;
 
-import android.annotation.TargetApi;
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
@@ -73,12 +72,12 @@ import java.security.PrivateKey;
 import java.security.cert.CertificateEncodingException;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 import java.util.SortedSet;
 
+import androidx.annotation.Keep;
 import androidx.core.app.NotificationCompat;
 import androidx.core.content.ContextCompat;
 import androidx.preference.PreferenceManager;
@@ -479,11 +478,7 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
 				intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
 				intent.setAction(VpnProfileControlActivity.START_PROFILE);
 				intent.putExtra(VpnProfileControlActivity.EXTRA_VPN_PROFILE_UUID, profile.getUUID().toString());
-				int flags = PendingIntent.FLAG_UPDATE_CURRENT;
-				if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M)
-				{
-					flags |= PendingIntent.FLAG_IMMUTABLE;
-				}
+				int flags = PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE;
 				PendingIntent pending = PendingIntent.getActivity(getApplicationContext(), 0, intent,
 																  flags);
 				builder.addAction(R.drawable.ic_notification_connecting, getString(R.string.retry), pending);
@@ -515,11 +510,7 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
 		}
 		builder.setContentTitle(getString(s));
 
-		int flags = PendingIntent.FLAG_UPDATE_CURRENT;
-		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M)
-		{
-			flags |= PendingIntent.FLAG_IMMUTABLE;
-		}
+		int flags = PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE;
 		if (!publicVersion)
 		{
 			if (add_action)
@@ -648,6 +639,7 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
 	 *
 	 * @param status new state
 	 */
+	@Keep
 	public void updateStatus(int status)
 	{
 		switch (status)
@@ -691,6 +683,7 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
 	 *
 	 * @param value new state
 	 */
+	@Keep
 	public void updateImcState(int value)
 	{
 		ImcState state = ImcState.fromValue(value);
@@ -706,6 +699,7 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
 	 *
 	 * @param xml XML text
 	 */
+	@Keep
 	public void addRemediationInstruction(String xml)
 	{
 		for (RemediationInstruction instruction : RemediationInstruction.fromXml(xml))
@@ -726,6 +720,7 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
 	 *
 	 * @return a list of DER encoded CA certificates
 	 */
+	@Keep
 	private byte[][] getTrustedCertificates()
 	{
 		ArrayList<byte[]> certs = new ArrayList<byte[]>();
@@ -770,6 +765,7 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
 	 * @throws KeyChainException
 	 * @throws CertificateEncodingException
 	 */
+	@Keep
 	private byte[][] getUserCertificate() throws KeyChainException, InterruptedException, CertificateEncodingException
 	{
 		ArrayList<byte[]> encodings = new ArrayList<byte[]>();
@@ -795,6 +791,7 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
 	 * @throws InterruptedException
 	 * @throws KeyChainException
 	 */
+	@Keep
 	private PrivateKey getUserKey() throws KeyChainException, InterruptedException
 	{
 		return KeyChain.getPrivateKey(getApplicationContext(), mCurrentUserCertificateAlias);
@@ -826,6 +823,7 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
 	 * Adapter for VpnService.Builder which is used to access it safely via JNI.
 	 * There is a corresponding C object to access it from native code.
 	 */
+	@Keep
 	public class BuilderAdapter
 	{
 		private VpnProfile mProfile;
@@ -850,11 +848,7 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
 			 * we just use our main Activity */
 			Context context = getApplicationContext();
 			Intent intent = new Intent(context, MainActivity.class);
-			int flags = PendingIntent.FLAG_UPDATE_CURRENT;
-			if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M)
-			{
-				flags |= PendingIntent.FLAG_IMMUTABLE;
-			}
+			int flags = PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE;
 			PendingIntent pending = PendingIntent.getActivity(context, 0, intent, flags);
 			builder.setConfigureIntent(pending);
 
@@ -1410,19 +1404,16 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
 	/**
 	 * Function called via JNI to determine information about the Android version.
 	 */
+	@Keep
 	private static String getAndroidVersion()
 	{
-		String version = "Android " + Build.VERSION.RELEASE + " - " + Build.DISPLAY;
-		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M)
-		{
-			version += "/" + Build.VERSION.SECURITY_PATCH;
-		}
-		return version;
+		return "Android " + Build.VERSION.RELEASE + " - " + Build.DISPLAY + "/" + Build.VERSION.SECURITY_PATCH;
 	}
 
 	/**
 	 * Function called via JNI to determine information about the device.
 	 */
+	@Keep
 	private static String getDeviceString()
 	{
 		return Build.MODEL + " - " + Build.BRAND + "/" + Build.PRODUCT + "/" + Build.MANUFACTURER;

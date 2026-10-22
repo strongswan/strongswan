@@ -561,7 +561,7 @@ android)
 	rm -r strongswan-*
 	cd $SRC_DIR/src/frontends/android
 	echo "$ ./gradlew build"
-	NDK_CCACHE=ccache ./gradlew build --info || exit $?
+	NDK_CCACHE=ccache ./gradlew build --info -Dorg.gradle.jvmargs='-Xmx4g -XX:MaxMetaspaceSize=2g' || exit $?
 	;;
 *)
 	;;

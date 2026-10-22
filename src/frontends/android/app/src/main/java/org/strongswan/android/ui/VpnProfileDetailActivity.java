@@ -449,18 +449,20 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 	@Override
 	public boolean onOptionsItemSelected(MenuItem item)
 	{
-		switch (item.getItemId())
+		if (item.getItemId() == android.R.id.home ||
+			item.getItemId() == R.id.menu_cancel)
 		{
-			case android.R.id.home:
-			case R.id.menu_cancel:
-				finish();
-				return true;
-			case R.id.menu_accept:
-				saveProfile();
-				return true;
-			default:
-				return super.onOptionsItemSelected(item);
+			finish();
 		}
+		else if (item.getItemId() == R.id.menu_accept)
+		{
+			saveProfile();
+		}
+		else
+		{
+			return super.onOptionsItemSelected(item);
+		}
+		return true;
 	}
 
 	/**

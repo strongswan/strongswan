@@ -313,17 +313,19 @@ public class VpnProfileImportActivity extends AppCompatActivity
 	@Override
 	public boolean onOptionsItemSelected(MenuItem item)
 	{
-		switch (item.getItemId())
+		if (item.getItemId() == android.R.id.home)
 		{
-			case android.R.id.home:
-				finish();
-				return true;
-			case R.id.menu_accept:
-				saveProfile();
-				return true;
-			default:
-				return super.onOptionsItemSelected(item);
+			finish();
 		}
+		else if (item.getItemId() == R.id.menu_accept)
+		{
+			saveProfile();
+		}
+		else
+		{
+			return super.onOptionsItemSelected(item);
+		}
+		return true;
 	}
 
 	private void loadProfile(Uri uri)

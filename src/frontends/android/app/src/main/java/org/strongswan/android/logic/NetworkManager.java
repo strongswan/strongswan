@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2019 Tobias Brunner
+ * Copyright (C) 2012-2026 Tobias Brunner
  *
  * Copyright (C) secunet Security Networks AG
  *
@@ -21,20 +21,30 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.net.ConnectivityManager;
+import android.net.LinkAddress;
+import android.net.LinkProperties;
 import android.net.Network;
+import android.net.NetworkCapabilities;
 import android.net.NetworkRequest;
 import android.os.Build;
 
+import java.net.InetAddress;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedList;
 
+import androidx.annotation.Keep;
+import androidx.annotation.NonNull;
+
+@Keep
 public class NetworkManager extends BroadcastReceiver implements Runnable
 {
 	private final Context mContext;
 	private volatile boolean mRegistered;
 	private ConnectivityManager.NetworkCallback mCallback;
 	private Thread mEventNotifier;
-	private int mConnectedNetworks = 0;
 	private LinkedList<Boolean> mEvents = new LinkedList<>();
+	private HashMap<Network, NetworkState> mNetworks = new HashMap<>();
 
 	public NetworkManager(Context context)
 	{
@@ -51,9 +61,8 @@ public class NetworkManager extends BroadcastReceiver implements Runnable
 					{
 						/* we expect this to be called if connected to at least one network during
 						 * callback registration */
-						mConnectedNetworks += 1;
-						mEvents.addLast(true);
-						NetworkManager.this.notifyAll();
+						mNetworks.put(network, new NetworkState());
+						notifyNetworkChanged();
 					}
 				}
 
@@ -63,9 +72,74 @@ public class NetworkManager extends BroadcastReceiver implements Runnable
 					synchronized (NetworkManager.this)
 					{
 						/* in particular mobile connections are disconnected overlapping with WiFi */
-						mConnectedNetworks -= 1;
-						mEvents.addLast(mConnectedNetworks > 0);
-						NetworkManager.this.notifyAll();
+						mNetworks.remove(network);
+						notifyNetworkChanged();
+					}
+				}
+
+				@Override
+				public void onCapabilitiesChanged(@NonNull Network network, @NonNull NetworkCapabilities networkCapabilities)
+				{
+					synchronized (NetworkManager.this)
+					{
+						NetworkState state = mNetworks.get(network);
+						if (state != null)
+						{
+							int capabilities = 0;
+							/* only look at the capabilities relevant for us */
+							if (networkCapabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED))
+							{
+								capabilities |= (1 << 1);
+							}
+							if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P &&
+								networkCapabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_SUSPENDED))
+							{
+								capabilities |= (1 << 2);
+							}
+							if (state.capabilities != capabilities)
+							{
+								state.capabilities = capabilities;
+								notifyNetworkChanged();
+							}
+						}
+					}
+				}
+
+				@Override
+				public void onLinkPropertiesChanged(@NonNull Network network, @NonNull LinkProperties linkProperties)
+				{
+					synchronized (NetworkManager.this)
+					{
+						NetworkState state = mNetworks.get(network);
+						if (state != null)
+						{
+							/* check addresses in case e.g. a new DHCP lease is assigned or
+							 * IPv4 arrives after IPv6 */
+							HashSet<InetAddress> addresses = new HashSet<>();
+							for (LinkAddress address : linkProperties.getLinkAddresses())
+							{
+								addresses.add(address.getAddress());
+							}
+							if (!state.addresses.equals(addresses))
+							{
+								state.addresses = addresses;
+								notifyNetworkChanged();
+							}
+						}
+					}
+				}
+
+				@Override
+				public void onBlockedStatusChanged(@NonNull Network network, boolean blocked)
+				{
+					synchronized (NetworkManager.this)
+					{
+						NetworkState state = mNetworks.get(network);
+						if (state != null && state.blocked != blocked)
+						{
+							state.blocked = blocked;
+							notifyNetworkChanged();
+						}
 					}
 				}
 			};
@@ -75,6 +149,7 @@ public class NetworkManager extends BroadcastReceiver implements Runnable
 	public void Register()
 	{
 		mEvents.clear();
+		mNetworks.clear();
 		mRegistered = true;
 		mEventNotifier = new Thread(this);
 		mEventNotifier.start();
@@ -149,6 +224,16 @@ public class NetworkManager extends BroadcastReceiver implements Runnable
 		}
 	}
 
+	/**
+	 * Queue a connectivity change event for the notifier thread.  Has to be
+	 * called from a synchronized() section.
+	 */
+	private void notifyNetworkChanged()
+	{
+		mEvents.addLast(!mNetworks.isEmpty());
+		NetworkManager.this.notifyAll();
+	}
+
 	@Override
 	public void run()
 	{
@@ -186,4 +271,14 @@ public class NetworkManager extends BroadcastReceiver implements Runnable
 	 * @param disconnected true if no connection is available at the moment
 	 */
 	public native void networkChanged(boolean disconnected);
+
+	/**
+	 * Simplified network state we track to see if anything changed
+	 */
+	private static class NetworkState
+	{
+		boolean blocked;
+		int capabilities;
+		HashSet<InetAddress> addresses = new HashSet<>();
+	}
 }

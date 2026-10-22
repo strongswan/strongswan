@@ -19,14 +19,12 @@ package org.strongswan.android.data;
 import android.content.Context;
 import android.content.RestrictionsManager;
 import android.content.SharedPreferences;
-import android.os.Build;
 import android.os.Bundle;
 
 import org.strongswan.android.utils.Constants;
 
 import java.util.Collections;
 import java.util.Map;
-import java.util.UUID;
 
 import androidx.preference.PreferenceManager;
 
@@ -44,11 +42,6 @@ public class ManagedConfigurationService
 
 	public void loadConfiguration()
 	{
-		if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M)
-		{
-			return;
-		}
-
 		final RestrictionsManager restrictionsService = mContext.getSystemService(RestrictionsManager.class);
 		if (restrictionsService == null)
 		{

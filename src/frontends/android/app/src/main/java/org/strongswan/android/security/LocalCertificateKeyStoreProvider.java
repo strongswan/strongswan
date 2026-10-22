@@ -18,6 +18,9 @@ package org.strongswan.android.security;
 
 import java.security.Provider;
 
+import androidx.annotation.Keep;
+
+@Keep
 public class LocalCertificateKeyStoreProvider extends Provider
 {
 	private static final long serialVersionUID = 3515038332469843219L;
