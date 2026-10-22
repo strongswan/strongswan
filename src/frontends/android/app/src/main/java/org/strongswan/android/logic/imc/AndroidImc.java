@@ -28,6 +28,9 @@ import org.strongswan.android.logic.imc.collectors.StringVersionCollector;
 
 import android.content.Context;
 
+import androidx.annotation.Keep;
+
+@Keep
 public class AndroidImc
 {
 	private final Context mContext;

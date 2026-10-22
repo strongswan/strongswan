@@ -37,6 +37,9 @@ import org.strongswan.android.utils.Utils;
 
 import android.content.Context;
 
+import androidx.annotation.Keep;
+
+@Keep
 public class LocalCertificateStore
 {
 	private static final String FILE_PREFIX = "certificate-";

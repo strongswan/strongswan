@@ -29,6 +29,9 @@ import java.util.ArrayList;
 import java.util.PriorityQueue;
 import java.util.UUID;
 
+import androidx.annotation.Keep;
+
+@Keep
 public class Scheduler extends BroadcastReceiver
 {
 	private final String EXECUTE_JOB = "org.strongswan.android.Scheduler.EXECUTE_JOB";

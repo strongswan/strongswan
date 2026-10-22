@@ -33,8 +33,10 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
 
+import androidx.annotation.Keep;
 import androidx.annotation.NonNull;
 
+@Keep
 public class NetworkManager extends BroadcastReceiver implements Runnable
 {
 	private final Context mContext;
