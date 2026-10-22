@@ -77,9 +77,6 @@ public class TrustedCertificateListFragment extends ListFragment implements Menu
 		setEmptyText(getString(R.string.no_certificates));
 
 		mAdapter = new TrustedCertificateAdapter(getActivity());
-		setListAdapter(mAdapter);
-
-		setListShown(false);
 
 		Bundle arguments = getArguments();
 		if (arguments != null)
@@ -157,14 +154,7 @@ public class TrustedCertificateListFragment extends ListFragment implements Menu
 	{
 		mAdapter.setData(data);
 
-		if (isResumed())
-		{
-			setListShown(true);
-		}
-		else
-		{
-			setListShownNoAnimation(true);
-		}
+		setListAdapter(mAdapter);
 	}
 
 	@Override
