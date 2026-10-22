@@ -107,30 +107,35 @@ public class MainActivity extends AppCompatActivity implements OnVpnProfileSelec
 	@Override
 	public boolean onOptionsItemSelected(MenuItem item)
 	{
-		switch (item.getItemId())
+		if (item.getItemId() == R.id.menu_import_profile)
 		{
-			case R.id.menu_import_profile:
-				Intent intent = new Intent(this, VpnProfileImportActivity.class);
-				startActivity(intent);
-				return true;
-			case R.id.menu_manage_certs:
-				Intent certIntent = new Intent(this, TrustedCertificatesActivity.class);
-				startActivity(certIntent);
-				return true;
-			case R.id.menu_crl_cache:
-				clearCRLs();
-				return true;
-			case R.id.menu_show_log:
-				Intent logIntent = new Intent(this, LogActivity.class);
-				startActivity(logIntent);
-				return true;
-			case R.id.menu_settings:
-				Intent settingsIntent = new Intent(this, SettingsActivity.class);
-				startActivity(settingsIntent);
-				return true;
-			default:
-				return super.onOptionsItemSelected(item);
+			Intent intent = new Intent(this, VpnProfileImportActivity.class);
+			startActivity(intent);
 		}
+		else if (item.getItemId() == R.id.menu_manage_certs)
+		{
+			Intent certIntent = new Intent(this, TrustedCertificatesActivity.class);
+			startActivity(certIntent);
+		}
+		else if (item.getItemId() == R.id.menu_crl_cache)
+		{
+			clearCRLs();
+		}
+		else if (item.getItemId() == R.id.menu_show_log)
+		{
+			Intent logIntent = new Intent(this, LogActivity.class);
+			startActivity(logIntent);
+		}
+		else if (item.getItemId() == R.id.menu_settings)
+		{
+			Intent settingsIntent = new Intent(this, SettingsActivity.class);
+			startActivity(settingsIntent);
+		}
+		else
+		{
+			return super.onOptionsItemSelected(item);
+		}
+		return true;
 	}
 
 	@Override
