@@ -16,11 +16,19 @@
 
 #include "pkcs12_decode.h"
 
+#include <inttypes.h>
+
 #include <utils/debug.h>
 #include <asn1/oid.h>
 #include <asn1/asn1.h>
 #include <asn1/asn1_parser.h>
 #include <credentials/sets/mem_cred.h>
+
+/** maximum accepted length for the MAC salt in a parsed PFX */
+#define PKCS12_SALT_LEN_MAX		128
+
+/** maximum accepted MAC iteration count in a parsed PFX */
+#define PKCS12_ITERATIONS_MAX	1000000
 
 typedef struct private_pkcs12_t private_pkcs12_t;
 
@@ -528,6 +536,19 @@ end_parse:
 		{
 			if (container->get_type(container) != CONTAINER_PKCS7_DATA)
 			{
+				goto end;
+			}
+			if (salt.len > PKCS12_SALT_LEN_MAX)
+			{
+				DBG1(DBG_ASN, "  MAC salt length %zu exceeds maximum of %zu "
+					 "bytes", salt.len, (size_t)PKCS12_SALT_LEN_MAX);
+				goto end;
+			}
+			if (!iterations || iterations > PKCS12_ITERATIONS_MAX)
+			{
+				DBG1(DBG_ASN, "  MAC iteration count %" PRIu64 " is out of "
+					 "range (1-%" PRIu64 ")", iterations,
+					 (uint64_t)PKCS12_ITERATIONS_MAX);
 				goto end;
 			}
 			creds = mem_cred_create();
