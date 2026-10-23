@@ -386,6 +386,12 @@ METHOD(pkcs5_t, decrypt, bool,
 		default:
 			return FALSE;
 	}
+	if (iv.len != this->crypter->get_iv_size(this->crypter))
+	{
+		DBG1(DBG_ASN, "  IV length does not match expected %zu bytes",
+			 this->crypter->get_iv_size(this->crypter));
+		return FALSE;
+	}
 	return decrypt_generic(this, password, data, decrypted, kdf,
 						   keymat, key, iv);
 }
