@@ -17,24 +17,49 @@
 #include <library.h>
 #include <utils/debug.h>
 
-int LLVMFuzzerTestOneInput(const uint8_t *buf, size_t len)
-{
-	certificate_t *cert;
-	chunk_t chunk;
+static certificate_type_t cert_types[] = {
+	CERT_X509,
+	CERT_X509_AC,
+	CERT_GPG,
+};
 
+int LLVMFuzzerInitialize(int *argc, char ***argv)
+{
 	dbg_default_set_level(-1);
 	library_init(NULL, "fuzz_certs");
 	if (!lib->plugins->load(lib->plugins, PLUGINS))
 	{
 		return 1;
 	}
+	return 0;
+}
+
+int LLVMFuzzerTestOneInput(const uint8_t *buf, size_t len)
+{
+	certificate_t *cert;
+	public_key_t *key;
+	chunk_t chunk, enc;
+	int i;
 
 	chunk = chunk_create((u_char*)buf, len);
-	cert = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509,
-							  BUILD_BLOB, chunk, BUILD_END);
-	DESTROY_IF(cert);
 
-	lib->plugins->unload(lib->plugins);
-	library_deinit();
+	for (i = 0; i < countof(cert_types); i++)
+	{
+		cert = lib->creds->create(lib->creds, CRED_CERTIFICATE, cert_types[i],
+								  BUILD_BLOB, chunk, BUILD_END);
+		if (cert)
+		{
+			cert->get_type(cert);
+			cert->get_subject(cert);
+			cert->get_issuer(cert);
+			key = cert->get_public_key(cert);
+			DESTROY_IF(key);
+			if (cert->get_encoding(cert, CERT_ASN1_DER, &enc))
+			{
+				chunk_free(&enc);
+			}
+			cert->destroy(cert);
+		}
+	}
 	return 0;
 }
