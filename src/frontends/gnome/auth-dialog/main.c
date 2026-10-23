@@ -106,6 +106,8 @@ static void keyfile_print_stdout (GKeyFile *keyfile)
 }
 
 static gboolean get_secrets(const char *type, const char *cert_source, const char *uuid, const char *name,
+							const char *secret_name,
+							const char *secondary_name, const char *in_pw2, char **out_pw2,
 							gboolean retry, gboolean allow_interaction, gboolean external_ui_mode,
 							const char *in_pw, char **out_pw, NMSettingSecretFlags flags)
 {
@@ -123,7 +125,7 @@ static gboolean get_secrets(const char *type, const char *cert_source, const cha
 		}
 		else
 		{
-			pw = keyring_lookup_secret (uuid, "password");
+			pw = keyring_lookup_secret (uuid, secret_name);
 		}
 	}
 	if (flags & NM_SETTING_SECRET_FLAG_NOT_REQUIRED)
@@ -131,7 +133,8 @@ static gboolean get_secrets(const char *type, const char *cert_source, const cha
 		g_free (pw);
 		return TRUE;
 	}
-	if (!strcmp(type, "eap"))
+	if (!strcmp(type, "eap") ||
+		!strcmp(type, "cert-eap"))
 	{
 		prompt = g_strdup_printf (_("EAP password required to establish VPN connection '%s'."),
 								  name);
@@ -165,28 +168,42 @@ static gboolean get_secrets(const char *type, const char *cert_source, const cha
 		g_key_file_set_string (keyfile, UI_KEYFILE_GROUP, "Description", prompt);
 		g_key_file_set_string (keyfile, UI_KEYFILE_GROUP, "Title", _("Authenticate VPN"));
 
-		keyfile_add_entry_info (keyfile, "password", pw ?: "", _("Password:"), TRUE, allow_interaction);
+		keyfile_add_entry_info (keyfile, secret_name, pw ?: "", _("Password:"), TRUE, allow_interaction);
+		if (secondary_name)
+			keyfile_add_entry_info (keyfile, secondary_name, in_pw2 ?: "",
+								!strcmp(cert_source, "smartcard") ? _("PIN:") : _("Private key password:"),
+								TRUE, allow_interaction);
 
 		keyfile_print_stdout (keyfile);
 		g_key_file_unref (keyfile);
 		goto out;
 	}
 	else if (!allow_interaction ||
-			(!retry && pw && !(flags & NM_SETTING_SECRET_FLAG_NOT_SAVED)))
+			(!retry && pw && !(flags & NM_SETTING_SECRET_FLAG_NOT_SAVED) &&
+			(!secondary_name || in_pw2)))
 	{
 		/* If we can't prompt the user, just return the existing password. Do the same
 		 * if we don't nee a new password (!retry) and have an existing saved one */
 		*out_pw = pw;
+		if (secondary_name)
+			*out_pw2 = g_strdup (in_pw2);
 		g_free (prompt);
 		return TRUE;
 	}
 
 	dialog = (NMAVpnPasswordDialog*)nma_vpn_password_dialog_new(_("Authenticate VPN"), prompt, NULL);
-	nma_vpn_password_dialog_set_show_password_secondary(dialog, FALSE);
+	nma_vpn_password_dialog_set_show_password_secondary(dialog, secondary_name != NULL);
 
 	if (pw && !(flags & NM_SETTING_SECRET_FLAG_NOT_SAVED))
 	{
 		nma_vpn_password_dialog_set_password(dialog, pw);
+	}
+	if (secondary_name)
+	{
+		nma_vpn_password_dialog_set_password_secondary_label(dialog,
+								!strcmp(cert_source, "smartcard") ? _("PIN:") : _("Private key password:"));
+		if (in_pw2)
+			nma_vpn_password_dialog_set_password_secondary(dialog, in_pw2);
 	}
 	gtk_widget_show (GTK_WIDGET (dialog));
 
@@ -202,6 +219,8 @@ too_short_retry:
 		{
 			*out_pw = g_strdup (new_pw);
 		}
+		if (secondary_name)
+			*out_pw2 = g_strdup (nma_vpn_password_dialog_get_password_secondary (dialog));
 	}
 	gtk_widget_hide (GTK_WIDGET (dialog));
 	gtk_widget_destroy (GTK_WIDGET (dialog));
@@ -252,8 +271,10 @@ int main (int argc, char *argv[])
 	gchar *name = NULL, *uuid = NULL, *service = NULL, *pass = NULL;
 	GHashTable *data = NULL, *secrets = NULL;
 	NMSettingSecretFlags flags = NM_SETTING_SECRET_FLAG_NONE;
+	NMSettingSecretFlags flags2 = NM_SETTING_SECRET_FLAG_NONE;
 	GOptionContext *context;
-	char *agent, *type, *cert_source;
+	char *agent, *type, *cert_source, *pass2 = NULL;
+	const char *secret_name = "password", *secondary_name = NULL;
 	int status = 0;
 	GOptionEntry entries[] = {
 		{ "reprompt", 'r', 0, G_OPTION_ARG_NONE, &retry, "Reprompt for passwords", NULL},
@@ -309,7 +330,8 @@ int main (int argc, char *argv[])
 		!strcmp(type, "eap-tls") ||
 		!strcmp(type, "key") ||
 		!strcmp(type, "agent") ||
-		!strcmp(type, "smartcard"))
+		!strcmp(type, "smartcard") ||
+		!strcmp(type, "cert-eap"))
 	{
 		if (!strcmp(cert_source, "agent"))
 		{
@@ -334,7 +356,8 @@ int main (int argc, char *argv[])
 				else
 				{
 					print_secret("agent", g_strdup (agent));
-					wait_for_quit ();
+					if (strcmp(type, "cert-eap") != 0)
+						wait_for_quit ();
 				}
 			}
 			else if (allow_interaction)
@@ -351,22 +374,38 @@ int main (int argc, char *argv[])
 		else
 		{
 			need_secret = TRUE;
+			if (!strcmp(type, "cert-eap"))
+				secondary_name = !strcmp(cert_source, "smartcard") ? "pin" : "userkey-password";
+			else
+				secret_name = !strcmp(cert_source, "smartcard") ? "pin" : "userkey-password";
 		}
 	}
 
 	if (need_secret ||
 		!strcmp(type, "eap") ||
-		!strcmp(type, "psk"))
+		!strcmp(type, "psk") ||
+		!strcmp(type, "cert-eap"))
 	{
-		nm_vpn_service_plugin_get_secret_flags (secrets, "password", &flags);
-		if (!get_secrets(type, cert_source, uuid, name, retry, allow_interaction,
-						 external_ui_mode, g_hash_table_lookup (secrets, "password"), &pass, flags))
+		nm_vpn_service_plugin_get_secret_flags (secrets, secret_name, &flags);
+		/* Secret flags are data items, not secrets */
+		if (secondary_name &&
+			nm_vpn_service_plugin_get_secret_flags (data, secondary_name, &flags2) &&
+			(flags2 & NM_SETTING_SECRET_FLAG_NOT_REQUIRED))
+			secondary_name = NULL;
+		if (!get_secrets(type, cert_source, uuid, name, secret_name,
+						 secondary_name,
+						 secondary_name ? g_hash_table_lookup (secrets, secondary_name) : NULL,
+						 secondary_name ? &pass2 : NULL,
+						 retry, allow_interaction,
+						 external_ui_mode, g_hash_table_lookup (secrets, secret_name), &pass, flags))
 		{
 			status = 1;
 		}
 		else if (!external_ui_mode)
 		{
-			print_secret("password", pass);
+			print_secret(secret_name, pass);
+			if (secondary_name)
+				print_secret(secondary_name, pass2);
 			wait_for_quit ();
 		}
 	}
