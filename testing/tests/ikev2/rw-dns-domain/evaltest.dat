@@ -1,0 +1,7 @@
+carol::cat /var/log/daemon.log::installing DNS server PH_IP_WINNETOU to /etc/resolv.conf::YES
+carol::cat /var/log/daemon.log::installing DNS search domain strongswan.org to /etc/resolv.conf::YES
+carol::cat /var/log/daemon.log::installing DNS search domain example.com to /etc/resolv.conf::YES
+carol::cat /etc/resolv.conf::nameserver PH_IP_WINNETOU::YES
+carol::cat /etc/resolv.conf::search strongswan.org example.com::YES
+carol::swanctl --list-sas --raw 2> /dev/null::home.*version=2 state=ESTABLISHED.*local-vips=\[10.3.0.1].*child-sas.*home.*state=INSTALLED::YES
+moon:: swanctl --list-sas --raw 2> /dev/null::rw.*state=ESTABLISHED.*remote-vips=\[10.3.0.1]::YES
