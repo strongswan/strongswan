@@ -165,7 +165,7 @@ static bool servicing(void *data, stream_t *stream)
 
 	t = time(NULL);
 	gmtime_r(&t, &tm);
-	strftime(buf, sizeof(buf), "%a, %d %b %Y %T %z", &tm);
+	strftime(buf, sizeof(buf), "Date: %a, %d %b %Y %T GMT\r\n", &tm);
 	may_fail(test, stream->write_all(stream, buf, strlen(buf)));
 	snprintf(buf, sizeof(buf), "Server: strongSwan unit test\r\n");
 	may_fail(test, stream->write_all(stream, buf, strlen(buf)));
