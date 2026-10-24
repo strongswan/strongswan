@@ -28,7 +28,6 @@ import android.content.SharedPreferences;
 import android.graphics.drawable.Icon;
 import android.os.Build;
 import android.os.IBinder;
-import android.provider.Settings;
 import android.service.quicksettings.Tile;
 import android.service.quicksettings.TileService;
 
@@ -46,6 +45,9 @@ import androidx.preference.PreferenceManager;
 public class VpnTileService extends TileService implements VpnStateService.VpnStateListener
 {
 	private boolean mListening;
+	/* a click that arrived before VpnStateService was bound (the tile service may
+	 * be created right on the click, e.g. on ColorOS that kills it aggressively) */
+	private boolean mPendingClick;
 	private VpnProfileDataSource mDataSource;
 	private VpnStateService mService;
 	private final ServiceConnection mServiceConnection = new ServiceConnection()
@@ -64,6 +66,11 @@ public class VpnTileService extends TileService implements VpnStateService.VpnSt
 			{
 				mService.registerListener(VpnTileService.this);
 				updateTile();
+			}
+			if (mPendingClick)
+			{
+				mPendingClick = false;
+				onClick();
 			}
 		}
 	};
@@ -133,6 +140,11 @@ public class VpnTileService extends TileService implements VpnStateService.VpnSt
 	@Override
 	public void onClick()
 	{
+		if (mService == null && mDataSource != null)
+		{	/* not bound yet, handle the click once we are */
+			mPendingClick = true;
+			return;
+		}
 		if (mService != null)
 		{
 			/* we operate on the current/most recently used profile, but fall back to configuration */
@@ -177,29 +189,21 @@ public class VpnTileService extends TileService implements VpnStateService.VpnSt
 				intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
 				intent.setAction(VpnProfileControlActivity.START_PROFILE);
 				intent.putExtra(VpnProfileControlActivity.EXTRA_VPN_PROFILE_UUID, profile.getUUID().toString());
-				if (profile.getVpnType().has(VpnType.VpnTypeFeature.USER_PASS) &&
-					profile.getPassword() == null)
+				if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
+				{	/* starting an activity from a tile is only reliably allowed via
+					 * startActivityAndCollapse() on Android 14+, a plain startActivity()
+					 * (even with the overlay permission) is silently blocked by some
+					 * vendors, e.g. ColorOS 15 */
+					startActivityAndCollapse(PendingIntent.getActivity(this, 0, intent,
+										PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT));
+				}
+				else if (profile.getVpnType().has(VpnType.VpnTypeFeature.USER_PASS) &&
+						 profile.getPassword() == null)
 				{	/* the user will have to enter the password, so collapse the drawer */
-					if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
-					{
-						startActivityAndCollapse(PendingIntent.getActivity(this, 0, intent, PendingIntent.FLAG_IMMUTABLE));
-					}
-					else
-					{
-						startActivityAndCollapseCompat(intent);
-					}
+					startActivityAndCollapseCompat(intent);
 				}
 				else
 				{
-					/* a bug in Android 14+ requires us to request this permission in
-					 * order to start the activity from this "background" service */
-					if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE && !Settings.canDrawOverlays(this))
-					{
-						Intent permIntent = new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION);
-						permIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-						startActivityAndCollapse(PendingIntent.getActivity(this, 0, permIntent, PendingIntent.FLAG_IMMUTABLE));
-						return;
-					}
 					startActivity(intent);
 				}
 				return;
@@ -209,7 +213,8 @@ public class VpnTileService extends TileService implements VpnStateService.VpnSt
 		intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
 		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
 		{
-			startActivityAndCollapse(PendingIntent.getActivity(this, 0, intent, PendingIntent.FLAG_IMMUTABLE));
+			startActivityAndCollapse(PendingIntent.getActivity(this, 0, intent,
+								PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT));
 		}
 		else
 		{
