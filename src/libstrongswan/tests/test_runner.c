@@ -586,7 +586,7 @@ static hashtable_t *get_iterations()
 	while (enumerator->enumerate(enumerator, &iter))
 	{
 		/* add 1 so we can store 0 */
-		config->put(config, (void*)(uintptr_t)atoi(iter)+1, config);
+		config->put(config, (void*)((uintptr_t)atoi(iter) + 1), config);
 	}
 	enumerator->destroy(enumerator);
 	if (!config->get_count(config))
@@ -635,7 +635,8 @@ static bool run_case(test_case_t *tcase, test_runner_init_t init, char *cfg,
 
 		for (i = tfun->start; i < tfun->end; i++)
 		{
-			if (iterations && !iterations->get(iterations, (void*)(uintptr_t)i+1))
+			if (iterations &&
+				!iterations->get(iterations, (void*)((uintptr_t)i + 1)))
 			{
 				skipped++;
 				continue;
