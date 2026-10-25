@@ -100,7 +100,7 @@ static int callback(struct dl_phdr_info *dlpi, size_t size, Dl_info *dli)
 			if (sgmt->p_type == PT_LOAD && (sgmt->p_flags & PF_X))
 			{
 				/* safe begin of segment in dli_fbase */
-				dli->dli_fbase = (void*)sgmt->p_vaddr + dlpi->dlpi_addr;
+				dli->dli_fbase = (void*)(sgmt->p_vaddr + dlpi->dlpi_addr);
 				/* safe end of segment in dli_saddr */
 				dli->dli_saddr = dli->dli_fbase + sgmt->p_memsz;
 				return 1;
