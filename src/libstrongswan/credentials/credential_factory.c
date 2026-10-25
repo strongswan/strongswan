@@ -148,7 +148,7 @@ METHOD(credential_factory_t, create, void*,
 			 credential_type_names, type, names, subtype, CREATE_MAX_DEPTH);
 		return NULL;
 	}
-	this->recursive->set(this->recursive, (void*)level + 1);
+	this->recursive->set(this->recursive, (void*)(level + 1));
 
 	this->lock->read_lock(this->lock);
 	/* push this in case of a timeout during unit tests */
