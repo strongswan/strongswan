@@ -714,7 +714,7 @@ METHOD(pts_component_t, verify, status_t,
 		char *uri, *ima_algo, *ima_name;
 		char algo_buf[IMA_ALGO_LEN_MAX];
 		uint8_t pcr_buffer[HASH_SIZE_SHA512];
-		chunk_t boot_aggregate;
+		chunk_t boot_aggregate = chunk_empty;
 		pts_meas_algorithms_t hash_algo;
 
 		evidence->get_validation(evidence, &uri);
@@ -754,6 +754,13 @@ METHOD(pts_component_t, verify, status_t,
 				this->state = IMA_STATE_INIT;
 				/* fall through to next state */
 			case IMA_STATE_INIT:
+				if (!boot_aggregate.len)
+				{
+					DBG1(DBG_PTS, "ima: no BIOS evidence received, cannot "
+								  "verify boot aggregate");
+					this->state = IMA_STATE_RUNTIME;
+					break;
+				}
 				this->name->set_qualifier(this->name, qualifier);
 				status = this->pts_db->get_comp_measurement_count(this->pts_db,
 												this->name, this->aik_id, algo,
