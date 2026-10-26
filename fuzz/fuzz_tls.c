@@ -150,6 +150,7 @@ int LLVMFuzzerTestOneInput(const uint8_t *buf, size_t len)
 	tls_t *tls;
 	identification_t *server_id, *peer_id;
 	tls_application_t *app;
+	chunk_t data;
 	status_t status;
 	char out[TLS_MAX_FRAGMENT_LEN + 2048];
 	size_t outlen, msglen;
@@ -166,6 +167,9 @@ int LLVMFuzzerTestOneInput(const uint8_t *buf, size_t len)
 	is_server = buf[0] & 1;
 	buf++;
 	len--;
+
+	/* Records are decrypted in place, so process a copy of the input */
+	data = chunk_clone(chunk_create((u_char*)buf, len));
 
 	server_id = identification_create_from_string("server.test");
 	peer_id = identification_create_from_string("peer.test");
@@ -187,7 +191,7 @@ int LLVMFuzzerTestOneInput(const uint8_t *buf, size_t len)
 		while (status == NEED_MORE);
 	}
 
-	status = tls->process(tls, (void*)buf, len);
+	status = tls->process(tls, data.ptr, data.len);
 
 	/* Drive build() naturally based on process() status */
 	if (status == NEED_MORE)
@@ -203,5 +207,6 @@ int LLVMFuzzerTestOneInput(const uint8_t *buf, size_t len)
 	tls->destroy(tls);
 	server_id->destroy(server_id);
 	peer_id->destroy(peer_id);
+	chunk_free(&data);
 	return 0;
 }
