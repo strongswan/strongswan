@@ -27,7 +27,9 @@ import android.content.ServiceConnection;
 import android.content.SharedPreferences;
 import android.graphics.drawable.Icon;
 import android.os.Build;
+import android.os.Handler;
 import android.os.IBinder;
+import android.os.Looper;
 import android.service.quicksettings.Tile;
 import android.service.quicksettings.TileService;
 
@@ -38,6 +40,7 @@ import org.strongswan.android.data.VpnProfileSource;
 import org.strongswan.android.data.VpnType;
 import org.strongswan.android.logic.VpnStateService;
 import org.strongswan.android.utils.Constants;
+import org.strongswan.android.utils.TileStart;
 
 import androidx.preference.PreferenceManager;
 
@@ -45,6 +48,7 @@ import androidx.preference.PreferenceManager;
 public class VpnTileService extends TileService implements VpnStateService.VpnStateListener
 {
 	private boolean mListening;
+	private final Handler mHandler = new Handler(Looper.getMainLooper());
 	/* a click that arrived before VpnStateService was bound (the tile service may
 	 * be created right on the click, e.g. on ColorOS that kills it aggressively) */
 	private boolean mPendingClick;
@@ -92,6 +96,7 @@ public class VpnTileService extends TileService implements VpnStateService.VpnSt
 	public void onDestroy()
 	{
 		super.onDestroy();
+		mHandler.removeCallbacksAndMessages(null);
 
 		if (mService != null)
 		{
@@ -183,29 +188,30 @@ public class VpnTileService extends TileService implements VpnStateService.VpnSt
 						return;
 				}
 			}
-			if (profile != null)
-			{
-				Intent intent = new Intent(this, VpnProfileControlActivity.class);
-				intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-				intent.setAction(VpnProfileControlActivity.START_PROFILE);
-				intent.putExtra(VpnProfileControlActivity.EXTRA_VPN_PROFILE_UUID, profile.getUUID().toString());
-				if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
-				{	/* starting an activity from a tile is only reliably allowed via
-					 * startActivityAndCollapse() on Android 14+, a plain startActivity()
-					 * (even with the overlay permission) is silently blocked by some
-					 * vendors, e.g. ColorOS 15 */
-					startActivityAndCollapse(PendingIntent.getActivity(this, 0, intent,
-										PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT));
-				}
-				else if (profile.getVpnType().has(VpnType.VpnTypeFeature.USER_PASS) &&
-						 profile.getPassword() == null)
-				{	/* the user will have to enter the password, so collapse the drawer */
-					startActivityAndCollapseCompat(intent);
+			if (profile != null && VpnProfileControlActivity.canConnectWithoutPrompt(this, profile))
+			{	/* nothing to ask, connect from here so the drawer stays open and shows the state */
+				final VpnProfile direct = profile;
+				Runnable connect = new Runnable()
+				{
+					@Override
+					public void run()
+					{
+						connectDirectly(direct);
+					}
+				};
+				if (isLocked())
+				{
+					unlockAndRun(connect);
 				}
 				else
 				{
-					startActivity(intent);
+					connect.run();
 				}
+				return;
+			}
+			if (profile != null)
+			{
+				startControlActivity(profile);
 				return;
 			}
 		}
@@ -219,6 +225,67 @@ public class VpnTileService extends TileService implements VpnStateService.VpnSt
 		else
 		{
 			startActivityAndCollapseCompat(intent);
+		}
+	}
+
+	/**
+	 * Connect without the activity. If the system refuses to start the service
+	 * from here (background start restrictions, vendor limits), or the connection
+	 * doesn't start within TileStart.FALLBACK_MS, fall back to the activity.
+	 */
+	private void connectDirectly(final VpnProfile profile)
+	{
+		try
+		{
+			mService.connect(VpnProfileControlActivity.profileInfo(profile), true);
+		}
+		catch (IllegalStateException | SecurityException e)
+		{
+			startControlActivity(profile);
+			return;
+		}
+		mHandler.postDelayed(new Runnable()
+		{
+			@Override
+			public void run()
+			{
+				if (mService != null && mService.getState() == VpnStateService.State.DISABLED &&
+					mService.getErrorState() == VpnStateService.ErrorState.NO_ERROR)
+				{
+					try
+					{
+						startControlActivity(profile);
+					}
+					catch (RuntimeException e)
+					{	/* not allowed outside of a click on some versions, the tile shows "disconnected" */
+					}
+				}
+			}
+		}, TileStart.FALLBACK_MS);
+	}
+
+	private void startControlActivity(VpnProfile profile)
+	{
+		Intent intent = new Intent(this, VpnProfileControlActivity.class);
+		intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+		intent.setAction(VpnProfileControlActivity.START_PROFILE);
+		intent.putExtra(VpnProfileControlActivity.EXTRA_VPN_PROFILE_UUID, profile.getUUID().toString());
+		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
+		{	/* starting an activity from a tile is only reliably allowed via
+			 * startActivityAndCollapse() on Android 14+, a plain startActivity()
+			 * (even with the overlay permission) is silently blocked by some
+			 * vendors, e.g. ColorOS 15 */
+			startActivityAndCollapse(PendingIntent.getActivity(this, 0, intent,
+								PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT));
+		}
+		else if (profile.getVpnType().has(VpnType.VpnTypeFeature.USER_PASS) &&
+				 profile.getPassword() == null)
+		{	/* the user will have to enter the password, so collapse the drawer */
+			startActivityAndCollapseCompat(intent);
+		}
+		else
+		{
+			startActivity(intent);
 		}
 	}
 
