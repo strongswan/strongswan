@@ -169,7 +169,7 @@ static gboolean get_secrets(const char *type, const char *cert_source, const cha
 
 		keyfile = g_key_file_new ();
 
-		if (!strcmp(type, "cert-eap") && !strcmp(cert_source, "agent"))
+		if (strcmp(type, "cert-eap") || strcmp(cert_source, "agent"))
 		{
 			g_key_file_set_integer (keyfile, UI_KEYFILE_GROUP, "Version", 2);
 			g_key_file_set_string (keyfile, UI_KEYFILE_GROUP, "Description", prompt);
