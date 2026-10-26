@@ -391,6 +391,7 @@ init_plugin_ui (StrongswanPluginUiWidget *self, NMConnection *connection, GError
 	NMSettingVpn *settings;
 	GtkWidget *widget;
 	const char *value, *method, *secret;
+	NMSettingSecretFlags flags = NM_SETTING_SECRET_FLAG_NONE;
 
 	settings = NM_SETTING_VPN(nm_connection_get_setting(connection, NM_TYPE_SETTING_VPN));
 
@@ -433,6 +434,28 @@ init_plugin_ui (StrongswanPluginUiWidget *self, NMConnection *connection, GError
 		gtk_editable_set_text (GTK_EDITABLE (widget), value);
 	g_signal_connect (G_OBJECT (widget), "changed", G_CALLBACK (settings_changed_cb), self);
 
+	/* fallback to the password for old certificate configs, before the
+	 * password field below stores default flags for it */
+	secret = "userkey-password";
+	if (!nm_setting_vpn_get_secret (settings, "userkey-password") &&
+		!(nm_setting_get_secret_flags (NM_SETTING (settings), "userkey-password",
+									   &flags, NULL) && flags) &&
+		(nm_setting_vpn_get_secret (settings, "password") ||
+		 (nm_setting_get_secret_flags (NM_SETTING (settings), "password",
+									   &flags, NULL) && flags)) &&
+		method && g_strcmp0 (method, "eap") != 0 && g_strcmp0 (method, "psk") != 0 &&
+		g_strcmp0 (method, "cert-eap") != 0)
+	{
+		secret = "password";
+	}
+	widget = GTK_WIDGET (gtk_builder_get_object (priv->builder, "userkey-password-entry"));
+	value = nm_setting_vpn_get_secret (settings, secret);
+	if (value)
+		gtk_editable_set_text (GTK_EDITABLE (widget), value);
+	g_signal_connect (G_OBJECT (widget), "changed", G_CALLBACK (settings_changed_cb), self);
+	init_password_icon (self, settings, secret, "userkey-password-entry",
+						NM_SETTING_SECRET_FLAG_NOT_REQUIRED);
+
 	widget = GTK_WIDGET (gtk_builder_get_object (priv->builder, "passwd-show"));
 	g_signal_connect (G_OBJECT (widget), "toggled", G_CALLBACK (show_toggled_cb), self);
 	widget = GTK_WIDGET (gtk_builder_get_object (priv->builder, "passwd-entry"));
@@ -446,23 +469,6 @@ init_plugin_ui (StrongswanPluginUiWidget *self, NMConnection *connection, GError
 	g_signal_connect (G_OBJECT (widget), "changed", G_CALLBACK (settings_changed_cb), self);
 	init_password_icon (self, settings, "password", "passwd-entry",
 						NM_SETTING_SECRET_FLAG_NOT_SAVED);
-
-	/* fallback to the password for old certificate configs */
-	secret = "userkey-password";
-	if (!nm_setting_vpn_get_secret (settings, "userkey-password") &&
-		nm_setting_vpn_get_secret (settings, "password") &&
-		method && g_strcmp0 (method, "eap") != 0 && g_strcmp0 (method, "psk") != 0 &&
-		g_strcmp0 (method, "cert-eap") != 0)
-	{
-		secret = "password";
-	}
-	widget = GTK_WIDGET (gtk_builder_get_object (priv->builder, "userkey-password-entry"));
-	value = nm_setting_vpn_get_secret (settings, secret);
-	if (value)
-		gtk_editable_set_text (GTK_EDITABLE (widget), value);
-	g_signal_connect (G_OBJECT (widget), "changed", G_CALLBACK (settings_changed_cb), self);
-	init_password_icon (self, settings, secret, "userkey-password-entry",
-						NM_SETTING_SECRET_FLAG_NOT_REQUIRED);
 
 	widget = GTK_WIDGET (gtk_builder_get_object (priv->builder, "method-combo"));
 	gtk_combo_box_text_append_text (GTK_COMBO_BOX_TEXT (widget), _("EAP (Username/Password)"));
