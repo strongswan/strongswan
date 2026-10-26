@@ -420,11 +420,13 @@ static bool post_test(test_runner_init_t init, bool check_leaks,
 		}
 		else
 		{
+			test_setup_timeout(0);
 			thread_cleanup_popall();
 			library_deinit();
 			return FALSE;
 		}
 	}
+	test_setup_timeout(0);
 	if (check_leaks && lib->leak_detective)
 	{
 		lib->leak_detective->set_report_cb(lib->leak_detective,
@@ -676,7 +678,6 @@ static bool run_case(test_case_t *tcase, test_runner_init_t init, char *cfg,
 
 				times[ti] = end_timing(&start);
 				total_time += times[ti++];
-				test_setup_timeout(0);
 
 				if (ok)
 				{
