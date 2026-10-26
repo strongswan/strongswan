@@ -17,6 +17,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <errno.h>
+#include <sys/mman.h>
 #include <library.h>
 
 extern int LLVMFuzzerTestOneInput(const unsigned char *data, size_t size);
@@ -45,6 +46,11 @@ int main(int argc, char **argv)
 		if (!data)
 		{
 			fprintf(stderr, "opening %s failed: %s\n", argv[i], strerror(errno));
+			return 1;
+		}
+		if (data->len && mprotect(data->ptr, data->len, PROT_READ) != 0)
+		{	/* libFuzzer passes a const buffer to the targets too */
+			fprintf(stderr, "protecting %s failed: %s\n", argv[i], strerror(errno));
 			return 1;
 		}
 		res = LLVMFuzzerTestOneInput(data->ptr, data->len);
