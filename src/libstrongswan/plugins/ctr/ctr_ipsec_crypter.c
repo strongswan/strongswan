@@ -85,6 +85,10 @@ static bool crypt_ctr(private_ctr_ipsec_crypter_t *this,
 METHOD(crypter_t, crypt, bool,
 	private_ctr_ipsec_crypter_t *this, chunk_t in, chunk_t iv, chunk_t *out)
 {
+	if (iv.len != sizeof(this->state.iv))
+	{
+		return FALSE;
+	}
 	memcpy(this->state.iv, iv.ptr, sizeof(this->state.iv));
 
 	if (out)
