@@ -489,6 +489,10 @@ if test x$cert_enroll = xtrue; then
 	pki=true
 fi
 
+if test x$fuzzing = xtrue; then
+	monolithic=true
+fi
+
 if test x$kdf = xfalse; then
 	openssl_hkdf=false
 	if test x$openssl = xtrue; then
