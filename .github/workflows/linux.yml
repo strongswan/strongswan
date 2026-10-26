@@ -58,8 +58,8 @@ jobs:
           - test: no-testable-ke
             compiler: clang
           - test: fuzzing
+          - test: fuzzing
             compiler: clang
-            monolithic: yes
     env:
       LEAK_DETECTIVE: ${{ matrix.leak-detective || 'no' }}
       MONOLITHIC: ${{ matrix.monolithic || 'no' }}
