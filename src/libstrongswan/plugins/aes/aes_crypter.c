@@ -796,6 +796,11 @@ METHOD(crypter_t, decrypt, bool,
 	const uint32_t *iv_i;
 	uint8_t *in, *out;
 
+	if (this->has_iv && iv.len != AES_BLOCK_SIZE)
+	{
+		return FALSE;
+	}
+
 	if (decrypted)
 	{
 		*decrypted = chunk_alloc(data.len);
