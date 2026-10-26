@@ -111,6 +111,10 @@ METHOD(crypter_t, decrypt, bool,
 		out = dst->ptr;
 	}
 
+	if (iv.len != this->iv_size)
+	{
+		return FALSE;
+	}
 	if (this->salt.len > 0)
 	{
 		memcpy(nonce, this->salt.ptr, this->salt.len);
@@ -455,7 +459,7 @@ wolfssl_crypter_t *wolfssl_crypter_create(encryption_algorithm_t algo,
 {
 	private_wolfssl_crypter_t *this;
 	size_t block_size;
-	size_t iv_size;
+	size_t iv_size = 0;
 	size_t salt_len = 0;
 	int ret = 0;
 
@@ -464,7 +468,6 @@ wolfssl_crypter_t *wolfssl_crypter_create(encryption_algorithm_t algo,
 		case ENCR_NULL:
 			key_size = 0;
 			block_size = 1;
-			iv_size = 0;
 			break;
 #if !defined(NO_AES) && !defined(NO_AES_CBC)
 		case ENCR_AES_CBC:
@@ -495,7 +498,6 @@ wolfssl_crypter_t *wolfssl_crypter_create(encryption_algorithm_t algo,
 				case 24:
 				case 32:
 					block_size = AES_BLOCK_SIZE;
-					iv_size = AES_IV_SIZE;
 					break;
 				default:
 					return NULL;
@@ -567,6 +569,8 @@ wolfssl_crypter_t *wolfssl_crypter_create(encryption_algorithm_t algo,
 			iv_size = DES_BLOCK_SIZE;
 			break;
 		case ENCR_DES:
+			iv_size = DES_BLOCK_SIZE;
+			/* fall-through */
 	#ifdef WOLFSSL_DES_ECB
 		case ENCR_DES_ECB:
 	#endif
@@ -575,7 +579,6 @@ wolfssl_crypter_t *wolfssl_crypter_create(encryption_algorithm_t algo,
 				return NULL;
 			}
 			block_size = DES_BLOCK_SIZE;
-			iv_size = DES_BLOCK_SIZE;
 			break;
 #endif
 		default:
