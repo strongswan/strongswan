@@ -18,7 +18,8 @@ fuzz_cppflags_cus = ${AM_CPPFLAGS} \
 
 fuzz_ldflags = @LDFLAGS@ ${libfuzzer} \
 	$(top_builddir)/src/libstrongswan/.libs/libstrongswan.a \
-	@FUZZING_LDFLAGS@
+	@FUZZING_LDFLAGS@ \
+	-lm $(PTHREADLIB) $(ATOMICLIB) $(DLLIB)
 
 if USE_OPENSSL
 fuzz_ldflags += -Wl,-Bstatic -lcrypto -Wl,-Bdynamic

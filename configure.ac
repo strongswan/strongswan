@@ -1313,9 +1313,6 @@ if test x$fuzzing = xtrue; then
 	*)
 		# required for libFuzzer
 		FUZZING_LDFLAGS="-stdlib=libc++ -lstdc++"
-		if test "$SANITIZER" = "coverage"; then
-			FUZZING_LDFLAGS="$FUZZING_LDFLAGS -lm"
-		fi
 		AC_SUBST(FUZZING_LDFLAGS)
 		;;
 	esac
