@@ -16,7 +16,7 @@ fuzz_cppflags_def = ${AM_CPPFLAGS} \
 fuzz_cppflags_cus = ${AM_CPPFLAGS} \
 	-DPLUGINS="\"${fc_plugins}\""
 
-fuzz_ldflags = ${libfuzzer} \
+fuzz_ldflags = @LDFLAGS@ ${libfuzzer} \
 	$(top_builddir)/src/libstrongswan/.libs/libstrongswan.a \
 	@FUZZING_LDFLAGS@
 
