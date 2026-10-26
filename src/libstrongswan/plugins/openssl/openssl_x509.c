@@ -80,6 +80,11 @@ static inline void X509_get0_signature(ASN1_BIT_STRING **psig, X509_ALGOR **palg
 #define ASN1_STRING_get0_data ASN1_STRING_data
 #endif
 
+/* this was added with 4.1.0 and deprecated immediately */
+#if OPENSSL_VERSION_NUMBER < 0x40100000L
+#define ASN1_STRING_get_length(s) ASN1_STRING_length(s)
+#endif
+
 typedef struct private_openssl_x509_t private_openssl_x509_t;
 
 /**
@@ -727,7 +732,7 @@ static bool parse_keyUsage_ext(private_openssl_x509_t *this,
 	if (usage)
 	{
 		const u_char *data = ASN1_STRING_get0_data(usage);
-		int length = ASN1_STRING_length(usage);
+		int length = ASN1_STRING_get_length(usage);
 		if (length > 0)
 		{
 			int flags = data[0];

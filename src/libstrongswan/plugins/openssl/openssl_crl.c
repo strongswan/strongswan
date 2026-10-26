@@ -61,6 +61,11 @@ static inline void X509_CRL_get0_signature(const X509_CRL *crl, ASN1_BIT_STRING 
 #define X509_CRL_get0_nextUpdate(c) X509_CRL_get_nextUpdate(c)
 #endif
 
+/* this was added with 4.1.0 and deprecated immediately */
+#if OPENSSL_VERSION_NUMBER < 0x40100000L
+#define ASN1_STRING_get_length(s) ASN1_STRING_length(s)
+#endif
+
 typedef struct private_openssl_crl_t private_openssl_crl_t;
 
 /**
@@ -193,7 +198,7 @@ METHOD(enumerator_t, crl_enumerate, bool,
 			if (crlrsn)
 			{
 				if (ASN1_STRING_type(crlrsn) == V_ASN1_ENUMERATED &&
-					ASN1_STRING_length(crlrsn) == 1)
+					ASN1_STRING_get_length(crlrsn) == 1)
 				{
 					*reason = *ASN1_STRING_get0_data(crlrsn);
 				}

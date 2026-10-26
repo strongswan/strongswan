@@ -39,6 +39,11 @@
 #define ASN1_STRING_get0_data(a) ASN1_STRING_data((ASN1_STRING*)a)
 #endif
 
+/* this was added with 4.1.0 and deprecated immediately */
+#if OPENSSL_VERSION_NUMBER < 0x40100000L
+#define ASN1_STRING_get_length(s) ASN1_STRING_length(s)
+#endif
+
 #if defined(OPENSSL_IS_BORINGSSL) || defined(OPENSSL_IS_AWSLC)
 /**
  * Chunk for an ASN.1 Integer with a value of 0.
@@ -263,7 +268,7 @@ chunk_t openssl_asn1_str2chunk(const ASN1_STRING *asn1)
 	if (asn1)
 	{
 		return chunk_create((u_char*)ASN1_STRING_get0_data(asn1),
-							ASN1_STRING_length(asn1));
+							ASN1_STRING_get_length(asn1));
 	}
 	return chunk_empty;
 }

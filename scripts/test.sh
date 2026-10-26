@@ -214,7 +214,7 @@ openssl*)
 		use_custom_openssl $1
 	elif test "$TEST" = "openssl-4"; then
 		DEPS=""
-		SSL_REV=openssl-4.0.3
+		SSL_REV=openssl-4.1.0
 		use_custom_openssl $1
 	elif test "$TEST" = "openssl-awslc"; then
 		DEPS="cmake ninja-build golang"
