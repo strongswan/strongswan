@@ -1414,6 +1414,11 @@ METHOD(crypter_t, decrypt, bool,
 	des_cblock ivb;
 	uint8_t *out;
 
+	if (iv.len < sizeof(des_cblock))
+	{
+		return FALSE;
+	}
+
 	out = data.ptr;
 	if (decrypted)
 	{
@@ -1482,6 +1487,11 @@ METHOD(crypter_t, decrypt3, bool,
 {
 	des_cblock ivb;
 	uint8_t *out;
+
+	if (iv.len < sizeof(des_cblock))
+	{
+		return FALSE;
+	}
 
 	out = data.ptr;
 	if (decrypted)
