@@ -482,6 +482,11 @@ typedef struct {
  */
 static echo_server_config_t *server_config;
 
+/**
+ * Client socket of current test
+ */
+static int client_fd = -1;
+
 START_TEARDOWN(teardown_creds)
 {
 	lib->credmgr->remove_set(lib->credmgr, &creds->set);
@@ -493,6 +498,11 @@ START_TEARDOWN(teardown_creds)
 		shutdown(server_config->fd, SHUT_RDWR);
 		free(server_config);
 		server_config = NULL;
+	}
+	if (client_fd != -1)
+	{
+		shutdown(client_fd, SHUT_WR);
+		client_fd = -1;
 	}
 }
 END_TEARDOWN
@@ -595,7 +605,6 @@ static void run_echo_client(echo_server_config_t *config)
 {
 	tls_socket_t *tls;
 	ssize_t len, rd, wr;
-	int fd;
 	host_t *host;
 	identification_t *server, *client = NULL;
 	char buf[128];
@@ -607,11 +616,11 @@ static void run_echo_client(echo_server_config_t *config)
 		client = server;
 	}
 
-	fd = socket(AF_INET, SOCK_STREAM, 0);
-	ck_assert(fd != -1);
-	ck_assert(connect(fd, host->get_sockaddr(host),
+	client_fd = socket(AF_INET, SOCK_STREAM, 0);
+	ck_assert(client_fd != -1);
+	ck_assert(connect(client_fd, host->get_sockaddr(host),
 					  *host->get_sockaddr_len(host)) != -1);
-	tls = tls_socket_create(FALSE, server, client, fd, NULL,
+	tls = tls_socket_create(FALSE, server, client, client_fd, NULL,
 							TLS_SUPPORTED_MIN, config->version,
 							TLS_FLAG_ENCRYPTION_OPTIONAL);
 	ck_assert(tls != NULL);
@@ -640,7 +649,8 @@ static void run_echo_client(echo_server_config_t *config)
 	}
 
 	tls->destroy(tls);
-	close(fd);
+	close(client_fd);
+	client_fd = -1;
 	host->destroy(host);
 	server->destroy(server);
 }
