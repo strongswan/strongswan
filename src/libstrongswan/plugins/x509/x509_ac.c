@@ -410,7 +410,7 @@ static bool parse_certificate(private_x509_ac_t *this)
 	int type     = OID_UNKNOWN;
 	int extn_oid = OID_UNKNOWN;
 	signature_params_t sig_alg = {};
-	bool success = FALSE;
+	bool critical = FALSE, success = FALSE;
 
 	parser = asn1_parser_create(acObjects, this->encoding);
 
@@ -510,8 +510,8 @@ static bool parse_certificate(private_x509_ac_t *this)
 				extn_oid = asn1_known_oid(object);
 				break;
 			case AC_OBJ_CRITICAL:
-				DBG2(DBG_ASN, "  %s",
-					 object.len && *object.ptr ? "TRUE" : "FALSE");
+				critical = object.len && *object.ptr;
+				DBG2(DBG_ASN, "  %s", critical ? "TRUE" : "FALSE");
 				break;
 			case AC_OBJ_EXTN_VALUE:
 			{
@@ -533,6 +533,14 @@ static bool parse_certificate(private_x509_ac_t *this)
 						this->noRevAvail = TRUE;
 						break;
 					default:
+						if (critical && lib->settings->get_bool(lib->settings,
+							"%s.x509.enforce_critical", TRUE, lib->ns))
+						{
+							DBG1(DBG_ASN, "critical '%s' extension not supported",
+								 (extn_oid == OID_UNKNOWN) ? "unknown" :
+								 (char*)oid_names[extn_oid].name);
+							goto end;
+						}
 						break;
 				}
 				break;
