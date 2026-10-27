@@ -194,9 +194,9 @@ static bool remove_padding(private_pkcs7_enveloped_data_t *this)
 	pattern = *pos;
 	padding = pattern;
 
-	if (padding > this->content.len)
+	if (!padding || padding > this->content.len)
 	{
-		DBG1(DBG_LIB, "padding greater than data length");
+		DBG1(DBG_LIB, "padding invalid");
 		return FALSE;
 	}
 	this->content.len -= padding;
