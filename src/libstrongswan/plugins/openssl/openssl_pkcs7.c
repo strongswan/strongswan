@@ -599,9 +599,9 @@ static bool remove_padding(chunk_t *data)
 	pos = data->ptr + data->len - 1;
 	padding = pattern = *pos;
 
-	if (padding > data->len)
+	if (!padding || padding > data->len)
 	{
-		DBG1(DBG_LIB, "padding greater than data length");
+		DBG1(DBG_LIB, "padding invalid");
 		return FALSE;
 	}
 	data->len -= padding;
