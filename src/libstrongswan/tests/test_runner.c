@@ -411,19 +411,34 @@ static bool post_test(test_runner_init_t init, bool check_leaks,
 		.name = name,
 		.i = i,
 	};
+	volatile bool deinit_called = FALSE;
 
-	if (init)
+	if (test_restore_point())
 	{
-		if (test_restore_point())
+		if (init)
 		{
 			init(FALSE);
 		}
-		else
+	}
+	else
+	{
+		if (deinit_called && lib)
+		{
+			/* a timeout or critical signal was triggered during library deinit,
+			 * which leaves it partially deinitialized (lib stays set) and we
+			 * won't be able to initialize it again, so we abort to avoid
+			 * undefined behavior */
+			fprintf(stderr, "\n%sTimeout/failure during library deinit%s\n",
+					TTY(RED), TTY(DEF));
+			abort();
+		}
+		if (!deinit_called)
 		{
 			thread_cleanup_popall();
+			deinit_called = TRUE;
 			library_deinit();
-			return FALSE;
 		}
+		return FALSE;
 	}
 	if (check_leaks && lib->leak_detective)
 	{
@@ -431,6 +446,7 @@ static bool post_test(test_runner_init_t init, bool check_leaks,
 								(leak_detective_report_cb_t)report_leaks,
 								(leak_detective_summary_cb_t)sum_leaks, &data);
 	}
+	deinit_called = TRUE;
 	library_deinit();
 
 	*leaks = data.leaks;
