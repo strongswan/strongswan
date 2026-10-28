@@ -793,9 +793,6 @@ static void test_tls_server(tls_version_t version, uint16_t port, bool cauth,
 
 	run_echo_client(client);
 
-	shutdown(client->fd, SHUT_RDWR);
-	close(client->fd);
-
 	free(client);
 }
 
@@ -813,9 +810,6 @@ static void test_tls_client(tls_version_t version, uint16_t port, bool cauth,
 	start_echo_server(server_config);
 
 	run_echo_client(client);
-
-	shutdown(client->fd, SHUT_RDWR);
-	close(client->fd);
 
 	free(client);
 }
