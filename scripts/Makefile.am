@@ -7,7 +7,8 @@ AM_CPPFLAGS = \
 
 noinst_PROGRAMS = bin2array bin2sql id2sql key2keyid keyid2sql oid2der \
 	thread_analysis dh_speed pubkey_speed crypt_burn hash_burn fetch \
-	dnssec malloc_speed aes-test settings-test timeattack nist_kem_kat
+	dnssec malloc_speed aes-test settings-test timeattack nist_kem_kat \
+	nist_acvp
 
 if USE_TLS
   noinst_PROGRAMS += tls_test
@@ -32,6 +33,7 @@ fetch_SOURCES = fetch.c
 dnssec_SOURCES = dnssec.c
 timeattack_SOURCES = timeattack.c
 nist_kem_kat_SOURCES = nist_kem_kat.c
+nist_acvp_SOURCES = nist_acvp.c
 
 id2sql_LDADD = $(top_builddir)/src/libstrongswan/libstrongswan.la
 key2keyid_LDADD = $(top_builddir)/src/libstrongswan/libstrongswan.la
@@ -48,6 +50,7 @@ aes_test_LDADD = $(top_builddir)/src/libstrongswan/libstrongswan.la
 settings_test_LDADD = $(top_builddir)/src/libstrongswan/libstrongswan.la
 timeattack_LDADD = $(top_builddir)/src/libstrongswan/libstrongswan.la $(RTLIB)
 nist_kem_kat_LDADD = $(top_builddir)/src/libstrongswan/libstrongswan.la
+nist_acvp_LDADD = $(top_builddir)/src/libstrongswan/libstrongswan.la
 
 if USE_IMCV
   AM_CPPFLAGS += -I$(top_srcdir)/src/libimcv
