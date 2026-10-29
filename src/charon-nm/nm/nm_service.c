@@ -1320,31 +1320,30 @@ static gboolean do_disconnect(gpointer plugin)
 {
 	NMStrongswanPluginPrivate *priv = NM_STRONGSWAN_PLUGIN_GET_PRIVATE(plugin);
 	enumerator_t *enumerator;
+	array_t *ids = NULL;
 	ike_sa_t *ike_sa;
-	u_int id = 0;
+	uint32_t id = 0;
 
-	/* our ike_sa pointer might be invalid, lookup sa */
+	/* don't trigger events anymore while terminating SAs */
+	priv->ike_sa = NULL;
+
+	/* terminate all SAs in case e.g. a make-before-break reauthentication
+	 * is currently active */
 	enumerator = charon->controller->create_ike_sa_enumerator(
 													charon->controller, TRUE);
 	while (enumerator->enumerate(enumerator, &ike_sa))
 	{
-		if (priv->ike_sa == ike_sa)
-		{
-			id = ike_sa->get_unique_id(ike_sa);
-			break;
-		}
+		id = ike_sa->get_unique_id(ike_sa);
+		array_insert_create_value(&ids, sizeof(id), ARRAY_TAIL, &id);
 	}
 	enumerator->destroy(enumerator);
 
-	if (id)
+	while (array_remove(ids, ARRAY_HEAD, &id))
 	{
-		charon->controller->terminate_ike(charon->controller, id, FALSE,
+		charon->controller->terminate_ike(charon->controller, id, TRUE,
 									controller_cb_empty, NULL, LEVEL_SILENT, 0);
 	}
-	else
-	{
-		g_debug("Connection not found.");
-	}
+	array_destroy(ids);
 
 	/* clear secrets as we are asked for new secrets (where we'd find the cached
 	 * secrets from earlier connections) before we clear them in connect() */
