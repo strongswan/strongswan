@@ -14,6 +14,8 @@
  * for more details.
  */
 
+#define _GNU_SOURCE
+#include <stdio.h>
 #include <errno.h>
 
 #include "pki.h"
@@ -38,7 +40,9 @@ static int show(pem_t *bundle)
 
 		if (x509->get_flags(x509) & X509_CA)
 		{
-			printf("[%2d] \"%Y\" (CA)\n", index++, cert->get_subject(cert));
+			printf("[%2d] \"%Y\" (CA, %s)\n", index++, cert->get_subject(cert),
+				   x509->get_flags(x509) & X509_SELF_SIGNED ? "root"
+															: "intermediate");
 		}
 		else
 		{
@@ -50,46 +54,198 @@ static int show(pem_t *bundle)
 }
 
 /**
+ * Build and allocate a path for a given certificate
+ */
+static bool build_pathname(int index, int total, char *template,
+						   cred_encoding_type_t outform, char **path)
+{
+	char *dirname, *basename, *dot, *suffix;
+	int len, written;
+
+	dirname = path_dirname(template);
+	basename = path_basename(template);
+
+	suffix = (outform == CERT_ASN1_DER) ? "der" : "pem";
+
+	dot = strrchr(basename, '.');
+	len = dot ? (dot - basename) : strlen(basename);
+	if (dot && (dot[1] != '\0'))
+	{
+		suffix = dot + 1;
+	}
+
+	if (total > 1)
+	{
+		written = asprintf(path, "%s%s%.*s-%d.%s", dirname, DIRECTORY_SEPARATOR,
+						   len, basename, index, suffix);
+	}
+	else
+	{
+		written = asprintf(path, "%s%s%.*s.%s", dirname, DIRECTORY_SEPARATOR,
+						   len, basename, suffix);
+	}
+	free(basename);
+	free(dirname);
+	return written > 0;
+}
+
+/**
+ * Export selection modes if not using a specific index
+ */
+typedef enum {
+	EXPORT_ALL,
+	EXPORT_NO_ROOT,
+	EXPORT_ROOT,
+	EXPORT_CA,
+	EXPORT_IM,
+	EXPORT_EE,
+} export_mode_t;
+
+ENUM(export_mode_names, EXPORT_ALL, EXPORT_EE,
+	"all",
+	"no-root",
+	"root",
+	"ca",
+	"im",
+	"ee",
+);
+
+/**
+ * Check if a certificate is selected for export
+ */
+static bool cert_selected(export_mode_t mode, x509_t *x509)
+{
+	bool is_self = x509->get_flags(x509) & X509_SELF_SIGNED;
+	bool is_ca = x509->get_flags(x509) & X509_CA;
+
+	switch (mode)
+	{
+		case EXPORT_NO_ROOT:
+			return !(is_ca && is_self);
+		case EXPORT_ROOT:
+			return is_ca && is_self;
+		case EXPORT_CA:
+			return is_ca;
+		case EXPORT_IM:
+			return is_ca && !is_self;
+		case EXPORT_EE:
+			return !is_ca;
+		default:
+			return TRUE;
+	}
+}
+
+/**
  * Export a certificate from a PEM certificate bundle
  */
-static int export(pem_t *bundle, int index, char *outform)
+static int export(pem_t *bundle, char *selector, char *template,
+				  cred_encoding_type_t outform, bool reverse, bool force)
 {
-	cred_encoding_type_t form = CERT_ASN1_DER;
 	enumerator_t *enumerator;
 	certificate_t *cert;
+	array_t *selected = NULL;
+	export_mode_t mode = EXPORT_ALL;
 	chunk_t encoding;
-	int i = 1;
+	char *end, *path;
+	uint32_t index = 0;
+	int i = 1, count = 0, ret = 1;
 
-	if (outform && !get_form(outform, &form, CRED_CERTIFICATE))
+	if (!enum_from_name(export_mode_names, selector, &mode) &&
+		(!uint32_from_string(selector, &end, 10, &index) || *end != '\0' ||
+		 !index))
 	{
-		return command_usage("invalid output format");
+		fprintf(stderr, "invalid selector\n");
+		return 1;
 	}
 
 	enumerator = bundle->create_cert_enumerator(bundle);
 	while (enumerator->enumerate(enumerator, &cert))
 	{
-		if (i++ == index)
+		if (!index)
 		{
-			if (cert->get_encoding(cert, form, &encoding))
+			if (!cert_selected(mode, (x509_t*)cert))
 			{
-				set_file_mode(stdout, form);
-				if (fwrite(encoding.ptr, encoding.len, 1, stdout) == 1)
-				{
-					free(encoding.ptr);
-					enumerator->destroy(enumerator);
-					return 0;
-				}
-				free(encoding.ptr);
+				continue;
 			}
-			fprintf(stderr, "certificate export failed\n");
-			enumerator->destroy(enumerator);
-			return 1;
 		}
+		else if (i++ != index)
+		{
+			continue;
+		}
+		array_insert_create(&selected, reverse ? ARRAY_HEAD : ARRAY_TAIL,
+							cert->get_ref(cert));
 	}
 	enumerator->destroy(enumerator);
 
-	fprintf(stderr, "invalid index %d\n", index);
-	return 1;
+	count = array_count(selected);
+	if (!count)
+	{
+		if (index)
+		{
+			fprintf(stderr, "invalid index %u\n", index);
+		}
+		else
+		{
+			fprintf(stderr, "no certificates match '%N' selector\n",
+					export_mode_names, mode);
+		}
+		return 1;
+	}
+
+	if (!template && count > 1 && outform != CERT_PEM)
+	{
+		fprintf(stderr, "forcing PEM format to export multiple certificates to "
+				"STDOUT\n");
+		outform = CERT_PEM;
+	}
+
+	i = 1;
+	while (array_remove(selected, ARRAY_HEAD, &cert))
+	{
+		if (!cert->get_encoding(cert, outform, &encoding))
+		{
+			fprintf(stderr, "unable to encode certificate\n");
+			cert->destroy(cert);
+			goto out;
+		}
+		cert->destroy(cert);
+
+		if (template)
+		{
+			if (!build_pathname(i, count, template, outform, &path))
+			{
+				fprintf(stderr, "failed to create path to export certificate\n");
+				free(encoding.ptr);
+				goto out;
+			}
+			if (!chunk_write(encoding, path, 0022, force))
+			{
+				fprintf(stderr, "unable to write certificate to '%s': %s\n",
+						path, strerror(errno));
+				free(encoding.ptr);
+				free(path);
+				goto out;
+			}
+			free(path);
+		}
+		else
+		{
+			set_file_mode(stdout, outform);
+			if (fwrite(encoding.ptr, encoding.len, 1, stdout) != 1)
+			{
+				fprintf(stderr, "certificate export failed\n");
+				free(encoding.ptr);
+				goto out;
+			}
+		}
+		free(encoding.ptr);
+		i++;
+	}
+	fprintf(stderr, "exported %d certificates\n", count);
+	ret = 0;
+out:
+	array_destroy_offset(selected, offsetof(certificate_t, destroy));
+	return ret;
 }
 
 /**
@@ -206,10 +362,12 @@ out:
  */
 static int bundle()
 {
-	char *arg, *file = NULL, *outform = NULL;
+	cred_encoding_type_t outform = CERT_ASN1_DER;
+	char *arg, *file = NULL, *selector = NULL, *template = NULL;
 	pem_t *pem = NULL;
 	array_t *certs = NULL;
-	int res = 1, index = 0;
+	int res = 1;
+	bool reverse = FALSE, force = FALSE;
 	enum {
 		OP_NONE,
 		OP_LIST,
@@ -226,6 +384,9 @@ static int bundle()
 			case 'i':
 				file = arg;
 				continue;
+			case 'o':
+				template = arg;
+				continue;
 			case 'l':
 				if (op != OP_NONE)
 				{
@@ -239,10 +400,19 @@ static int bundle()
 					goto invalid;
 				}
 				op = OP_EXPORT;
-				index = atoi(arg);
+				selector = arg;
+				continue;
+			case 'r':
+				reverse = TRUE;
+				continue;
+			case 'F':
+				force = TRUE;
 				continue;
 			case 'f':
-				outform = arg;
+				if (!get_form(arg, &outform, CRED_CERTIFICATE))
+				{
+					return command_usage("invalid output format");
+				}
 				continue;
 			case 'C':
 				if (op != OP_NONE)
@@ -302,7 +472,7 @@ static int bundle()
 			res = show(pem);
 			break;
 		case OP_EXPORT:
-			res = export(pem, index, outform);
+			res = export(pem, selector, template, outform, reverse, force);
 			break;
 		case OP_CREATE:
 			res = create(certs);
@@ -328,13 +498,16 @@ static void __attribute__ ((constructor))reg()
 {
 	command_register((command_t) {
 		bundle, 'b', "bundle", "PEM certificate bundle functions",
-		{"--export index|--list [--in file]|--create [--cert -|file]+",
-		 "[--outform der|pem]"},
+		{"--export selector|--list [--in file]|--create [--cert -|file]+",
+		 "[--out file|template] [--reverse] [--force] [--outform der|pem]"},
 		{
 			{"help",	'h', 0, "show usage information"},
 			{"in",		'i', 1, "input file, default: stdin"},
 			{"list",	'l', 0, "list certificates"},
-			{"export",	'e', 1, "export the certificate with the given index"},
+			{"export",	'e', 1, "export certificates in a bundle"},
+			{"out",		'o', 1, "export output file/template, default: stdout"},
+			{"reverse",	'r', 0, "reverse the certificate order when exporting"},
+			{"force",	'F', 0, "force overwriting existing files"},
 			{"outform",	'f', 1, "encoding of exported certificate, default: der"},
 			{"create",	'C', 0, "create a bundle from multiple certificates"},
 			{"cert",	'c', 1, "certificate/bundle to place into a new bundle"},

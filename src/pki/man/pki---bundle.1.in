@@ -13,9 +13,12 @@ pki \-\-bundle \- Provides PEM certificate bundle functions
 .YS
 .
 .SY pki\ \-\-bundle
-.BI \-\-export\~ index
+.BI \-\-export\~ selector
 .OP \-\-in file
+.OP \-\-out file|template
 .OP \-\-outform encoding
+.OP \-\-reverse
+.OP \-\-force
 .OP \-\-debug level
 .YS
 .
@@ -56,9 +59,32 @@ Read command line options from \fIfile\fR.
 .BI "\-l, \-\-list"
 List certificates contained in a PEM-encoded certificate bundle.
 .TP
-.BI "\-e, \-\-export " index
-Export the certificate with the given \fIindex\fR.  Use \fI\-\-list\fR to
-determine the index of certificates.
+.BI "\-e, \-\-export " selector
+Export certificates that match the given \fIselector\fR.  This can either be
+a numeric \fBindex\fR (use \fI\-\-list\fR to determine it for a specific
+certificate), \fBall\fR to export all certificates, \fBroot\fR to export only
+self-signed CA certificates, \fBno-root\fR to export all certificates except
+self-signed CA certificates, \fBim\fR to export only intermediate CA
+certificates, \fBca\fR to export all CA certificates, or \fBee\fR to export all
+end entity certificates.
+Where certificates are stored is determined by \fB\-\-out\fR.
+.TP
+.BI "\-o, \-\-out " file|template
+Where to store exported certificates. For single certificates the passed file
+name is used as is. If multiple certificates are exported, \fItemplate\fR
+determines the path where a certificate file is stored to. A unique file name
+is generated for each (*-1, *-2, etc.). If a file suffix is missing, then
+depending on the value of \fB\-\-outform\fR either .\fIder\fR (the default)
+or .\fIpem\fR is automatically appended. If not given, certificates are written
+to \fISTDOUT\fR, which forces \fB\-\-outform\fR to \fIpem\fR if multiple
+certificates are selected.
+.TP
+.BI "\-r, \-\-reverse"
+When exporting more than one certificate, this reverses their order in the
+output (if \fB\-\-out\fR is given it changes the numbering).
+.TP
+.BI "\-F, \-\-force"
+Whether to force overwriting existing exported certificate files.
 .TP
 .BI "\-f, \-\-outform " encoding
 Encoding of the exported credential. Either \fIder\fR (ASN.1 DER) or
