@@ -96,6 +96,14 @@ static void setup_cert()
 }
 
 /**
+ * Unload the test certificate/credential set
+ */
+static void teardown_cert()
+{
+	creds->destroy(creds);
+}
+
+/**
  * Minimal TLS application stub for fuzzing
  */
 typedef struct {
@@ -141,7 +149,9 @@ int LLVMFuzzerInitialize(int *argc, char ***argv)
 	{
 		return 1;
 	}
+	atexit(library_deinit);
 	setup_cert();
+	atexit(teardown_cert);
 	return 0;
 }
 

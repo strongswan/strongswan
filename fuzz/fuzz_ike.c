@@ -23,6 +23,8 @@ int LLVMFuzzerInitialize(int *argc, char ***argv)
 	dbg_default_set_level(-1);
 	library_init(NULL, "fuzz_ike");
 	libcharon_init();
+	atexit(library_deinit);
+	atexit(libcharon_deinit);
 	return 0;
 }
 

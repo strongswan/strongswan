@@ -722,9 +722,31 @@ METHOD(plugin_t, get_features, int,
 	return count;
 }
 
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L
+static int unload_ossl_provider(OSSL_PROVIDER *provider, void *cbdata)
+{
+	OSSL_PROVIDER_unload(provider);
+	return 1;
+}
+#endif
+
 METHOD(plugin_t, destroy, void,
 	private_openssl_plugin_t *this)
 {
+/* with OpenSSL 3 there is a problem with atexit() handlers registered by
+ * OpenSSL and some of our executables (e.g. swanctl or pki).  because plugins
+ * are loaded after atexit() has been called to register library_deinit(), the
+ * handler registered by OpenSSL will run before ours.  so when the latter
+ * destroys the plugins it's a bad idea to try to access any OpenSSL objects as
+ * they might already be invalid.  so we generally don't unload the providers
+ * and just whitelist the leaks, however, that doesn't work for our fuzzers on
+ * OSS-Fuzz, so we detect this context here and unload the providers */
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L
+	if (strpfx(lib->ns, "fuzz_"))
+	{
+		OSSL_PROVIDER_do_all(NULL, unload_ossl_provider, NULL);
+	}
+#endif
 
 /* OpenSSL 1.1.0 cleans up itself at exit and while OPENSSL_cleanup() exists we
  * can't call it as we couldn't re-initialize the library (as required by the

@@ -26,6 +26,7 @@ int LLVMFuzzerInitialize(int *argc, char ***argv)
 	{
 		return 1;
 	}
+	atexit(library_deinit);
 	return 0;
 }
 
