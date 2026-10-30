@@ -20,6 +20,16 @@
 #include <ietf/ietf_attr_pa_tnc_error.h>
 #include <utils/debug.h>
 
+int LLVMFuzzerInitialize(int *argc, char ***argv)
+{
+	dbg_default_set_level(-1);
+	library_init(NULL, "fuzz_pa_tnc");
+	libimcv_init(FALSE);
+	atexit(library_deinit);
+	atexit(libimcv_deinit);
+	return 0;
+}
+
 int LLVMFuzzerTestOneInput(const uint8_t *buf, size_t len)
 {
 	pa_tnc_msg_t *msg;
@@ -28,10 +38,6 @@ int LLVMFuzzerTestOneInput(const uint8_t *buf, size_t len)
 	linked_list_t *non_fatal_types;
 	enumerator_t *enumerator;
 	chunk_t chunk;
-
-	dbg_default_set_level(-1);
-	library_init(NULL, "fuzz_pa_tnc");
-	libimcv_init(FALSE);
 
 	chunk = chunk_create((u_char*)buf, len);
 
@@ -62,8 +68,5 @@ int LLVMFuzzerTestOneInput(const uint8_t *buf, size_t len)
 	enumerator->destroy(enumerator);
 
 	msg->destroy(msg);
-
-	libimcv_deinit();
-	library_deinit();
 	return 0;
 }

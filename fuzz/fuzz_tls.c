@@ -147,7 +147,8 @@ int LLVMFuzzerInitialize(int *argc, char ***argv)
 	library_init(NULL, "fuzz_tls");
 	if (!lib->plugins->load(lib->plugins, PLUGINS))
 	{
-		return 1;
+		fprintf(stderr, "failed to load plugins\n");
+		exit(1);
 	}
 	atexit(library_deinit);
 	setup_cert();

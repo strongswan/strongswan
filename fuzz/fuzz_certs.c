@@ -17,24 +17,27 @@
 #include <library.h>
 #include <utils/debug.h>
 
+int LLVMFuzzerInitialize(int *argc, char ***argv)
+{
+	dbg_default_set_level(-1);
+	library_init(NULL, "fuzz_certs");
+	if (!lib->plugins->load(lib->plugins, PLUGINS))
+	{
+		fprintf(stderr, "failed to load plugins\n");
+		exit(1);
+	}
+	atexit(library_deinit);
+	return 0;
+}
+
 int LLVMFuzzerTestOneInput(const uint8_t *buf, size_t len)
 {
 	certificate_t *cert;
 	chunk_t chunk;
 
-	dbg_default_set_level(-1);
-	library_init(NULL, "fuzz_certs");
-	if (!lib->plugins->load(lib->plugins, PLUGINS))
-	{
-		return 1;
-	}
-
 	chunk = chunk_create((u_char*)buf, len);
 	cert = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509,
 							  BUILD_BLOB, chunk, BUILD_END);
 	DESTROY_IF(cert);
-
-	lib->plugins->unload(lib->plugins);
-	library_deinit();
 	return 0;
 }

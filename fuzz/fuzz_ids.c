@@ -17,6 +17,14 @@
 #include <library.h>
 #include <utils/debug.h>
 
+int LLVMFuzzerInitialize(int *argc, char ***argv)
+{
+	dbg_default_set_level(-1);
+	library_init(NULL, "fuzz_ids");
+	atexit(library_deinit);
+	return 0;
+}
+
 int LLVMFuzzerTestOneInput(const uint8_t *buf, size_t len)
 {
 	identification_t *id, *clone;
@@ -24,9 +32,6 @@ int LLVMFuzzerTestOneInput(const uint8_t *buf, size_t len)
 	chunk_t chunk, data;
 	id_part_t part;
 	char str_buf[BUF_LEN], min_buf[3];
-
-	dbg_default_set_level(-1);
-	library_init(NULL, "fuzz_ids");
 
 	chunk = chunk_create((u_char*)buf, len);
 	id = identification_create_from_data(chunk);
@@ -51,7 +56,5 @@ int LLVMFuzzerTestOneInput(const uint8_t *buf, size_t len)
 	snprintf(str_buf, sizeof(str_buf), "%Y", id);
 	snprintf(min_buf, sizeof(min_buf), "%Y", id);
 	DESTROY_IF(id);
-
-	library_deinit();
 	return 0;
 }

@@ -20,6 +20,14 @@
 #include <state_machine/pb_tnc_state_machine.h>
 #include <utils/debug.h>
 
+int LLVMFuzzerInitialize(int *argc, char ***argv)
+{
+	dbg_default_set_level(-1);
+	library_init(NULL, "fuzz_pb_tnc");
+	atexit(library_deinit);
+	return 0;
+}
+
 int LLVMFuzzerTestOneInput(const uint8_t *buf, size_t len)
 {
 	pb_tnc_batch_t *batch;
@@ -29,9 +37,6 @@ int LLVMFuzzerTestOneInput(const uint8_t *buf, size_t len)
 	enumerator_t *enumerator;
 	bool from_server;
 	chunk_t chunk;
-
-	dbg_default_set_level(-1);
-	library_init(NULL, "fuzz_pb_tnc");
 
 	chunk = chunk_create((u_char*)buf, len);
 
@@ -68,6 +73,5 @@ int LLVMFuzzerTestOneInput(const uint8_t *buf, size_t len)
 	batch->destroy(batch);
 
 	free(state);
-	library_deinit();
 	return 0;
 }
