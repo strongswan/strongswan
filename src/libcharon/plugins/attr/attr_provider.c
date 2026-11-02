@@ -178,6 +178,17 @@ static void add_legacy_entry(private_attr_provider_t *this, char *key, int nr,
 }
 
 /**
+ * Format of an attribute's value(s), determines how the configured value is
+ * parsed. Defaults to ATTR_VALUE_ADDR for keys that don't specify one.
+ */
+typedef enum {
+	/** IPv4/IPv6 address, optionally with a subnet mask */
+	ATTR_VALUE_ADDR,
+	/** arbitrary string */
+	ATTR_VALUE_STRING,
+} attr_value_type_t;
+
+/**
  * Key to attribute type mappings, for v4 and v6 attributes
  */
 typedef struct {
@@ -185,6 +196,7 @@ typedef struct {
 	configuration_attribute_type_t v4;
 	configuration_attribute_type_t v6;
 	ike_version_t ike;
+	attr_value_type_t value;
 } attribute_type_key_t;
 
 static attribute_type_key_t keys[] = {
@@ -198,6 +210,7 @@ static attribute_type_key_t keys[] = {
 	{"p-cscf",			P_CSCF_IP4_ADDRESS,		P_CSCF_IP6_ADDRESS,		IKEV2},
 	{"split-include",	UNITY_SPLIT_INCLUDE,	UNITY_SPLIT_INCLUDE,	IKEV1},
 	{"split-exclude",	UNITY_LOCAL_LAN,		UNITY_LOCAL_LAN,		IKEV1},
+	{"dns-domain",		INTERNAL_DNS_DOMAIN,	INTERNAL_DNS_DOMAIN,	IKE_ANY,	ATTR_VALUE_STRING},
 };
 
 /**
@@ -260,13 +273,17 @@ static void load_entries(private_attr_provider_t *this)
 			host = host_create_from_string(token, 0);
 			if (!host)
 			{
-				if (mapped)
+				if (mapped && mapped->value != ATTR_VALUE_STRING)
 				{
 					DBG1(DBG_CFG, "invalid host in key %s: %s", key, token);
 					continue;
 				}
-				/* store numeric attributes that are no IP addresses as strings */
+				/* store attributes that are not IP addresses as strings */
 				data = chunk_clone(chunk_from_str(token));
+				if (mapped)
+				{
+					type = mapped->v4;
+				}
 			}
 			else
 			{
