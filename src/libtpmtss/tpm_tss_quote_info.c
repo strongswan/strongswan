@@ -16,6 +16,7 @@
 
 #include <tpm_tss_quote_info.h>
 
+#include <bio/bio_reader.h>
 #include <bio/bio_writer.h>
 
 #ifndef TPM_TAG_QUOTE_INFO2
@@ -97,6 +98,30 @@ METHOD(tpm_tss_quote_info_t, get_pcr_digest, chunk_t,
 	return this->pcr_digest;
 }
 
+/**
+ * Check that a TPML_PCR_SELECTION selects exactly the given PCRs.  The TPM only
+ * signs a digest over the PCR values, so without this a quote over different
+ * PCRs that happen to hold the expected values would be accepted.
+ */
+static bool check_tpm2_pcr_select(chunk_t pcr_select, chunk_t expected)
+{
+	bio_reader_t *reader;
+	chunk_t select;
+	uint32_t count;
+	uint16_t hash_alg;
+	bool valid;
+
+	reader = bio_reader_create(pcr_select);
+	valid = reader->read_uint32(reader, &count) && count == 1 &&
+			reader->read_uint16(reader, &hash_alg) &&
+			reader->read_data8(reader, &select) &&
+			reader->remaining(reader) == 0 &&
+			chunk_equals(select, expected);
+	reader->destroy(reader);
+
+	return valid;
+}
+
 METHOD(tpm_tss_quote_info_t, get_quote, bool,
 	private_tpm_tss_quote_info_t *this, chunk_t nonce,
 	tpm_tss_pcr_composite_t *composite, chunk_t *quoted)
@@ -105,6 +130,14 @@ METHOD(tpm_tss_quote_info_t, get_quote, bool,
 	bio_writer_t *writer;
 	hasher_t *hasher;
 	bool equal_digests;
+
+	if (this->quote_mode == TPM_QUOTE_TPM2 &&
+		!check_tpm2_pcr_select(this->pcr_select, composite->pcr_select))
+	{
+		DBG1(DBG_PTS, "received TPM 2.0 PCR selection %B does not match "
+			 "evaluated PCRs %B", &this->pcr_select, &composite->pcr_select);
+		return FALSE;
+	}
 
 	/* Construct PCR Composite */
 	writer = bio_writer_create(32);
