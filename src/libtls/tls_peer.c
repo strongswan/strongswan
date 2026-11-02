@@ -406,6 +406,7 @@ static status_t process_server_hello(private_tls_peer_t *this,
 
 		DESTROY_IF(this->dh);
 		this->dh = NULL;
+		chunk_free(&this->session);
 		this->original_suite = suite;
 		this->requested_curve = key_type;
 		this->cookie = chunk_clone(cookie);
