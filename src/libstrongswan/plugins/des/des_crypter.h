@@ -40,9 +40,9 @@ struct des_crypter_t {
  * Constructor to create des_crypter_t objects.
  *
  * @param algo		ENCR_DES for single DES, ENCR_3DES for triple DES
+ * @param key_size	key size in bytes
  * @return			des_crypter_t object, NULL if algo not supported
  */
-des_crypter_t *des_crypter_create(encryption_algorithm_t algo);
-
+des_crypter_t *des_crypter_create(encryption_algorithm_t algo, size_t key_size);
 
 #endif /** DES_CRYPTER_H_ @}*/

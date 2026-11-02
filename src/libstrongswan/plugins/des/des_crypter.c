@@ -1546,6 +1546,10 @@ METHOD(crypter_t, get_key_size, size_t,
 METHOD(crypter_t, set_key, bool,
 	private_des_crypter_t *this, chunk_t key)
 {
+	if (key.len != this->key_size)
+	{
+		return FALSE;
+	}
 	des_set_key((des_cblock*)(key.ptr), &this->ks);
 	return TRUE;
 }
@@ -1553,6 +1557,10 @@ METHOD(crypter_t, set_key, bool,
 METHOD(crypter_t, set_key3, bool,
 	private_des_crypter_t *this, chunk_t key)
 {
+	if (key.len != this->key_size)
+	{
+		return FALSE;
+	}
 	des_set_key((des_cblock*)(key.ptr) + 0, &this->ks3[0]);
 	des_set_key((des_cblock*)(key.ptr) + 1, &this->ks3[1]);
 	des_set_key((des_cblock*)(key.ptr) + 2, &this->ks3[2]);
@@ -1569,7 +1577,7 @@ METHOD(crypter_t, destroy, void,
 /*
  * Described in header
  */
-des_crypter_t *des_crypter_create(encryption_algorithm_t algo)
+des_crypter_t *des_crypter_create(encryption_algorithm_t algo, size_t key_size)
 {
 	private_des_crypter_t *this;
 
@@ -1608,6 +1616,11 @@ des_crypter_t *des_crypter_create(encryption_algorithm_t algo)
 		default:
 			free(this);
 			return NULL;
+	}
+	if (key_size && key_size != this->key_size)
+	{
+		free(this);
+		return NULL;
 	}
 	return &this->public;
 }
