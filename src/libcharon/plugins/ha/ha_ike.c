@@ -223,6 +223,12 @@ METHOD(listener_t, ike_updown, bool,
 			m->add_attribute(m, HA_PEER_ADDR, addr);
 		}
 		enumerator->destroy(enumerator);
+		enumerator = ike_sa->create_virtual_ip_enumerator(ike_sa, FALSE);
+		while (enumerator->enumerate(enumerator, &addr))
+		{
+			m->add_attribute(m, HA_REMOTE_VIP, addr);
+		}
+		enumerator->destroy(enumerator);
 	}
 	else
 	{
@@ -268,7 +274,7 @@ METHOD(listener_t, ike_state_change, bool,
 }
 
 /**
- * Send a virtual IP sync message for remote VIPs
+ * Send a virtual IP sync message for remote VIPs (IKEv1 only)
  */
 static void sync_vips(private_ha_ike_t *this, ike_sa_t *ike_sa)
 {
@@ -323,14 +329,6 @@ METHOD(listener_t, message_hook, bool,
 			m->add_attribute(m, HA_MID, message->get_message_id(message) + 1);
 			this->socket->push(this->socket, m);
 			this->cache->cache(this->cache, ike_sa, m);
-		}
-		if (ike_sa->get_state(ike_sa) == IKE_ESTABLISHED &&
-			message->get_exchange_type(message) == IKE_AUTH &&
-			!message->get_request(message))
-		{	/* After IKE_SA has been established, sync peers virtual IP.
-			 * We cannot sync it in the state_change hook, it is installed later.
-			 * TODO: where to sync local VIP? */
-			sync_vips(this, ike_sa);
 		}
 	}
 	if (ike_sa->get_version(ike_sa) == IKEV1)
