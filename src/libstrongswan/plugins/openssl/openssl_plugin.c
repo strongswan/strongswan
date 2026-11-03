@@ -851,7 +851,12 @@ static int concat_ossl_providers(OSSL_PROVIDER *provider, void *cbdata)
 /**
  * Callback to add ml-dsa parameters to loaded providers
  */
-static int add_ml_dsa_ossl_params(OSSL_PROVIDER *provider, void *cbdata)
+#ifndef LEAK_DETECTIVE
+/* make this non-static if leak detective is enabled so we can whitelist it as
+ * OSSL_PROVIDER_add_conf_parameter does sometimes not show up in backtraces */
+static
+#endif
+int add_ml_dsa_ossl_params(OSSL_PROVIDER *provider, void *cbdata)
 {
 	/* prefer seed-only format but allow priv-only if we loaded a priv-only
 	 * key and need to re-encode it again (e.g. in swanctl after decrypting
