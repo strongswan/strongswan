@@ -114,7 +114,7 @@ static void load_bundle(load_ctx_t *ctx, char *dir, certificate_type_t type,
 	x509_t *x509;
 	chunk_t encoding;
 
-	enumerator = bundle->create_cert_enumerator(bundle);
+	enumerator = bundle->create_cert_enumerator(bundle, PEM_SELECTION_ALL);
 	while (enumerator->enumerate(enumerator, &cert))
 	{
 		x509_flag_t cert_flag = dir_flag;

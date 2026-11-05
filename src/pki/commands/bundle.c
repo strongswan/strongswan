@@ -34,7 +34,7 @@ static int show(pem_t *bundle)
 	certificate_t *cert;
 	int index = 1;
 
-	enumerator = bundle->create_cert_enumerator(bundle);
+	enumerator = bundle->create_cert_enumerator(bundle, PEM_SELECTION_ALL);
 	while (enumerator->enumerate(enumerator, &cert))
 	{
 		x509_t *x509 = (x509_t*)cert;
@@ -89,19 +89,7 @@ static bool build_pathname(int index, int total, char *template,
 	return written > 0;
 }
 
-/**
- * Export selection modes if not using a specific index
- */
-typedef enum {
-	EXPORT_ALL,
-	EXPORT_NO_ROOT,
-	EXPORT_ROOT,
-	EXPORT_CA,
-	EXPORT_IM,
-	EXPORT_EE,
-} export_mode_t;
-
-ENUM(export_mode_names, EXPORT_ALL, EXPORT_EE,
+ENUM(selection_mode_names, PEM_SELECTION_ALL, PEM_SELECTION_EE,
 	"all",
 	"no-root",
 	"root",
@@ -109,31 +97,6 @@ ENUM(export_mode_names, EXPORT_ALL, EXPORT_EE,
 	"im",
 	"ee",
 );
-
-/**
- * Check if a certificate is selected for export
- */
-static bool cert_selected(export_mode_t mode, x509_t *x509)
-{
-	bool is_self = x509->get_flags(x509) & X509_SELF_SIGNED;
-	bool is_ca = x509->get_flags(x509) & X509_CA;
-
-	switch (mode)
-	{
-		case EXPORT_NO_ROOT:
-			return !(is_ca && is_self);
-		case EXPORT_ROOT:
-			return is_ca && is_self;
-		case EXPORT_CA:
-			return is_ca;
-		case EXPORT_IM:
-			return is_ca && !is_self;
-		case EXPORT_EE:
-			return !is_ca;
-		default:
-			return TRUE;
-	}
-}
 
 /**
  * Export a certificate from a PEM certificate bundle
@@ -144,13 +107,13 @@ static int export(pem_t *bundle, char *selector, char *template,
 	enumerator_t *enumerator;
 	certificate_t *cert;
 	array_t *selected = NULL;
-	export_mode_t mode = EXPORT_ALL;
+	pem_selection_t mode = PEM_SELECTION_ALL;
 	chunk_t encoding;
 	char *end, *path;
 	uint32_t index = 0;
 	int i = 1, count = 0, ret = 1;
 
-	if (!enum_from_name(export_mode_names, selector, &mode) &&
+	if (!enum_from_name(selection_mode_names, selector, &mode) &&
 		(!uint32_from_string(selector, &end, 10, &index) || *end != '\0' ||
 		 !index))
 	{
@@ -158,17 +121,10 @@ static int export(pem_t *bundle, char *selector, char *template,
 		return 1;
 	}
 
-	enumerator = bundle->create_cert_enumerator(bundle);
+	enumerator = bundle->create_cert_enumerator(bundle, mode);
 	while (enumerator->enumerate(enumerator, &cert))
 	{
-		if (!index)
-		{
-			if (!cert_selected(mode, (x509_t*)cert))
-			{
-				continue;
-			}
-		}
-		else if (i++ != index)
+		if (index && i++ != index)
 		{
 			continue;
 		}
@@ -187,7 +143,7 @@ static int export(pem_t *bundle, char *selector, char *template,
 		else
 		{
 			fprintf(stderr, "no certificates match '%N' selector\n",
-					export_mode_names, mode);
+					selection_mode_names, mode);
 		}
 		return 1;
 	}
@@ -328,7 +284,7 @@ static bool add_certs(array_t **certs, char *path)
 	}
 	if (pem)
 	{
-		enumerator = pem->create_cert_enumerator(pem);
+		enumerator = pem->create_cert_enumerator(pem, PEM_SELECTION_ALL);
 		while (enumerator->enumerate(enumerator, &cert))
 		{
 			array_insert_create(certs, ARRAY_TAIL, cert->get_ref(cert));
