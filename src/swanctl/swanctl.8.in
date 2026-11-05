@@ -178,9 +178,11 @@ May contain config snippets (\fI*.conf\fR files) that are merged with the main
 .SS PEM-encoded Certificate Bundles
 In some directories, PEM-encoded certificate bundles are supported (i.e. files
 that concatenate several PEM-encoded certificates). This may be used to
-load certificate chains from a single file. However, please be aware that for
-all other uses, such as referencing a file in \fBcerts\fR or \fBcacerts\fR in
-\fIswanctl.conf\fR, only the \fBfirst\fR certificate is loaded from such a file.
+load certificate chains from a single file. However, please be aware that in
+most other cases only the first certificate is loaded from such a file. As a
+special exception, when used in \fBcerts\fR or \fBcacerts\fR in
+\fIswanctl.conf\fR, the type of certificate is considered, i.e. the \fBfirst\fR
+end entity or CA certificate is loaded, respectively.
 So if necessary, structure your files accordingly or split them up.
 .SH SEE ALSO
 .BR swanctl.conf (5)
