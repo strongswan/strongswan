@@ -33,6 +33,8 @@ CONFIG_OPTS = \
 	--enable-shake256 \
 	--with-max-rsa-bits=8192
 
+BUILD_HASH := $(shell printf '%s\n' '$(CFLAGS)' '$(CONFIG_OPTS)' | sha256sum | cut -c1-12)
+
 all: install
 
 .$(PKG)-cloned:
@@ -43,9 +45,10 @@ all: install
 	cd $(PKG) && git fetch -f --tags && git checkout $(REV)
 	@rm -f .$(PKG)-checkout-* && touch $@
 
-.$(PKG)-built-$(REV): .$(PKG)-checkout-$(REV)
-	cd $(PKG) && ./autogen.sh && ./configure C_FLAGS="$(CFLAGS)" $(CONFIG_OPTS) && make -j $(NUM_CPUS)
+.$(PKG)-built-$(REV)-$(BUILD_HASH): .$(PKG)-checkout-$(REV)
+	cd $(PKG) && git clean -xdf && ./autogen.sh && \
+		./configure C_FLAGS="$(CFLAGS)" $(CONFIG_OPTS) && make -j $(NUM_CPUS)
 	@rm -f .$(PKG)-built-* && touch $@
 
-install: .$(PKG)-built-$(REV)
+install: .$(PKG)-built-$(REV)-$(BUILD_HASH)
 	cd $(PKG) && make install && ldconfig
