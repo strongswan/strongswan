@@ -17,6 +17,7 @@
 #include "pem_bundle.h"
 
 #include <collections/array.h>
+#include <credentials/certificates/x509.h>
 
 typedef struct private_pem_bundle_t private_pem_bundle_t;
 
@@ -61,10 +62,82 @@ METHOD(container_t, get_encoding, bool,
 	return FALSE;
 }
 
-METHOD(pem_t, create_cert_enumerator, enumerator_t*,
-	private_pem_bundle_t *this)
+/**
+ * Check if a certificate is selected
+ */
+static bool cert_selected(pem_selection_t selector, certificate_t *cert)
 {
-	return array_create_enumerator(this->certs);
+	x509_t *x509 = (x509_t*)cert;
+	bool is_self, is_ca;
+
+	if (cert->get_type(cert) != CERT_X509)
+	{
+		return FALSE;
+	}
+
+	is_self = x509->get_flags(x509) & X509_SELF_SIGNED;
+	is_ca = x509->get_flags(x509) & X509_CA;
+
+	switch (selector)
+	{
+		case PEM_SELECTION_NO_ROOT:
+			return !(is_ca && is_self);
+		case PEM_SELECTION_ROOT:
+			return is_ca && is_self;
+		case PEM_SELECTION_CA:
+			return is_ca;
+		case PEM_SELECTION_IM:
+			return is_ca && !is_self;
+		case PEM_SELECTION_EE:
+			return !is_ca;
+		default:
+			return TRUE;
+	}
+}
+
+CALLBACK(filter_certs, bool,
+	pem_selection_t *selector, enumerator_t *orig, va_list args)
+{
+	certificate_t *cert, **out;
+
+	VA_ARGS_VGET(args, out);
+
+	while (orig->enumerate(orig, &cert))
+	{
+		if (cert_selected(*selector, cert))
+		{
+			*out = cert;
+			return TRUE;
+		}
+	}
+	return FALSE;
+}
+
+METHOD(pem_t, create_cert_enumerator, enumerator_t*,
+	private_pem_bundle_t *this, pem_selection_t selector)
+{
+	pem_selection_t *sel = malloc_thing(pem_selection_t);
+
+	*sel = selector;
+	return enumerator_create_filter(array_create_enumerator(this->certs),
+									filter_certs, sel, free);
+}
+
+METHOD(pem_t, get_first, certificate_t*,
+	private_pem_bundle_t *this, pem_selection_t selector)
+{
+	certificate_t *cert;
+	int i;
+
+	for (i = 0; i < array_count(this->certs); i++)
+	{
+		array_get(this->certs, i, &cert);
+		if (cert_selected(selector, cert))
+		{
+			return cert->get_ref(cert);
+		}
+	}
+	return NULL;
 }
 
 METHOD(pem_bundle_t, add_cert, void,
@@ -98,6 +171,7 @@ pem_bundle_t *pem_bundle_create()
 					.destroy = _destroy,
 				},
 				.create_cert_enumerator = _create_cert_enumerator,
+				.get_first = _get_first,
 			},
 			.add_cert = _add_cert,
 		},

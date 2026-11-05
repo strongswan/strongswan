@@ -891,7 +891,7 @@ static bool load_trusted_certificates(NMStrongswanPluginPrivate *priv,
 								BUILD_BLOB, file, BUILD_END);
 	if (bundle)
 	{
-		enumerator = bundle->create_cert_enumerator(bundle);
+		enumerator = bundle->create_cert_enumerator(bundle, PEM_SELECTION_ALL);
 		while (enumerator->enumerate(enumerator, &cert))
 		{
 			if (cert->get_type(cert) == CERT_X509)

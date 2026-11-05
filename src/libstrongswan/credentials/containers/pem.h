@@ -23,8 +23,28 @@
 #define PEM_H_
 
 #include <credentials/containers/container.h>
+#include <credentials/certificates/certificate.h>
 
 typedef struct pem_t pem_t;
+typedef enum pem_selection_t pem_selection_t;
+
+/**
+ * Selection mode for enumerating certificates in PEM certificate bundles
+ */
+enum pem_selection_t {
+	/** Select all X.509 certificates contained in the bundle */
+	PEM_SELECTION_ALL,
+	/** Select all certificates except self-signed CA certificates */
+	PEM_SELECTION_NO_ROOT,
+	/** Select only self-signed CA certificates */
+	PEM_SELECTION_ROOT,
+	/** Select all CA certificates */
+	PEM_SELECTION_CA,
+	/** Select all non-self-signed (intermediate) CA certificates */
+	PEM_SELECTION_IM,
+	/** Select all end entity certificates */
+	PEM_SELECTION_EE,
+};
 
 /**
  * PEM certificate bundle container type.
@@ -37,11 +57,21 @@ struct pem_t {
 	container_t container;
 
 	/**
-	 * Create an enumerator over contained certificates.
+	 * Create an enumerator over selected certificates.
 	 *
+	 * @param selector	certificate selection mode
 	 * @return			enumerator over certificate_t
 	 */
-	enumerator_t *(*create_cert_enumerator)(pem_t *this);
+	enumerator_t *(*create_cert_enumerator)(pem_t *this,
+											pem_selection_t selector);
+
+	/**
+	 * Return the first certificate that matches the given selector.
+	 *
+	 * @param selector	certificate selection mode
+	 * @return			certificate reference or NULL if no match was found
+	 */
+	certificate_t *(*get_first)(pem_t *this, pem_selection_t selector);
 };
 
 #endif /** PEM_H_ @}*/
