@@ -47,6 +47,7 @@
 #include <daemon.h>
 #include <threading/rwlock.h>
 #include <threading/rwlock_condvar.h>
+#include <credentials/containers/pem.h>
 #include <collections/array.h>
 #include <collections/hashtable.h>
 #include <collections/linked_list.h>
@@ -1338,9 +1339,22 @@ static bool add_cert(auth_data_t *auth, auth_rule_t rule, certificate_t *cert)
 static bool parse_cert(auth_data_t *auth, auth_rule_t rule, chunk_t v)
 {
 	certificate_t *cert;
+	pem_selection_t sel;
+	pem_t *bundle;
 
-	cert = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509,
-							  BUILD_BLOB, v, BUILD_END);
+	bundle = lib->creds->create(lib->creds, CRED_CONTAINER,
+								CONTAINER_PEM, BUILD_BLOB, v, BUILD_END);
+	if (bundle)
+	{
+		sel = (rule == AUTH_RULE_CA_CERT) ? PEM_SELECTION_CA : PEM_SELECTION_EE;
+		cert = bundle->get_first(bundle, sel);
+		bundle->container.destroy(&bundle->container);
+	}
+	else
+	{
+		cert = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509,
+								  BUILD_BLOB, v, BUILD_END);
+	}
 	if (cert)
 	{
 		return add_cert(auth, rule, cert);
@@ -1753,6 +1767,8 @@ CALLBACK(auth_sn, bool,
 		auth_rule_t rule;
 		certificate_t *cert;
 		chunk_t handle;
+		pem_selection_t sel;
+		pem_t *bundle;
 
 		INIT(data,
 			.request = auth->request,
@@ -1781,8 +1797,22 @@ CALLBACK(auth_sn, bool,
 
 		if (data->file)
 		{
-			cert = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509,
-								BUILD_FROM_FILE, data->file, BUILD_END);
+			bundle = lib->creds->create(lib->creds, CRED_CONTAINER,
+								CONTAINER_PEM, BUILD_FROM_FILE, data->file,
+								BUILD_END);
+			if (bundle)
+			{
+				sel = strcasepfx(name, "cert") ? PEM_SELECTION_EE
+											   : PEM_SELECTION_CA;
+				cert = bundle->get_first(bundle, sel);
+				bundle->container.destroy(&bundle->container);
+			}
+			else
+			{
+				cert = lib->creds->create(lib->creds, CRED_CERTIFICATE,
+								CERT_X509, BUILD_FROM_FILE, data->file,
+								BUILD_END);
+			}
 		}
 		else
 		{

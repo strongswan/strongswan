@@ -384,7 +384,8 @@ connections.<conn>.local<suffix>.certs =
 
 	Comma separated list of certificate candidates to use for authentication.
 	The certificates may use a relative path from the **swanctl** _x509_
-	directory or an absolute path.
+	directory or an absolute path. Be aware that only the first end entity
+	certificate from a PEM-encoded certificate bundle is loaded.
 
 	The certificate used for authentication is selected based on the received
 	certificate request payloads. If no appropriate CA can be located, the
@@ -401,7 +402,8 @@ connections.<conn>.local<suffix>.cert<suffix>.file =
 	Absolute path to the certificate to load.
 
 	Absolute path to the certificate to load. Passed as-is to the daemon, so it
-	must be readable by it.
+	must be readable by it. Be aware that only the first end entity certificate
+	from a PEM-encoded certificate bundle is loaded.
 
 	Configure either this or _handle_, but not both, in one section.
 
@@ -576,8 +578,8 @@ connections.<conn>.remote<suffix>.certs =
 
 	Comma separated list of certificates to accept for authentication.
 	The certificates may use a relative path from the **swanctl** _x509_
-	directory or an absolute path. Be aware that only the first certificate
-	from a PEM-encoded certificate bundle is loaded.
+	directory or an absolute path. Be aware that only the first end entity
+	certificate from a PEM-encoded certificate bundle is loaded.
 
 connections.<conn>.remote<suffix>.cert<suffix> =
 	Section for a certificate to accept for authentication.
@@ -590,7 +592,8 @@ connections.<conn>.remote<suffix>.cert<suffix>.file =
 	Absolute path to the certificate to load.
 
 	Absolute path to the certificate to load. Passed as-is to the daemon, so it
-	must be readable by it.
+	must be readable by it. Be aware that only the first end entity certificate
+	from a PEM-encoded certificate bundle is loaded.
 
 	Configure either this or _handle_, but not both, in one section.
 
@@ -612,7 +615,7 @@ connections.<conn>.remote<suffix>.cacerts =
 
 	Comma separated list of CA certificates to accept for authentication.
 	The certificates may use a relative path from the **swanctl** _x509ca_
-	directory or an absolute path. Be aware that only the first certificate
+	directory or an absolute path. Be aware that only the first CA certificate
 	from a PEM-encoded certificate bundle is loaded.
 
 connections.<conn>.remote<suffix>.cacert<suffix> =
@@ -626,7 +629,8 @@ connections.<conn>.remote<suffix>.cacert<suffix>.file =
 	Absolute path to the certificate to load.
 
 	Absolute path to the certificate to load. Passed as-is to the daemon, so it
-	must be readable by it.
+	must be readable by it. Be aware that only the first CA certificate
+	from a PEM-encoded certificate bundle is loaded.
 
 	Configure either this or _handle_, but not both, in one section.
 
