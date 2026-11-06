@@ -20,6 +20,7 @@
 #include <utils/debug.h>
 
 #include <openssl/bn.h>
+#include <openssl/err.h>
 #include <openssl/evp.h>
 #include <openssl/x509.h>
 
@@ -29,8 +30,13 @@
 #endif
 
 #include "openssl_ec_private_key.h"
+#include "openssl_ec_public_key.h"
 #include "openssl_ed_private_key.h"
+#include "openssl_ed_public_key.h"
 #include "openssl_rsa_private_key.h"
+#include "openssl_rsa_public_key.h"
+#include "openssl_ml_dsa_private_key.h"
+#include "openssl_ml_dsa_public_key.h"
 
 /* these were added with 1.1.0 when ASN1_OBJECT was made opaque */
 #if OPENSSL_VERSION_NUMBER < 0x10100000L
@@ -118,6 +124,21 @@ bool openssl_fingerprint(EVP_PKEY *key, cred_encoding_type_t type, chunk_t *fp)
 	switch (type)
 	{
 		case KEYID_PUBKEY_SHA1:
+#if OPENSSL_VERSION_NUMBER >= 0x1010100fL
+			/* prefer this as AWS-LC returns a SPKI for keys that don't have a
+			 * legacy encoding (e.g. EdDSA) and it's required for ML-DSA */
+			if (EVP_PKEY_get_raw_public_key(key, NULL, &enc.len))
+			{
+				enc = chunk_alloc(enc.len);
+				if (!EVP_PKEY_get_raw_public_key(key, enc.ptr, &enc.len))
+				{
+					chunk_free(&enc);
+					return FALSE;
+				}
+				break;
+			}
+			ERR_clear_error();
+#endif
 			enc = openssl_i2chunk(PublicKey, key);
 			break;
 		case KEYID_PUBKEY_INFO_SHA1:
@@ -125,6 +146,10 @@ bool openssl_fingerprint(EVP_PKEY *key, cred_encoding_type_t type, chunk_t *fp)
 			break;
 		default:
 			return FALSE;
+	}
+	if (!enc.ptr)
+	{
+		return FALSE;
 	}
 	hasher = lib->crypto->create_hasher(lib->crypto, HASH_SHA1);
 	if (!hasher || !hasher->allocate_hash(hasher, enc, fp))
@@ -165,6 +190,58 @@ private_key_t *openssl_wrap_private_key(EVP_PKEY *key, bool engine)
 				return openssl_ed_private_key_create(key, engine);
 #endif /* OPENSSL_VERSION_NUMBER && !OPENSSL_NO_EC && !OPENSSL_IS_AWSLC */
 			default:
+#if (OPENSSL_VERSION_NUMBER >= 0x30500000L && !defined(OPENSSL_NO_ML_DSA))
+				/* OpenSSL does not provide an ID for ML-DSA keys, which is
+				 * apparently a legacy feature */
+				if (EVP_PKEY_is_a(key, "ML-DSA-44") ||
+					EVP_PKEY_is_a(key, "ML-DSA-65") ||
+					EVP_PKEY_is_a(key, "ML-DSA-87"))
+				{
+					return openssl_ml_dsa_private_key_create(key, FALSE);
+				}
+#endif
+				EVP_PKEY_free(key);
+				break;
+		}
+	}
+	return NULL;
+}
+
+/*
+ * Described in header
+ */
+public_key_t *openssl_wrap_public_key(EVP_PKEY *key)
+{
+	if (key)
+	{
+		switch (EVP_PKEY_base_id(key))
+		{
+#ifndef OPENSSL_NO_RSA
+			case EVP_PKEY_RSA:
+				return openssl_rsa_public_key_create(key);
+#endif
+#ifndef OPENSSL_NO_ECDSA
+			case EVP_PKEY_EC:
+				return openssl_ec_public_key_create(key);
+#endif
+#if OPENSSL_VERSION_NUMBER >= 0x1010100fL && !defined(OPENSSL_NO_EC)
+			case EVP_PKEY_ED25519:
+#ifndef OPENSSL_IS_AWSLC
+			case EVP_PKEY_ED448:
+#endif
+				return openssl_ed_public_key_create(key);
+#endif /* OPENSSL_VERSION_NUMBER && !OPENSSL_NO_EC && !OPENSSL_IS_AWSLC */
+			default:
+#if (OPENSSL_VERSION_NUMBER >= 0x30500000L && !defined(OPENSSL_NO_ML_DSA))
+				/* OpenSSL does not provide an ID for ML-DSA keys, which is
+				 * apparently a legacy feature */
+				if (EVP_PKEY_is_a(key, "ML-DSA-44") ||
+					EVP_PKEY_is_a(key, "ML-DSA-65") ||
+					EVP_PKEY_is_a(key, "ML-DSA-87"))
+				{
+					return openssl_ml_dsa_public_key_create(key);
+				}
+#endif
 				EVP_PKEY_free(key);
 				break;
 		}

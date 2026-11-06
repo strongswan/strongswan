@@ -2,7 +2,7 @@
 
 PKG = botan
 SRC = https://github.com/randombit/$(PKG).git
-REV = 3.12.0
+REV = 3.14.0
 
 NUM_CPUS := $(shell getconf _NPROCESSORS_ONLN)
 
@@ -15,6 +15,8 @@ CONFIG_OPTS = \
 	--disable-deprecated-features \
 	--enable-modules=md5
 
+BUILD_HASH := $(shell printf '%s\n' '$(CONFIG_OPTS)' | sha256sum | cut -c1-12)
+
 all: install
 
 .$(PKG)-cloned:
@@ -25,9 +27,10 @@ all: install
 	cd $(PKG) && git fetch && git checkout $(REV)
 	@rm -f .$(PKG)-checkout-* && touch $@
 
-.$(PKG)-built-$(REV): .$(PKG)-checkout-$(REV)
-	cd $(PKG) && python3 ./configure.py $(CONFIG_OPTS) && make -j $(NUM_CPUS)
+.$(PKG)-built-$(REV)-$(BUILD_HASH): .$(PKG)-checkout-$(REV)
+	cd $(PKG) && git clean -xdf && python3 ./configure.py $(CONFIG_OPTS) && \
+		make -j $(NUM_CPUS)
 	@rm -f .$(PKG)-built-* && touch $@
 
-install: .$(PKG)-built-$(REV)
+install: .$(PKG)-built-$(REV)-$(BUILD_HASH)
 	cd $(PKG) && make install && ldconfig
