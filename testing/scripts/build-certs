@@ -19,6 +19,33 @@ load_qemu_nbd
 mkdir -p $LOOPDIR
 mkdir -p $IMGDIR
 
+usage() {
+cat << EOF
+Usage:
+  ${0##*/} [--no-guests]
+    --help            (-h)  show usage information
+    --no-guests       (-n)  don't build guest images after generating certificates
+EOF
+}
+
+NO_GUESTS=
+
+while :; do
+	case $1 in
+	-h|--help)
+		usage
+		exit
+		;;
+	-n|--no-guests)
+		NO_GUESTS=1
+		;;
+	*)
+		break
+	esac
+
+	shift
+done
+
 log_action "Connecting root image to NBD device $NBDEV"
 execute "qemu-nbd -c $NBDEV $ROOTIMG"
 do_on_exit qemu-nbd -d $NBDEV
@@ -43,7 +70,7 @@ log_action "Building certificates"
 execute_chroot "/root/testing/scripts/build-certs-chroot"
 
 # rebuild the guest images to generate the CRLs on winnetou
-if [ -z "$2" ]; then
+if [ -z "$NO_GUESTS" ]; then
 	# cleanup before mounting guest images
 	on_exit
 	$DIR/scripts/build-guestimages
