@@ -20,22 +20,40 @@
 
 /* declare test suite constructors */
 #define TEST_SUITE(x) test_suite_t* x();
+#define TEST_SUITE_DEPEND(x, ...) TEST_SUITE(x)
 #include "imcv_tests.h"
 #undef TEST_SUITE
+#undef TEST_SUITE_DEPEND
 
 static test_configuration_t tests[] = {
 #define TEST_SUITE(x) \
 	{ .suite = x, },
+#define TEST_SUITE_DEPEND(x, type, ...) \
+	{ .suite = x, .feature = PLUGIN_DEPENDS(type, __VA_ARGS__) },
 #include "imcv_tests.h"
 	{ .suite = NULL, }
 };
 
 static bool test_runner_init(bool init)
 {
-	if (!init)
+	if (init)
+	{
+		char *plugins;
+
+		plugins = getenv("TESTS_PLUGINS") ?:
+					lib->settings->get_str(lib->settings,
+										"tests.load", PLUGINS);
+		plugin_loader_add_plugindirs(PLUGINDIR, plugins);
+		if (!lib->plugins->load(lib->plugins, plugins))
+		{
+			return FALSE;
+		}
+	}
+	else
 	{
 		lib->processor->set_threads(lib->processor, 0);
 		lib->processor->cancel(lib->processor);
+		lib->plugins->unload(lib->plugins);
 	}
 	return TRUE;
 }
