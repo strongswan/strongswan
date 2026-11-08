@@ -875,6 +875,60 @@ bool openssl_parse_crlDistributionPoints(X509_EXTENSION *ext,
 }
 
 /**
+ * Parse the distribution point URIs of an issuingDistributionPoint extension
+ * (used by openssl_crl.c), failing if it restricts the CRL's scope
+ */
+bool openssl_parse_issuingDistributionPoint(X509_EXTENSION *ext,
+											linked_list_t *list)
+{
+	ISSUING_DIST_POINT *idp;
+	identification_t *id;
+	char *uri;
+	int i, len;
+	bool ok = FALSE;
+
+	idp = X509V3_EXT_d2i(ext);
+	if (!idp)
+	{
+		return FALSE;
+	}
+	if (idp->onlyuser || idp->onlyCA || idp->onlysomereasons ||
+		idp->indirectCRL || idp->onlyattr ||
+		(idp->distpoint && idp->distpoint->type != 0))
+	{
+		DBG1(DBG_LIB, "scoped CRLs (restricted issuingDistributionPoint) are "
+			 "not supported");
+		goto end;
+	}
+	if (idp->distpoint)
+	{
+		for (i = 0; i < sk_GENERAL_NAME_num(idp->distpoint->name.fullname); i++)
+		{
+			id = general_name2id(sk_GENERAL_NAME_value(
+											idp->distpoint->name.fullname, i));
+			if (id)
+			{
+				len = asprintf(&uri, "%Y", id);
+				if (len > 0)
+				{
+					list->insert_last(list, uri);
+				}
+				else if (!len)
+				{
+					free(uri);
+				}
+				id->destroy(id);
+			}
+		}
+	}
+	ok = TRUE;
+
+end:
+	ISSUING_DIST_POINT_free(idp);
+	return ok;
+}
+
+/**
  * Parse authorityInfoAccess with OCSP URIs
  */
 static bool parse_authorityInfoAccess_ext(private_openssl_x509_t *this,
