@@ -87,6 +87,11 @@ struct private_x509_crl_t {
 	linked_list_t *crl_uris;
 
 	/**
+	 * URIs of the issuingDistributionPoint
+	 */
+	linked_list_t *idp_uris;
+
+	/**
 	 * Authority Key Identifier
 	 */
 	chunk_t authKeyIdentifier;
@@ -138,6 +143,12 @@ extern chunk_t x509_parse_authorityKeyIdentifier(chunk_t blob, int level0,
  */
 extern bool x509_parse_crlDistributionPoints(chunk_t blob, int level0,
 											 linked_list_t *list);
+
+/**
+ * from x509_cert
+ */
+extern bool x509_parse_issuingDistributionPoint(chunk_t blob, int level0,
+												linked_list_t *list);
 
 /**
  * from x509_cert
@@ -307,6 +318,13 @@ static bool parse(private_x509_crl_t *this)
 							goto end;
 						}
 						break;
+					case OID_ISSUING_DIST_POINT:
+						if (!x509_parse_issuingDistributionPoint(object, level,
+																 this->idp_uris))
+						{
+							goto end;
+						}
+						break;
 					case OID_DELTA_CRL_INDICATOR:
 						if (!asn1_parse_simple_object(&object, ASN1_INTEGER,
 													level, "deltaCrlIndicator"))
@@ -417,6 +435,12 @@ METHOD(crl_t, create_delta_crl_uri_enumerator, enumerator_t*,
 	private_x509_crl_t *this)
 {
 	return this->crl_uris->create_enumerator(this->crl_uris);
+}
+
+METHOD(crl_t, create_idp_uri_enumerator, enumerator_t*,
+	private_x509_crl_t *this)
+{
+	return this->idp_uris->create_enumerator(this->idp_uris);
 }
 
 METHOD(crl_t, create_enumerator, enumerator_t*,
@@ -583,6 +607,7 @@ METHOD(certificate_t, destroy, void,
 		this->revoked->destroy_function(this->revoked, (void*)revoked_destroy);
 		this->crl_uris->destroy_function(this->crl_uris,
 										 (void*)x509_cdp_destroy);
+		this->idp_uris->destroy_function(this->idp_uris, free);
 		signature_params_destroy(this->scheme);
 		DESTROY_IF(this->issuer);
 		free(this->authKeyIdentifier.ptr);
@@ -627,11 +652,13 @@ static private_x509_crl_t* create_empty(void)
 				.get_authKeyIdentifier = _get_authKeyIdentifier,
 				.is_delta_crl = _is_delta_crl,
 				.create_delta_crl_uri_enumerator = _create_delta_crl_uri_enumerator,
+				.create_idp_uri_enumerator = _create_idp_uri_enumerator,
 				.create_enumerator = _create_enumerator,
 			},
 		},
 		.revoked = linked_list_create(),
 		.crl_uris = linked_list_create(),
+		.idp_uris = linked_list_create(),
 		.ref = 1,
 	);
 	return this;

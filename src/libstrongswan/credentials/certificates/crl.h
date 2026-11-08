@@ -124,6 +124,19 @@ struct crl_t {
 	enumerator_t* (*create_delta_crl_uri_enumerator)(crl_t *this);
 
 	/**
+	 * Create an enumerator over the URIs of the distribution point named in
+	 * the issuingDistributionPoint extension.
+	 *
+	 * A CRL whose issuingDistributionPoint restricts its scope (to user, CA
+	 * or attribute certificates, to some reasons, or to an indirect CRL) is
+	 * rejected while parsing, so this only names the distribution point a
+	 * full-scope CRL was issued for.
+	 *
+	 * @return			enumerator over URIs (char*)
+	 */
+	enumerator_t* (*create_idp_uri_enumerator)(crl_t *this);
+
+	/**
 	 * Create an enumerator over all revoked certificates.
 	 *
 	 * The enumerator takes 3 pointer arguments:
