@@ -150,7 +150,20 @@ static bool lookup_uid_gid()
 int main(int argc, char *argv[])
 {
 	struct sigaction action;
+	sigset_t set;
 	int status = SS_RC_INITIALIZATION_FAILED;
+
+	/* Block SIGINT/SIGTERM before any thread is created. Loading the NM
+	 * backend initializes libnm, which installs its own signal handler and
+	 * creates GLib/GDBus worker threads. Threads inherit the signal mask at
+	 * creation, so if these signals were only blocked after
+	 * charon->initialize(), those threads would keep them unblocked and could
+	 * consume them via libnm's handler, leaving sigwaitinfo() in run() waiting
+	 * forever and the daemon hanging on shutdown. */
+	sigemptyset(&set);
+	sigaddset(&set, SIGINT);
+	sigaddset(&set, SIGTERM);
+	pthread_sigmask(SIG_BLOCK, &set, NULL);
 
 	/* logging for library during initialization, as we have no bus yet */
 	dbg = dbg_syslog;
