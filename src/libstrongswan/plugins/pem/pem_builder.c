@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Tobias Brunner
+ * Copyright (C) 2013-2026 Tobias Brunner
  * Copyright (C) 2009 Martin Willi
  * Copyright (C) 2001-2008 Andreas Steffen
  *
@@ -17,6 +17,7 @@
  */
 
 #include "pem_builder.h"
+#include "pem_bundle.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -37,6 +38,18 @@
 #include <credentials/certificates/x509.h>
 
 #define PKCS5_SALT_LEN	8	/* bytes */
+
+/**
+ * Parser state
+ */
+typedef enum {
+	PEM_PRE    = 0,
+	PEM_MSG    = 1,
+	PEM_HEADER = 2,
+	PEM_BODY   = 3,
+	PEM_POST   = 4,
+	PEM_ABORT  = 5
+} state_t;
 
 /**
  * check the presence of a pattern in a character string, skip if found
@@ -190,15 +203,6 @@ static status_t pem_decrypt(chunk_t *blob, encryption_algorithm_t alg,
  */
 static status_t pem_to_bin(chunk_t *blob, bool *pgp)
 {
-	typedef enum {
-		PEM_PRE    = 0,
-		PEM_MSG    = 1,
-		PEM_HEADER = 2,
-		PEM_BODY   = 3,
-		PEM_POST   = 4,
-		PEM_ABORT  = 5
-	} state_t;
-
 	encryption_algorithm_t alg = ENCR_UNDEFINED;
 	size_t key_size = 0;
 	bool encrypted = FALSE;
@@ -546,4 +550,118 @@ certificate_t *pem_certificate_load(certificate_type_t type, va_list args)
 container_t *pem_container_load(container_type_t type, va_list args)
 {
 	return pem_load(CRED_CONTAINER, type, args);
+}
+
+/**
+ * Load a PEM certificate bundle container.
+ */
+container_t *pem_container_load_bundle(container_type_t type, va_list args)
+{
+	char *file = NULL;
+	chunk_t pem = chunk_empty, *mapped = NULL, src, dst, line, data, der;
+	pem_bundle_t *bundle;
+	certificate_t *cert;
+	state_t state = PEM_PRE;
+	bool found = FALSE;
+
+	while (TRUE)
+	{
+		switch (va_arg(args, builder_part_t))
+		{
+			case BUILD_FROM_FILE:
+				file = va_arg(args, char*);
+				continue;
+			case BUILD_BLOB:
+			case BUILD_BLOB_PEM:
+				pem = va_arg(args, chunk_t);
+				continue;
+			case BUILD_END:
+				break;
+			default:
+				return NULL;
+		}
+		break;
+	}
+
+	if (!pem.len && file)
+	{
+		mapped = chunk_map(file, FALSE);
+		if (!mapped)
+		{
+			DBG1(DBG_LIB, "  opening '%s' failed: %s", file, strerror(errno));
+			return NULL;
+		}
+		pem = *mapped;
+	}
+
+	if (is_ber_indefinite_length(pem) || is_asn1(pem))
+	{
+		if (mapped)
+		{
+			chunk_unmap(mapped);
+		}
+		return NULL;
+	}
+
+	pem = chunk_clone(pem);
+	if (mapped)
+	{
+		chunk_unmap(mapped);
+	}
+
+	bundle = pem_bundle_create();
+	src = pem;
+	while (fetchline(&src, &line))
+	{
+		if (state != PEM_BODY)
+		{
+			if (!present("-----BEGIN CERTIFICATE-----", &line))
+			{
+				continue;
+			}
+			state = PEM_BODY;
+			/* decode every certificate inline at the start of the buffer */
+			der = dst = pem;
+			der.len = 0;
+		}
+		else
+		{
+			if (present("-----END CERTIFICATE-----", &line))
+			{
+				cert = lib->creds->create(lib->creds, CRED_CERTIFICATE,
+										  CERT_X509, BUILD_BLOB_ASN1_DER, der,
+										  BUILD_END);
+				if (cert)
+				{
+					bundle->add_cert(bundle, cert);
+					found = TRUE;
+				}
+				state = PEM_PRE;
+				continue;
+			}
+
+			if (!extract_token(&data, ' ', &line))
+			{
+				data = line;
+			}
+			if (dst.len < data.len / 4 * 3)
+			{
+				state = PEM_PRE;
+				continue;
+			}
+			data = chunk_from_base64(data, dst.ptr);
+			dst.ptr += data.len;
+			dst.len -= data.len;
+			der.len += data.len;
+		}
+	}
+
+	chunk_free(&pem);
+
+	if (!found)
+	{
+		bundle->pem.container.destroy(&bundle->pem.container);
+		return NULL;
+	}
+	return &bundle->pem.container;
 }
