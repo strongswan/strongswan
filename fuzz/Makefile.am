@@ -60,7 +60,8 @@ fuzzers_with_def = $(fuzzers_with_plugins:%=%_def)
 fuzzers_with_cus = $(fuzzers_with_plugins:%=%_cus)
 
 fuzzers_no_plugins = \
-	fuzz_ids fuzz_ike fuzz_pa_tnc fuzz_pb_tnc fuzz_radius fuzz_tls fuzz_vici
+	fuzz_ids fuzz_ike fuzz_pa_tnc fuzz_pb_tnc fuzz_radius fuzz_tls \
+	fuzz_vici fuzz_vici_cred
 
 ALL_FUZZERS=$(fuzzers_with_def) $(fuzzers_with_cus) $(fuzzers_no_plugins)
 
@@ -112,6 +113,9 @@ fuzz_tls: fuzz_tls.c ${libfuzzer}
 
 fuzz_vici: fuzz_vici.c ${libfuzzer}
 	$(CC) $(AM_CPPFLAGS) $(CFLAGS) -o $@ $< $(charon_ldflags)
+
+fuzz_vici_cred: fuzz_vici_cred.c ${libfuzzer}
+	$(CC) $(fuzz_cppflags_def) $(CFLAGS) -o $@ $< $(charon_ldflags)
 
 noinst_LIBRARIES = libFuzzerLocal.a
 libFuzzerLocal_a_SOURCES = libFuzzerLocal.c

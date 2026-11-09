@@ -13,3 +13,4 @@ fuzz_pb_tnc
 fuzz_radius
 fuzz_tls
 fuzz_vici
+fuzz_vici_cred
