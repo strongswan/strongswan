@@ -1,5 +1,6 @@
 fuzz_certs_cus
 fuzz_certs_def
+fuzz_credmgr_chain
 fuzz_crls_cus
 fuzz_crls_def
 fuzz_ids
