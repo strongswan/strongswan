@@ -2640,12 +2640,17 @@ START_TEST(test_ml_dsa_sig)
 	private_key_t *key;
 	signature_scheme_t scheme;
 	pqc_params_t pqc_params;
-	chunk_t msg, signature, asn1, asn1_privkey, encoding;
+	chunk_t msg, signature, randsig = chunk_empty, asn1, asn1_privkey, encoding;
 
 	/* load private key in seed format */
 	key = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, tests[_i].type,
 							 BUILD_BLOB, tests[_i].seed, BUILD_END);
-	ck_assert(key != NULL);
+	ck_assert(key);
+	/* load the corresponding public key */
+	pubkey = lib->creds->create(lib->creds, CRED_PUBLIC_KEY, tests[_i].type,
+								BUILD_BLOB, tests[_i].pubkey, BUILD_END);
+
+	ck_assert(pubkey);
 
 	/* prepare signature generation */
 	scheme = signature_scheme_from_oid(key_type_to_oid(tests[_i].type));
@@ -2663,9 +2668,24 @@ START_TEST(test_ml_dsa_sig)
 	{
 		warn("non-empty context string in ML-DSA signature not supported");
 	}
-	else
+	else if (!chunk_equals(signature, tests[_i].sig_ctx))
 	{
-		ck_assert_chunk_eq(signature, tests[_i].sig_ctx);
+		/* if the implementation only supports random signatures, make sure
+		 * they are different and validate against the public key */
+		ck_assert(key->sign(key, scheme, &pqc_params, msg, &randsig));
+		if (!chunk_equals(signature, randsig))
+		{
+			warn("deterministic ML-DSA signatures not supported");
+		}
+		else
+		{
+			ck_assert_chunk_eq(signature, tests[_i].sig_ctx);
+		}
+	}
+	ck_assert(pubkey->verify(pubkey, scheme, &pqc_params, msg, signature));
+	if (randsig.len)
+	{
+		ck_assert(pubkey->verify(pubkey, scheme, &pqc_params, msg, randsig));
 	}
 	chunk_free(&signature);
 
@@ -2674,9 +2694,14 @@ START_TEST(test_ml_dsa_sig)
 
 	/* generate and verify signature with empty context string */
 	ck_assert(key->sign(key, scheme, &pqc_params, msg, &signature));
-	ck_assert_chunk_eq(signature, tests[_i].sig);
+	if (!randsig.len)
+	{
+		ck_assert_chunk_eq(signature, tests[_i].sig);
+	}
+	ck_assert(pubkey->verify(pubkey, scheme, &pqc_params, msg, signature));
 	chunk_free(&signature);
 	key->destroy(key);
+	pubkey->destroy(pubkey);
 
 	/* load private key in expanded format */
 	asn1 = chunk_cat("cc", tests[_i].asn1_privkey, tests[_i].privkey);
@@ -2740,7 +2765,10 @@ START_TEST(test_ml_dsa_sig)
 		chunk_free(&encoding);
 		/* generate and verify signature with empty context string */
 		ck_assert(key->sign(key, scheme, &pqc_params, msg, &signature));
-		ck_assert_chunk_eq(signature, tests[_i].sig);
+		if (!randsig.len)
+		{
+			ck_assert_chunk_eq(signature, tests[_i].sig);
+		}
 		chunk_free(&signature);
 		key->destroy(key);
 	}
@@ -2752,6 +2780,7 @@ START_TEST(test_ml_dsa_sig)
 							 BUILD_BLOB_ASN1_DER, asn1, BUILD_END);
 	ck_assert(!key);
 	chunk_free(&asn1);
+	chunk_free(&randsig);
 }
 END_TEST
 

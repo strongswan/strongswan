@@ -16,10 +16,14 @@
 
 #include <openssl/evp.h>
 
-#if OPENSSL_VERSION_NUMBER >= 0x30500000L && !defined(OPENSSL_NO_ML_DSA)
+#if OPENSSL_VERSION_NUMBER >= 0x30500000L && !defined(OPENSSL_NO_ML_DSA) || \
+	(defined(OPENSSL_IS_AWSLC) && AWSLC_API_VERSION >= 36)
+
+#ifndef OPENSSL_IS_AWSLC
 #include <openssl/core_names.h>
 #include <openssl/params.h>
 #include <openssl/provider.h>
+#endif
 
 #include "openssl_ml_dsa_private_key.h"
 #include "openssl_util.h"
@@ -57,7 +61,11 @@ struct private_private_key_t {
 };
 
 /* from openssl_ml_dsa public key */
+#ifndef OPENSSL_IS_AWSLC
 char *openssl_ml_dsa_alg_name(key_type_t type);
+#else
+int openssl_ml_dsa_alg_nid(key_type_t type);
+#endif
 key_type_t openssl_ml_dsa_evp_pkey_key_type(EVP_PKEY *key);
 
 METHOD(private_key_t, sign, bool,
@@ -65,10 +73,6 @@ METHOD(private_key_t, sign, bool,
 	void *params, chunk_t data, chunk_t *signature)
 {
 	pqc_params_t pqc_params;
-	OSSL_PARAM ossl_params[] = { OSSL_PARAM_END, OSSL_PARAM_END, OSSL_PARAM_END};
-	EVP_PKEY_CTX *ctx = NULL;
-	EVP_SIGNATURE *sig_alg = NULL;
-	int deterministic;
 	bool success = FALSE;
 
 	if ((this->type == KEY_ML_DSA_44 && scheme != SIGN_ML_DSA_44) ||
@@ -85,6 +89,13 @@ METHOD(private_key_t, sign, bool,
 	{
 		return FALSE;
 	}
+
+#ifndef OPENSSL_IS_AWSLC
+	EVP_PKEY_CTX *ctx = NULL;
+	OSSL_PARAM ossl_params[] = { OSSL_PARAM_END, OSSL_PARAM_END, OSSL_PARAM_END};
+	EVP_SIGNATURE *sig_alg = NULL;
+	int deterministic;
+
 	deterministic = pqc_params.deterministic ? 1 : 0;
 	ossl_params[0] = OSSL_PARAM_construct_int(
 									OSSL_SIGNATURE_PARAM_DETERMINISTIC,
@@ -102,7 +113,6 @@ METHOD(private_key_t, sign, bool,
 		goto error;
 	}
 	sig_alg = EVP_SIGNATURE_fetch(NULL, openssl_ml_dsa_alg_name(this->type), NULL);
-
 	if (EVP_PKEY_sign_message_init(ctx, sig_alg, ossl_params) <= 0)
 	{
 		goto error;
@@ -116,17 +126,53 @@ METHOD(private_key_t, sign, bool,
 	*signature = chunk_alloc(signature->len);
 
 	if (EVP_PKEY_sign(ctx, signature->ptr, &signature->len,
-	                  data.ptr, data.len) <= 0)
+					  data.ptr, data.len) <= 0)
 	{
 		chunk_free(signature);
 		goto error;
 	}
+#else /* !OPENSSL_IS_AWSLC */
+	EVP_MD_CTX *ctx = NULL;
+	EVP_PKEY_CTX *pk_ctx = NULL;
+
+	ctx = EVP_MD_CTX_new();
+	if (!ctx || !EVP_DigestSignInit(ctx, &pk_ctx, NULL, NULL, this->key))
+	{
+		goto error;
+	}
+	/* AWS-LC does not support deterministic signatures */
+	if (pqc_params.ctx.len &&
+		!EVP_PKEY_CTX_set1_signature_context_string(pk_ctx, pqc_params.ctx.ptr,
+													pqc_params.ctx.len))
+	{
+		goto error;
+	}
+
+	if (!EVP_DigestSign(ctx, NULL, &signature->len, data.ptr, data.len))
+	{
+		goto error;
+	}
+
+	*signature = chunk_alloc(signature->len);
+
+	if (!EVP_DigestSign(ctx, signature->ptr, &signature->len,
+						data.ptr, data.len))
+	{
+		chunk_free(signature);
+		goto error;
+	}
+#endif /* !OPENSSL_IS_AWSLC */
+
 	success = TRUE;
 
 error:
 	pqc_params_free(&pqc_params);
+#ifndef OPENSSL_IS_AWSLC
 	EVP_SIGNATURE_free(sig_alg);
 	EVP_PKEY_CTX_free(ctx);
+#else
+	EVP_MD_CTX_free(ctx);
+#endif
 
 	return success;
 }
@@ -158,8 +204,12 @@ METHOD(private_key_t, get_public_key, public_key_t*,
 	u_char buf[2592];
 	chunk_t key = {buf, sizeof(buf)};
 
+#ifndef OPENSSL_IS_AWSLC
 	if (!EVP_PKEY_get_octet_string_param(this->key, OSSL_PKEY_PARAM_PUB_KEY,
 										 buf, sizeof(buf), &key.len))
+#else
+	if (!EVP_PKEY_get_raw_public_key(this->key, key.ptr, &key.len))
+#endif
 	{
 		return NULL;
 	}
@@ -265,6 +315,17 @@ private_key_t *openssl_ml_dsa_private_key_create(EVP_PKEY *key, bool engine)
 		EVP_PKEY_free(key);
 		return NULL;
 	}
+#ifdef OPENSSL_IS_AWSLC
+	size_t len;
+	/* AWS-LC can't export private keys in expanded format, so we reject them
+	 * when loading to avoid issues with swanctl */
+	if (!EVP_PKEY_get_private_seed(key, NULL, &len))
+	{
+		DBG1(DBG_LIB, "failed to load ML-DSA private key without seed");
+		EVP_PKEY_free(key);
+		return NULL;
+	}
+#endif
 	return create_internal(type, key);
 }
 
@@ -276,13 +337,27 @@ static private_key_t *create_instance(key_type_t type, chunk_t keyseed)
 	EVP_PKEY_CTX *ctx = NULL;
 	EVP_PKEY *key = NULL;
 
+#ifndef OPENSSL_IS_AWSLC
 	ctx = EVP_PKEY_CTX_new_from_name(NULL, openssl_ml_dsa_alg_name(type), NULL);
+#else
+	ctx = EVP_PKEY_CTX_new_id(EVP_PKEY_PQDSA, NULL);
+	if (ctx)
+	{
+		if (!EVP_PKEY_CTX_pqdsa_set_params(ctx, openssl_ml_dsa_alg_nid(type)))
+		{
+			EVP_PKEY_CTX_free(ctx);
+			ctx = NULL;
+		}
+	}
+#endif
+
 	if (!ctx || EVP_PKEY_keygen_init(ctx) <= 0)
 	{
 		DBG1(DBG_LIB, "failed to create ctx");
 		goto end;
 	}
 
+#ifndef OPENSSL_IS_AWSLC
 	if (keyseed.ptr)
 	{
 		OSSL_PARAM params[] = {
@@ -303,6 +378,18 @@ static private_key_t *create_instance(key_type_t type, chunk_t keyseed)
 		DBG1(DBG_LIB, "failed to generate ML-DSA private key");
 		goto end;
 	}
+#else /* !OPENSSL_IS_AWSLC */
+	if (keyseed.ptr)
+	{
+		key = EVP_PKEY_pqdsa_new_raw_private_key(openssl_ml_dsa_alg_nid(type),
+												 keyseed.ptr, keyseed.len);
+	}
+	else if (!EVP_PKEY_keygen(ctx, &key))
+	{
+		DBG1(DBG_LIB, "failed to generate ML-DSA private key");
+		goto end;
+	}
+#endif /* !OPENSSL_IS_AWSLC */
 
 end:
 	EVP_PKEY_CTX_free(ctx);
@@ -380,4 +467,4 @@ private_key_t *openssl_ml_dsa_private_key_load(key_type_t type, va_list args)
 }
 
 
-#endif /* OPENSSL_NO_ML_DSA*/
+#endif /* OPENSSL_NO_ML_DSA || OPENSSL_IS_AWSLC */

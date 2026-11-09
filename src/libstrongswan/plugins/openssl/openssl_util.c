@@ -189,6 +189,20 @@ private_key_t *openssl_wrap_private_key(EVP_PKEY *key, bool engine)
 #endif
 				return openssl_ed_private_key_create(key, engine);
 #endif /* OPENSSL_VERSION_NUMBER && !OPENSSL_NO_EC && !OPENSSL_IS_AWSLC */
+#if defined(OPENSSL_IS_AWSLC) && AWSLC_API_VERSION >= 36
+			case EVP_PKEY_PQDSA:
+				switch (EVP_PKEY_pqdsa_get_type(key))
+				{
+					case NID_MLDSA44:
+					case NID_MLDSA65:
+					case NID_MLDSA87:
+						return openssl_ml_dsa_private_key_create(key, FALSE);
+					default:
+						EVP_PKEY_free(key);
+						break;
+				}
+				break;
+#endif /* OPENSSL_IS_AWSLC */
 			default:
 #if (OPENSSL_VERSION_NUMBER >= 0x30500000L && !defined(OPENSSL_NO_ML_DSA))
 				/* OpenSSL does not provide an ID for ML-DSA keys, which is
@@ -231,6 +245,20 @@ public_key_t *openssl_wrap_public_key(EVP_PKEY *key)
 #endif
 				return openssl_ed_public_key_create(key);
 #endif /* OPENSSL_VERSION_NUMBER && !OPENSSL_NO_EC && !OPENSSL_IS_AWSLC */
+#if defined(OPENSSL_IS_AWSLC) && AWSLC_API_VERSION >= 36
+			case EVP_PKEY_PQDSA:
+				switch (EVP_PKEY_pqdsa_get_type(key))
+				{
+					case NID_MLDSA44:
+					case NID_MLDSA65:
+					case NID_MLDSA87:
+						return openssl_ml_dsa_public_key_create(key);
+					default:
+						EVP_PKEY_free(key);
+						break;
+				}
+				break;
+#endif /* OPENSSL_IS_AWSLC */
 			default:
 #if (OPENSSL_VERSION_NUMBER >= 0x30500000L && !defined(OPENSSL_NO_ML_DSA))
 				/* OpenSSL does not provide an ID for ML-DSA keys, which is
