@@ -234,6 +234,8 @@ static bool write_msg(private_netlink_socket_t *this, struct nlmsghdr *msg)
 static ssize_t read_msg(private_netlink_socket_t *this,
 						char *buf, size_t buflen, bool block)
 {
+	struct sockaddr_nl addr = {};
+	socklen_t addr_len = sizeof(addr);
 	ssize_t len;
 
 	if (block)
@@ -251,18 +253,24 @@ static ssize_t read_msg(private_netlink_socket_t *this,
 			return -1;
 		}
 	}
-	len = recv(this->socket, buf, buflen, MSG_TRUNC|(block ? 0 : MSG_DONTWAIT));
-	if (len > buflen)
-	{
-		DBG1(DBG_KNL, "netlink response exceeds buffer size");
-		return 0;
-	}
+	len = recvfrom(this->socket, buf, buflen,
+				   MSG_TRUNC|(block ? 0 : MSG_DONTWAIT),
+				   (struct sockaddr*)&addr, &addr_len);
 	if (len < 0)
 	{
 		if (errno != EAGAIN && errno != EWOULDBLOCK && errno != EINTR)
 		{
 			DBG1(DBG_KNL, "netlink read error: %s", strerror(errno));
 		}
+		return 0;
+	}
+	else if (len > buflen)
+	{
+		DBG1(DBG_KNL, "netlink response exceeds buffer size");
+		return 0;
+	}
+	else if (addr.nl_pid != 0)
+	{	/* ignore non-kernel messages */
 		return 0;
 	}
 	return len;
@@ -748,7 +756,7 @@ CALLBACK(watch_event, bool,
 {
 	char buf[this->buflen];
 	struct nlmsghdr *hdr = (struct nlmsghdr*)buf;
-	struct sockaddr_nl addr;
+	struct sockaddr_nl addr = {};
 	socklen_t addr_len = sizeof(addr);
 	int len;
 
