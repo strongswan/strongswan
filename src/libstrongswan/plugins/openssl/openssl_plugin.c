@@ -701,7 +701,8 @@ METHOD(plugin_t, get_features, int,
 		PLUGIN_REGISTER(HASHER, return_null),
 			PLUGIN_PROVIDE(HASHER, HASH_IDENTITY),
 #endif /* OPENSSL_VERSION_NUMBER && !OPENSSL_NO_EC && !OPENSSL_IS_AWSLC */
-#if (OPENSSL_VERSION_NUMBER >= 0x30500000L && !defined(OPENSSL_NO_ML_DSA))
+#if (OPENSSL_VERSION_NUMBER >= 0x30500000L && !defined(OPENSSL_NO_ML_DSA)) || \
+	(defined(OPENSSL_IS_AWSLC) && AWSLC_API_VERSION >= 36)
 		/* ML-DSA private/public key loading */
 		PLUGIN_REGISTER(PUBKEY, openssl_ml_dsa_public_key_load, TRUE),
 			PLUGIN_PROVIDE(PUBKEY, KEY_ML_DSA_44),
@@ -721,7 +722,7 @@ METHOD(plugin_t, get_features, int,
 		PLUGIN_PROVIDE(PUBKEY_VERIFY, SIGN_ML_DSA_44),
 		PLUGIN_PROVIDE(PUBKEY_VERIFY, SIGN_ML_DSA_65),
 		PLUGIN_PROVIDE(PUBKEY_VERIFY, SIGN_ML_DSA_87),
-#endif /* OPENSSL_NO_ML_DSA */
+#endif /* OPENSSL_NO_ML_DSA || OPENSSL_IS_AWSLC */
 
 		/* generic key loader */
 		PLUGIN_REGISTER(PUBKEY, openssl_public_key_load, TRUE),

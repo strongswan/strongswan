@@ -16,10 +16,14 @@
 
 #include <openssl/evp.h>
 
-#if OPENSSL_VERSION_NUMBER >= 0x30500000L && !defined(OPENSSL_NO_ML_DSA)
-#include <openssl/x509.h>
+#if OPENSSL_VERSION_NUMBER >= 0x30500000L && !defined(OPENSSL_NO_ML_DSA) || \
+	(defined(OPENSSL_IS_AWSLC) && AWSLC_API_VERSION >= 36)
+
+#ifndef OPENSSL_IS_AWSLC
 #include <openssl/core_names.h>
 #include <openssl/params.h>
+#endif
+#include <openssl/x509.h>
 
 #include "openssl_ml_dsa_public_key.h"
 #include "openssl_util.h"
@@ -54,6 +58,7 @@ struct private_public_key_t {
 	refcount_t ref;
 };
 
+#ifndef OPENSSL_IS_AWSLC
 /**
  * Map a key type to an algorithm name (also used by private key)
  */
@@ -73,26 +78,6 @@ char *openssl_ml_dsa_alg_name(key_type_t type)
 }
 
 /**
- * Determine the ML-DSA key type for the given key (also used by private key)
- */
-key_type_t openssl_ml_dsa_evp_pkey_key_type(EVP_PKEY *key)
-{
-	if (EVP_PKEY_is_a(key, "ML-DSA-44"))
-	{
-		return KEY_ML_DSA_44;
-	}
-	else if (EVP_PKEY_is_a(key, "ML-DSA-65"))
-	{
-		return KEY_ML_DSA_65;
-	}
-	else if (EVP_PKEY_is_a(key, "ML-DSA-87"))
-	{
-		return KEY_ML_DSA_87;
-	}
-	return KEY_ANY;
-}
-
-/**
  * Map a key type to an EVP key type
  */
 static int openssl_ml_dsa_key_type(key_type_t type)
@@ -109,6 +94,60 @@ static int openssl_ml_dsa_key_type(key_type_t type)
 			return 0;
 	}
 }
+#else /* !OPENSSL_IS_AWSLC */
+/**
+ * Map a key type to a NID (also used by private key)
+ */
+int openssl_ml_dsa_alg_nid(key_type_t type)
+{
+	switch (type)
+	{
+		case KEY_ML_DSA_44:
+			return NID_MLDSA44;
+		case KEY_ML_DSA_65:
+			return NID_MLDSA65;
+		case KEY_ML_DSA_87:
+			return NID_MLDSA87;
+		default:
+			return 0;
+	}
+}
+#endif /* !OPENSSL_IS_AWSLC */
+
+/**
+ * Determine the ML-DSA key type for the given key (also used by private key)
+ */
+key_type_t openssl_ml_dsa_evp_pkey_key_type(EVP_PKEY *key)
+{
+#ifndef OPENSSL_IS_AWSLC
+	if (EVP_PKEY_is_a(key, "ML-DSA-44"))
+	{
+		return KEY_ML_DSA_44;
+	}
+	else if (EVP_PKEY_is_a(key, "ML-DSA-65"))
+	{
+		return KEY_ML_DSA_65;
+	}
+	else if (EVP_PKEY_is_a(key, "ML-DSA-87"))
+	{
+		return KEY_ML_DSA_87;
+	}
+	return KEY_ANY;
+#else
+	int nid = EVP_PKEY_pqdsa_get_type(key);
+	switch (nid)
+	{
+		case NID_MLDSA44:
+			return KEY_ML_DSA_44;
+		case NID_MLDSA65:
+			return KEY_ML_DSA_65;
+		case NID_MLDSA87:
+			return KEY_ML_DSA_87;
+		default:
+			return KEY_ANY;
+	}
+#endif
+}
 
 METHOD(public_key_t, get_type, key_type_t,
 	private_public_key_t *this)
@@ -121,9 +160,6 @@ METHOD(public_key_t, verify, bool,
 	void *params, chunk_t data, chunk_t signature)
 {
 	pqc_params_t pqc_params;
-	EVP_PKEY_CTX *ctx = NULL;
-	EVP_SIGNATURE *sig_alg = NULL;
-	OSSL_PARAM ossl_params[] = { OSSL_PARAM_END, OSSL_PARAM_END};
 	bool success = FALSE;
 
 	if ((this->type == KEY_ML_DSA_44 && scheme != SIGN_ML_DSA_44) ||
@@ -140,6 +176,12 @@ METHOD(public_key_t, verify, bool,
 	{
 		return FALSE;
 	}
+
+#ifndef OPENSSL_IS_AWSLC
+	EVP_PKEY_CTX *ctx = NULL;
+	OSSL_PARAM ossl_params[] = { OSSL_PARAM_END, OSSL_PARAM_END};
+	EVP_SIGNATURE *sig_alg = NULL;
+
 	if (pqc_params.ctx.len)
 	{
 		ossl_params[0] = OSSL_PARAM_construct_octet_string(
@@ -158,17 +200,43 @@ METHOD(public_key_t, verify, bool,
 	{
 		goto error;
 	}
-
 	if (EVP_PKEY_verify(ctx, signature.ptr, signature.len, data.ptr, data.len) <= 0)
 	{
 		goto error;
 	}
+#else /* !OPENSSL_IS_AWSLC */
+	EVP_MD_CTX *ctx = NULL;
+	EVP_PKEY_CTX *pk_ctx = NULL;
+
+	ctx = EVP_MD_CTX_new();
+	if (!ctx || !EVP_DigestVerifyInit(ctx, &pk_ctx, NULL, NULL, this->key))
+	{
+		goto error;
+	}
+	/* AWS-LC does not support deterministic signatures */
+	if (pqc_params.ctx.len &&
+		!EVP_PKEY_CTX_set1_signature_context_string(pk_ctx, pqc_params.ctx.ptr,
+													pqc_params.ctx.len))
+	{
+		goto error;
+	}
+	if (!EVP_DigestVerify(ctx, signature.ptr, signature.len,
+						  data.ptr, data.len))
+	{
+		goto error;
+	}
+#endif /* !OPENSSL_IS_AWSLC */
+
 	success = TRUE;
 
 error:
 	pqc_params_free(&pqc_params);
+#ifndef OPENSSL_IS_AWSLC
 	EVP_SIGNATURE_free(sig_alg);
 	EVP_PKEY_CTX_free(ctx);
+#else
+	EVP_MD_CTX_free(ctx);
+#endif
 
 	return success;
 }
@@ -303,8 +371,13 @@ public_key_t *openssl_ml_dsa_public_key_load(key_type_t type, va_list args)
 
 	if (blob.len)
 	{
+#ifndef OPENSSL_IS_AWSLC
 		key = EVP_PKEY_new_raw_public_key(openssl_ml_dsa_key_type(type), NULL,
 										  blob.ptr, blob.len);
+#else
+		key = EVP_PKEY_pqdsa_new_raw_public_key(openssl_ml_dsa_alg_nid(type),
+												blob.ptr, blob.len);
+#endif
 		if (key)
 		{
 			return create_internal(type, key);
@@ -326,4 +399,4 @@ public_key_t *openssl_ml_dsa_public_key_load(key_type_t type, va_list args)
 	return NULL;
 }
 
-#endif /* OPENSSL_VERSION_NUMBER */
+#endif /* OPENSSL_VERSION_NUMBER || OPENSSL_IS_AWSLC */
