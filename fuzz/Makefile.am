@@ -54,10 +54,11 @@ tls_ldflags = \
 
 # fuzzers that use crypto plugins in a significant way
 fuzzers_with_plugins = \
-	fuzz_certs fuzz_crls fuzz_ocsp_req fuzz_ocsp_rsp
+	fuzz_certs fuzz_crls fuzz_ocsp_req fuzz_ocsp_rsp \
+	fuzz_pkcs7 fuzz_pkcs12
 
 fuzzers_with_def = $(fuzzers_with_plugins:%=%_def)
-fuzzers_with_cus = $(fuzzers_with_plugins:%=%_cus)
+fuzzers_with_cus = $(fuzzers_with_plugins:%=%_cus) fuzz_pkcs8_cus
 
 fuzzers_no_plugins = \
 	fuzz_ids fuzz_ike fuzz_pa_tnc fuzz_pb_tnc fuzz_radius fuzz_tls fuzz_vici
@@ -90,6 +91,21 @@ fuzz_ocsp_rsp_def: fuzz_ocsp_rsp.c ${libfuzzer}
 	$(CC) $(fuzz_cppflags_def) $(CFLAGS) -o $@ $< $(fuzz_ldflags)
 
 fuzz_ocsp_rsp_cus: fuzz_ocsp_rsp.c ${libfuzzer}
+	$(CC) $(fuzz_cppflags_cus) $(CFLAGS) -o $@ $< $(fuzz_ldflags)
+
+fuzz_pkcs7_def: fuzz_pkcs7.c ${libfuzzer}
+	$(CC) $(fuzz_cppflags_def) $(CFLAGS) -o $@ $< $(fuzz_ldflags)
+
+fuzz_pkcs7_cus: fuzz_pkcs7.c ${libfuzzer}
+	$(CC) $(fuzz_cppflags_cus) $(CFLAGS) -o $@ $< $(fuzz_ldflags)
+
+fuzz_pkcs8_cus: fuzz_pkcs8.c ${libfuzzer}
+	$(CC) $(fuzz_cppflags_cus) $(CFLAGS) -o $@ $< $(fuzz_ldflags)
+
+fuzz_pkcs12_def: fuzz_pkcs12.c ${libfuzzer}
+	$(CC) $(fuzz_cppflags_def) $(CFLAGS) -o $@ $< $(fuzz_ldflags)
+
+fuzz_pkcs12_cus: fuzz_pkcs12.c ${libfuzzer}
 	$(CC) $(fuzz_cppflags_cus) $(CFLAGS) -o $@ $< $(fuzz_ldflags)
 
 fuzz_pa_tnc: fuzz_pa_tnc.c ${libfuzzer}
