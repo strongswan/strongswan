@@ -938,6 +938,102 @@ end:
 }
 
 /**
+ * ASN.1 definition of issuingDistributionPoint
+ */
+static const asn1Object_t issuingDistributionPointObjects[] = {
+	{ 0, "issuingDistributionPoint",	ASN1_SEQUENCE,    ASN1_NONE            }, /*  0 */
+	{ 1,   "distributionPoint",			ASN1_CONTEXT_C_0, ASN1_OPT|ASN1_CHOICE }, /*  1 */
+	{ 2,     "fullName",				ASN1_CONTEXT_C_0, ASN1_OPT|ASN1_OBJ    }, /*  2 */
+	{ 2,     "end choice",				ASN1_EOC,         ASN1_END|ASN1_CH     }, /*  3 */
+	{ 2,     "nameRelToCRLIssuer",		ASN1_CONTEXT_C_1, ASN1_OPT|ASN1_BODY   }, /*  4 */
+	{ 2,     "end choice",				ASN1_EOC,         ASN1_END|ASN1_CH     }, /*  5 */
+	{ 1,   "end opt/choices",			ASN1_EOC,         ASN1_END|ASN1_CHOICE }, /*  6 */
+	{ 1,   "onlyContainsUserCerts",		ASN1_CONTEXT_S_1, ASN1_OPT|ASN1_BODY   }, /*  7 */
+	{ 1,   "end opt",					ASN1_EOC,         ASN1_END             }, /*  8 */
+	{ 1,   "onlyContainsCACerts",		ASN1_CONTEXT_S_2, ASN1_OPT|ASN1_BODY   }, /*  9 */
+	{ 1,   "end opt",					ASN1_EOC,         ASN1_END             }, /* 10 */
+	{ 1,   "onlySomeReasons",			ASN1_CONTEXT_S_3, ASN1_OPT|ASN1_BODY   }, /* 11 */
+	{ 1,   "end opt",					ASN1_EOC,         ASN1_END             }, /* 12 */
+	{ 1,   "indirectCRL",				ASN1_CONTEXT_S_4, ASN1_OPT|ASN1_BODY   }, /* 13 */
+	{ 1,   "end opt",					ASN1_EOC,         ASN1_END             }, /* 14 */
+	{ 1,   "onlyContainsAttributeCerts",ASN1_CONTEXT_S_5, ASN1_OPT|ASN1_BODY   }, /* 15 */
+	{ 1,   "end opt",					ASN1_EOC,         ASN1_END             }, /* 16 */
+	{ 0, "exit",						ASN1_EOC,         ASN1_EXIT            }
+};
+#define IDP_FULLNAME				 2
+#define IDP_NAME_REL_TO_CRL_ISSUER	 4
+#define IDP_ONLY_USER_CERTS			 7
+#define IDP_ONLY_CA_CERTS			 9
+#define IDP_ONLY_SOME_REASONS		11
+#define IDP_INDIRECT_CRL			13
+#define IDP_ONLY_ATTRIBUTE_CERTS	15
+
+/**
+ * Extracts the distribution point URIs of an issuingDistributionPoint
+ * extension (used by x509_crl.c), failing if it restricts the CRL's scope
+ */
+bool x509_parse_issuingDistributionPoint(chunk_t blob, int level0,
+										 linked_list_t *list)
+{
+	identification_t *id;
+	linked_list_t *names;
+	asn1_parser_t *parser;
+	chunk_t object;
+	int objectID;
+	bool success = FALSE;
+	char *uri;
+
+	names = linked_list_create();
+	parser = asn1_parser_create(issuingDistributionPointObjects, blob);
+	parser->set_top_level(parser, level0);
+
+	while (parser->iterate(parser, &objectID, &object))
+	{
+		switch (objectID)
+		{
+			case IDP_FULLNAME:
+				if (!x509_parse_generalNames(object,
+								parser->get_level(parser) + 1, TRUE, names))
+				{
+					goto end;
+				}
+				break;
+			case IDP_ONLY_USER_CERTS:
+			case IDP_ONLY_CA_CERTS:
+			case IDP_INDIRECT_CRL:
+			case IDP_ONLY_ATTRIBUTE_CERTS:
+				if (!object.len || !*object.ptr)
+				{	/* an explicitly encoded DEFAULT FALSE */
+					break;
+				}
+				/* fall-through */
+			case IDP_NAME_REL_TO_CRL_ISSUER:
+			case IDP_ONLY_SOME_REASONS:
+				DBG1(DBG_ASN, "scoped CRLs (issuingDistributionPoint with "
+					 "%s) are not supported",
+					 issuingDistributionPointObjects[objectID].name);
+				goto end;
+			default:
+				break;
+		}
+	}
+	success = parser->success(parser);
+
+end:
+	parser->destroy(parser);
+	while (names->remove_first(names, (void**)&id) == SUCCESS)
+	{
+		if (success && gn_to_string(id, &uri))
+		{
+			list->insert_last(list, uri);
+		}
+		id->destroy(id);
+	}
+	names->destroy(names);
+	return success;
+}
+
+/**
  * ASN.1 definition of nameConstraints
  */
 static const asn1Object_t nameConstraintsObjects[] = {
