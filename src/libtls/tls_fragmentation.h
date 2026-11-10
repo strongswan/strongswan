@@ -63,7 +63,7 @@ struct tls_fragmentation_t {
 					  tls_content_type_t *type, chunk_t *data);
 
 	/**
-	 * Has the application layer finished (returned SUCCESS)?.
+	 * Check if the application layer has finished (returned SUCCESS).
 	 *
 	 * @return			TRUE if application layer finished
 	 */

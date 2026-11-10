@@ -106,7 +106,7 @@ struct tls_alert_t {
 				tls_alert_desc_t *description);
 
 	/**
-	 * Did a fatal alert occur?.
+	 * Check if a fatal alert occurred.
 	 *
 	 * @return				TRUE if a fatal alert has occurred
 	 */
