@@ -4,7 +4,7 @@
 build_botan()
 {
 	# same revision used in the build recipe of the testing environment
-	BOTAN_REV=3.12.0
+	BOTAN_REV=3.14.0
 	BOTAN_DIR=$DEPS_BUILD_DIR/botan
 
 	if test -d "$BOTAN_DIR"; then
@@ -56,8 +56,9 @@ build_wolfssl()
 					--enable-aesccm --enable-aesctr --enable-aescfb --enable-camellia
 					--enable-curve25519 --enable-curve448 --enable-des3
 					--enable-ecccustcurves --enable-ed25519 --enable-ed448
-					--enable-keygen --enable-mlkem --with-max-rsa-bits=8192
-					--enable-rsapss --enable-sha3 --enable-shake256"
+					--enable-keygen --enable-mldsa --enable-mlkem
+					--enable-rsapss --enable-sha3 --enable-shake256
+					--with-max-rsa-bits=8192"
 
 	git clone https://github.com/wolfSSL/wolfssl.git $WOLFSSL_DIR &&
 	cd $WOLFSSL_DIR &&
@@ -123,7 +124,7 @@ build_openssl()
 
 build_awslc()
 {
-	LC_REV=5.12.0
+	LC_REV=5.13.0
 	LC_PKG=aws-lc-$LC_REV
 	LC_DIR=$DEPS_BUILD_DIR/$LC_PKG
 	LC_SRC=https://github.com/aws/aws-lc/archive/refs/tags/v${LC_REV}.tar.gz

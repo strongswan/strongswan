@@ -70,6 +70,22 @@ int openssl_ed_key_type(key_type_t type)
 }
 
 /**
+ * Map an EVP_PKEY type to a key type
+ */
+key_type_t openssl_ed_evp_pkey_key_type(EVP_PKEY *key)
+{
+	switch (EVP_PKEY_base_id(key))
+	{
+		case EVP_PKEY_ED25519:
+			return KEY_ED25519;
+		case EVP_PKEY_ED448:
+			return KEY_ED448;
+		default:
+			return KEY_ANY;
+	}
+}
+
+/**
  * Map a key type to a key size
  */
 int openssl_ed_keysize(key_type_t type)
@@ -133,56 +149,10 @@ METHOD(public_key_t, get_keysize, int,
 	return openssl_ed_keysize(this->type);
 }
 
-/**
- * Calculate fingerprint from an EdDSA key, also used in ed private key.
- */
-bool openssl_ed_fingerprint(EVP_PKEY *key, cred_encoding_type_t type,
-							chunk_t *fp)
-{
-	hasher_t *hasher;
-	chunk_t blob;
-
-	if (lib->encoding->get_cache(lib->encoding, type, key, fp))
-	{
-		return TRUE;
-	}
-	switch (type)
-	{
-		case KEYID_PUBKEY_SHA1:
-			if (!EVP_PKEY_get_raw_public_key(key, NULL, &blob.len))
-			{
-				return FALSE;
-			}
-			blob = chunk_alloc(blob.len);
-			if (!EVP_PKEY_get_raw_public_key(key, blob.ptr, &blob.len))
-			{
-				return FALSE;
-			}
-			break;
-		case KEYID_PUBKEY_INFO_SHA1:
-			blob = openssl_i2chunk(PUBKEY, key);
-			break;
-		default:
-			return FALSE;
-	}
-	hasher = lib->crypto->create_hasher(lib->crypto, HASH_SHA1);
-	if (!hasher || !hasher->allocate_hash(hasher, blob, fp))
-	{
-		DBG1(DBG_LIB, "SHA1 not supported, fingerprinting failed");
-		DESTROY_IF(hasher);
-		chunk_free(&blob);
-		return FALSE;
-	}
-	hasher->destroy(hasher);
-	chunk_free(&blob);
-	lib->encoding->cache(lib->encoding, type, key, fp);
-	return TRUE;
-}
-
 METHOD(public_key_t, get_fingerprint, bool,
 	private_public_key_t *this, cred_encoding_type_t type, chunk_t *fingerprint)
 {
-	return openssl_ed_fingerprint(this->key, type, fingerprint);
+	return openssl_fingerprint(this->key, type, fingerprint);
 }
 
 METHOD(public_key_t, get_encoding, bool,
@@ -247,6 +217,28 @@ static private_public_key_t *create_empty(key_type_t type)
 	);
 
 	return this;
+}
+
+/*
+ * Described in header
+ */
+public_key_t *openssl_ed_public_key_create(EVP_PKEY *key)
+{
+	private_public_key_t *this;
+	key_type_t type;
+
+	if (key)
+	{
+		type = openssl_ed_evp_pkey_key_type(key);
+		if (type != KEY_ANY)
+		{
+			this = create_empty(type);
+			this->key = key;
+			return &this->public;
+		}
+		EVP_PKEY_free(key);
+	}
+	return NULL;
 }
 
 /*

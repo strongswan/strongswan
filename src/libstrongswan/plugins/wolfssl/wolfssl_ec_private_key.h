@@ -59,7 +59,7 @@ wolfssl_ec_private_key_t *wolfssl_ec_private_key_gen(key_type_t type,
 /**
  * Load a ECDSA private key using wolfSSL.
  *
- * Accepts a BUILD_BLOB_ASN1_DER argument.
+ * Accepts a BUILD_BLOB_ALGID_PARAMS and BUILD_BLOB_ASN1_DER argument.
  *
  * @param type		type of the key, must be KEY_ECDSA
  * @param args		builder_part_t argument list

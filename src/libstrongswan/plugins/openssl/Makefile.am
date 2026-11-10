@@ -6,6 +6,10 @@ if USE_WINDOWS
 AM_CPPFLAGS += -DNOCRYPT
 endif
 
+if USE_LEAK_DETECTIVE
+AM_CPPFLAGS += -DLEAK_DETECTIVE
+endif
+
 AM_CFLAGS = \
 	$(PLUGIN_CFLAGS)
 
@@ -39,6 +43,8 @@ libstrongswan_openssl_la_SOURCES = \
 	openssl_x_diffie_hellman.c openssl_x_diffie_hellman.h \
 	openssl_ed_private_key.c openssl_ed_private_key.h \
 	openssl_ed_public_key.c openssl_ed_public_key.h \
+	openssl_ml_dsa_private_key.c openssl_ml_dsa_private_key.h \
+	openssl_ml_dsa_public_key.c openssl_ml_dsa_public_key.h \
 	openssl_xof.c openssl_xof.h \
 	openssl_kem.c openssl_kem.h
 

@@ -1,0 +1,401 @@
+/*
+ * Copyright (C) 2025 Andreas Steffen
+ *
+ * Copyright (C) secunet Security Networks AG
+ *
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by the
+ * Free Software Foundation; either version 2 of the License, or (at your
+ * option) any later version.  See <http://www.fsf.org/copyleft/gpl.txt>.
+ *
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+ * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * for more details.
+ */
+
+#include <openssl/evp.h>
+
+#if OPENSSL_VERSION_NUMBER >= 0x30500000L && !defined(OPENSSL_NO_ML_DSA) || \
+	(defined(OPENSSL_IS_AWSLC) && AWSLC_API_VERSION >= 36)
+
+#ifndef OPENSSL_IS_AWSLC
+#include <openssl/core_names.h>
+#include <openssl/params.h>
+#endif
+#include <openssl/x509.h>
+
+#include "openssl_ml_dsa_public_key.h"
+#include "openssl_util.h"
+
+#include <utils/debug.h>
+
+typedef struct private_public_key_t private_public_key_t;
+
+/**
+ * Private data
+ */
+struct private_public_key_t {
+
+	/**
+	 * Public interface
+	 */
+	public_key_t public;
+
+	/**
+	 * Key object
+	 */
+	EVP_PKEY *key;
+
+	/**
+	 * Key type
+	 */
+	key_type_t type;
+
+	/**
+	 * Reference counter
+	 */
+	refcount_t ref;
+};
+
+#ifndef OPENSSL_IS_AWSLC
+/**
+ * Map a key type to an algorithm name (also used by private key)
+ */
+char *openssl_ml_dsa_alg_name(key_type_t type)
+{
+	switch (type)
+	{
+		case KEY_ML_DSA_44:
+			return "ML-DSA-44";
+		case KEY_ML_DSA_65:
+			return "ML-DSA-65";
+		case KEY_ML_DSA_87:
+			return "ML-DSA-87";
+		default:
+			return NULL;
+	}
+}
+
+/**
+ * Map a key type to an EVP key type
+ */
+static int openssl_ml_dsa_key_type(key_type_t type)
+{
+	switch (type)
+	{
+		case KEY_ML_DSA_44:
+			return EVP_PKEY_ML_DSA_44;
+		case KEY_ML_DSA_65:
+			return EVP_PKEY_ML_DSA_65;
+		case KEY_ML_DSA_87:
+			return EVP_PKEY_ML_DSA_87;
+		default:
+			return 0;
+	}
+}
+#else /* !OPENSSL_IS_AWSLC */
+/**
+ * Map a key type to a NID (also used by private key)
+ */
+int openssl_ml_dsa_alg_nid(key_type_t type)
+{
+	switch (type)
+	{
+		case KEY_ML_DSA_44:
+			return NID_MLDSA44;
+		case KEY_ML_DSA_65:
+			return NID_MLDSA65;
+		case KEY_ML_DSA_87:
+			return NID_MLDSA87;
+		default:
+			return 0;
+	}
+}
+#endif /* !OPENSSL_IS_AWSLC */
+
+/**
+ * Determine the ML-DSA key type for the given key (also used by private key)
+ */
+key_type_t openssl_ml_dsa_evp_pkey_key_type(EVP_PKEY *key)
+{
+#ifndef OPENSSL_IS_AWSLC
+	if (EVP_PKEY_is_a(key, "ML-DSA-44"))
+	{
+		return KEY_ML_DSA_44;
+	}
+	else if (EVP_PKEY_is_a(key, "ML-DSA-65"))
+	{
+		return KEY_ML_DSA_65;
+	}
+	else if (EVP_PKEY_is_a(key, "ML-DSA-87"))
+	{
+		return KEY_ML_DSA_87;
+	}
+	return KEY_ANY;
+#else
+	int nid = EVP_PKEY_pqdsa_get_type(key);
+	switch (nid)
+	{
+		case NID_MLDSA44:
+			return KEY_ML_DSA_44;
+		case NID_MLDSA65:
+			return KEY_ML_DSA_65;
+		case NID_MLDSA87:
+			return KEY_ML_DSA_87;
+		default:
+			return KEY_ANY;
+	}
+#endif
+}
+
+METHOD(public_key_t, get_type, key_type_t,
+	private_public_key_t *this)
+{
+	return this->type;
+}
+
+METHOD(public_key_t, verify, bool,
+	private_public_key_t *this, signature_scheme_t scheme,
+	void *params, chunk_t data, chunk_t signature)
+{
+	pqc_params_t pqc_params;
+	bool success = FALSE;
+
+	if ((this->type == KEY_ML_DSA_44 && scheme != SIGN_ML_DSA_44) ||
+		(this->type == KEY_ML_DSA_65 && scheme != SIGN_ML_DSA_65) ||
+		(this->type == KEY_ML_DSA_87 && scheme != SIGN_ML_DSA_87))
+	{
+		DBG1(DBG_LIB, "signature scheme %N not supported by %N key",
+			 signature_scheme_names, scheme, key_type_names, this->type);
+		return FALSE;
+	}
+
+	/* set PQC signature params */
+	if (!pqc_params_create(params, &pqc_params))
+	{
+		return FALSE;
+	}
+
+#ifndef OPENSSL_IS_AWSLC
+	EVP_PKEY_CTX *ctx = NULL;
+	OSSL_PARAM ossl_params[] = { OSSL_PARAM_END, OSSL_PARAM_END};
+	EVP_SIGNATURE *sig_alg = NULL;
+
+	if (pqc_params.ctx.len)
+	{
+		ossl_params[0] = OSSL_PARAM_construct_octet_string(
+									OSSL_SIGNATURE_PARAM_CONTEXT_STRING,
+									pqc_params.ctx.ptr, pqc_params.ctx.len);
+	}
+
+	ctx = EVP_PKEY_CTX_new_from_pkey(NULL, this->key, NULL);
+	if (!ctx)
+	{
+		goto error;
+	}
+	sig_alg = EVP_SIGNATURE_fetch(NULL, openssl_ml_dsa_alg_name(this->type), NULL);
+
+	if (EVP_PKEY_verify_message_init(ctx, sig_alg, ossl_params) <= 0)
+	{
+		goto error;
+	}
+	if (EVP_PKEY_verify(ctx, signature.ptr, signature.len, data.ptr, data.len) <= 0)
+	{
+		goto error;
+	}
+#else /* !OPENSSL_IS_AWSLC */
+	EVP_MD_CTX *ctx = NULL;
+	EVP_PKEY_CTX *pk_ctx = NULL;
+
+	ctx = EVP_MD_CTX_new();
+	if (!ctx || !EVP_DigestVerifyInit(ctx, &pk_ctx, NULL, NULL, this->key))
+	{
+		goto error;
+	}
+	if (pqc_params.ctx.len &&
+		!EVP_PKEY_CTX_set1_signature_context_string(pk_ctx, pqc_params.ctx.ptr,
+													pqc_params.ctx.len))
+	{
+		goto error;
+	}
+	if (!EVP_DigestVerify(ctx, signature.ptr, signature.len,
+						  data.ptr, data.len))
+	{
+		goto error;
+	}
+#endif /* !OPENSSL_IS_AWSLC */
+
+	success = TRUE;
+
+error:
+	pqc_params_free(&pqc_params);
+#ifndef OPENSSL_IS_AWSLC
+	EVP_SIGNATURE_free(sig_alg);
+	EVP_PKEY_CTX_free(ctx);
+#else
+	EVP_MD_CTX_free(ctx);
+#endif
+
+	return success;
+}
+
+METHOD(public_key_t, encrypt, bool,
+	private_public_key_t *this, encryption_scheme_t scheme,
+	void *params, chunk_t crypto, chunk_t *plain)
+{
+	DBG1(DBG_LIB, "encryption scheme %N not supported", encryption_scheme_names,
+		 scheme);
+	return FALSE;
+}
+
+METHOD(public_key_t, get_keysize, int,
+	private_public_key_t *this)
+{
+	return BITS_PER_BYTE * get_public_key_size(this->type);
+}
+
+METHOD(public_key_t, get_fingerprint, bool,
+	private_public_key_t *this, cred_encoding_type_t type, chunk_t *fingerprint)
+{
+	return openssl_fingerprint(this->key, type, fingerprint);
+}
+
+METHOD(public_key_t, get_encoding, bool,
+	private_public_key_t *this, cred_encoding_type_t type, chunk_t *encoding)
+{
+	bool success = TRUE;
+
+	*encoding = openssl_i2chunk(PUBKEY, this->key);
+
+	if (type != PUBKEY_SPKI_ASN1_DER)
+	{
+		chunk_t asn1_encoding = *encoding;
+
+		success = lib->encoding->encode(lib->encoding, type,
+								NULL, encoding, CRED_PART_PUB_ASN1_DER,
+								asn1_encoding, CRED_PART_END);
+		chunk_clear(&asn1_encoding);
+	}
+	return success;
+}
+
+METHOD(public_key_t, get_ref, public_key_t*,
+	private_public_key_t *this)
+{
+	ref_get(&this->ref);
+	return &this->public;
+}
+
+METHOD(public_key_t, destroy, void,
+	private_public_key_t *this)
+{
+	if (ref_put(&this->ref))
+	{
+		lib->encoding->clear_cache(lib->encoding, this->key);
+		EVP_PKEY_free(this->key);
+		free(this);
+	}
+}
+
+/**
+ * Generic private constructor
+ */
+static public_key_t *create_internal(key_type_t type, EVP_PKEY *key)
+{
+	private_public_key_t *this;
+
+	INIT(this,
+		.public = {
+			.get_type = _get_type,
+			.verify = _verify,
+			.encrypt = _encrypt,
+			.get_keysize = _get_keysize,
+			.equals = public_key_equals,
+			.get_fingerprint = _get_fingerprint,
+			.has_fingerprint = public_key_has_fingerprint,
+			.get_encoding = _get_encoding,
+			.get_ref = _get_ref,
+			.destroy = _destroy,
+		},
+		.type = type,
+		.key = key,
+		.ref = 1,
+	);
+
+	return &this->public;
+}
+
+/*
+ * Described in header
+ */
+public_key_t *openssl_ml_dsa_public_key_create(EVP_PKEY *key)
+{
+	key_type_t type;
+
+	type = openssl_ml_dsa_evp_pkey_key_type(key);
+	if (type == KEY_ANY)
+	{
+		EVP_PKEY_free(key);
+		return NULL;
+	}
+	return create_internal(type, key);
+}
+
+/*
+ * Described in header
+ */
+public_key_t *openssl_ml_dsa_public_key_load(key_type_t type, va_list args)
+{
+	chunk_t pkcs1 = chunk_empty, blob = chunk_empty;
+	EVP_PKEY *key = NULL;
+
+	while (TRUE)
+	{
+		switch (va_arg(args, builder_part_t))
+		{
+			case BUILD_BLOB:
+				blob = va_arg(args, chunk_t);
+				continue;
+			case BUILD_BLOB_ASN1_DER:
+				pkcs1 = va_arg(args, chunk_t);
+				continue;
+			case BUILD_END:
+				break;
+			default:
+				return NULL;
+		}
+		break;
+	}
+
+	if (blob.len)
+	{
+#ifndef OPENSSL_IS_AWSLC
+		key = EVP_PKEY_new_raw_public_key(openssl_ml_dsa_key_type(type), NULL,
+										  blob.ptr, blob.len);
+#else
+		key = EVP_PKEY_pqdsa_new_raw_public_key(openssl_ml_dsa_alg_nid(type),
+												blob.ptr, blob.len);
+#endif
+		if (key)
+		{
+			return create_internal(type, key);
+		}
+	}
+	else if (pkcs1.len)
+	{
+		key = d2i_PUBKEY(NULL, (const u_char**)&pkcs1.ptr, pkcs1.len);
+		if (key)
+		{
+			if (type == openssl_ml_dsa_evp_pkey_key_type(key))
+			{
+				return create_internal(type, key);
+			}
+			EVP_PKEY_free(key);
+			return NULL;
+		}
+	}
+	return NULL;
+}
+
+#endif /* OPENSSL_VERSION_NUMBER || OPENSSL_IS_AWSLC */
