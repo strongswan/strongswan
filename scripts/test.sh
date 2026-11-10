@@ -98,7 +98,7 @@ build_openssl()
 	: ${SSL_REV=openssl-3.6.5}
 	SSL_DIR=$DEPS_BUILD_DIR/openssl
 	SSL_INS=$DEPS_PREFIX/ssl
-	SSL_OPT="-d shared no-dtls no-ssl3 no-zlib no-idea no-psk
+	SSL_OPT="-d shared no-dtls no-ssl3 no-zlib no-idea
 			 no-tests enable-rfc3779 enable-ec_nistp_64_gcc_128"
 
 	if test -d "$SSL_DIR"; then
@@ -173,7 +173,7 @@ prepare_system_openssl()
 		# make sure we can properly whitelist functions with leak detective
 		DEPS="$DEPS binutils-dev"
 		CONFIG="$CONFIG --enable-bfd-backtraces"
-	elif [ "$ID" = "ubuntu" -a "$VERSION_ID" != "24.04" ]; then
+	elif [ "$ID" = "ubuntu" -a "$VERSION_ID" = "22.04" ]; then
 		# with ASan we have to use the (extremely) slow stack unwind as the
 		# shipped version of the library is built with -fomit-frame-pointer
 		export ASAN_OPTIONS=fast_unwind_on_malloc=0
@@ -279,6 +279,9 @@ all|alpine|codeql|coverage|sonarcloud|no-dbg|no-testable-ke)
 		  libldap2-dev libpcsclite-dev libpam0g-dev binutils-dev libnm-dev
 		  libjson-c-dev libtspi-dev libsystemd-dev
 		  libselinux1-dev libiptc-dev ruby-rubygems python3-build tox"
+	if [ "$ID" = "ubuntu" -a "$VERSION_ID" != "22.04" ]; then
+		DEPS="$DEPS  systemd-dev"
+	fi
 	if [ "$ID" = "ubuntu" -a "$VERSION_ID" = "22.04" -a "$1" = "build-deps" ]; then
 		# python3-build is broken on 22.04 with venv (https://bugs.launchpad.net/ubuntu/+source/python-build/+bug/1992108)
 		# while installing python3-virtualenv should help, it doesn't. as even

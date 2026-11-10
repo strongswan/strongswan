@@ -57,7 +57,9 @@ jobs:
           - test: no-testable-ke
           - test: no-testable-ke
             compiler: clang
-          - test: fuzzing
+          # use the same base platform as oss-fuzz
+          - os: ubuntu-24.04
+            test: fuzzing
             compiler: clang
             monolithic: yes
     env:
@@ -165,9 +167,19 @@ jobs:
       fail-fast: false
       matrix:
         test: [ botan, wolfssl, openssl-sys, openssl-3, openssl-4, openssl-awslc ]
-        os: [ ubuntu-latest, ubuntu-22.04 ]
+        os: [ ubuntu-latest, ubuntu-24.04, ubuntu-22.04 ]
         exclude:
           # test custom-built libs only on the latest platform
+          - os: ubuntu-24.04
+            test: botan
+          - os: ubuntu-24.04
+            test: wolfssl
+          - os: ubuntu-24.04
+            test: openssl-3
+          - os: ubuntu-24.04
+            test: openssl-4
+          - os: ubuntu-24.04
+            test: openssl-awslc
           - os: ubuntu-22.04
             test: botan
           - os: ubuntu-22.04
@@ -183,6 +195,7 @@ jobs:
       CC: ${{ matrix.compiler || 'gcc' }}
       TEST: ${{ matrix.test }}
       ACTIVE_TRANSFORMS_REF: .github/active-transforms/${{ matrix.test }}
+      ACTIVE_TRANSFORMS_REF_OS: .github/active-transforms/${{ matrix.test }}-${{ matrix.os }}
       # only store a cache for some tests as the others have a minimal diff (if
       # any) compared to the 'all' build
       STORE_DEPS_CACHE: >-
@@ -249,7 +262,11 @@ jobs:
           retention-days: 5
       - name: Verify active transforms
         run: |
-          test ! -f $ACTIVE_TRANSFORMS_REF || diff -us --color=always $ACTIVE_TRANSFORMS_REF $TESTS_ACTIVE_TRANSFORMS
+          if [ -f $ACTIVE_TRANSFORMS_REF_OS ]; then
+            diff -us --color=always $ACTIVE_TRANSFORMS_REF_OS $TESTS_ACTIVE_TRANSFORMS
+          else
+            test ! -f $ACTIVE_TRANSFORMS_REF || diff -us --color=always $ACTIVE_TRANSFORMS_REF $TESTS_ACTIVE_TRANSFORMS
+          fi
       - if: ${{ failure() }}
         uses: actions/upload-artifact@v6
         with:
@@ -265,7 +282,7 @@ jobs:
       actions: write
     strategy:
       matrix:
-        os: [ ubuntu-22.04 ]
+        os: [ ubuntu-22.04, ubuntu-24.04 ]
         test: [ all, nm ]
         compiler: [ gcc, clang ]
         exclude:

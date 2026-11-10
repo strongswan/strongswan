@@ -65,16 +65,17 @@ cov-reset: cov-reset-common
 cov-report:
 		@mkdir $(top_builddir)/coverage
 		lcov -c -o $(top_builddir)/coverage/coverage.info -d $(top_builddir) \
-			 --rc branch_coverage=1
+			 --rc branch_coverage=1 --ignore-errors inconsistent
 		lcov -r $(top_builddir)/coverage/coverage.info '*/tests/*' '*/suites/*' '/usr*' \
 			 '*proposal_keywords_static.*' \
 			 -o $(abs_top_builddir)/coverage/coverage.cleaned.info \
-			 --rc branch_coverage=1
+			 --rc branch_coverage=1 --ignore-errors inconsistent
 		genhtml --num-spaces 4 --legend --branch-coverage --ignore-errors source \
 				-t "$(PACKAGE_STRING)" \
 				-o $(top_builddir)/coverage/html \
 				-p `readlink -m $(abs_top_srcdir)`/src \
-				$(top_builddir)/coverage/coverage.cleaned.info
+				$(top_builddir)/coverage/coverage.cleaned.info \
+				--ignore-errors inconsistent
 		@echo "Coverage Report at $(top_builddir)/coverage/html" >&2
 
 coverage:
