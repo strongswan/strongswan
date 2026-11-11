@@ -16,3 +16,4 @@
 
 TEST_SUITE(imcv_seg_suite_create)
 TEST_SUITE(imcv_swima_suite_create)
+TEST_SUITE_DEPEND(imcv_quote_suite_create, HASHER, HASH_SHA256)
