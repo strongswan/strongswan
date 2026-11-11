@@ -45,6 +45,7 @@
 
 #include <utils/debug.h>
 #include <asn1/asn1.h>
+#include <credentials/keys/signature_params.h>
 
 typedef struct private_pkcs11_private_key_t private_pkcs11_private_key_t;
 
@@ -194,6 +195,12 @@ CK_MECHANISM_PTR pkcs11_signature_scheme_to_mech(pkcs11_library_t *p11,
 		 KEY_ECDSA, 384,									HASH_SHA384},
 		{SIGN_ECDSA_521,				{CKM_ECDSA,				NULL, 0},
 		 KEY_ECDSA, 521,									HASH_SHA512},
+		{SIGN_ML_DSA_44,				{CKM_ML_DSA,			NULL, 0},
+		 KEY_ML_DSA_44, 0,								   HASH_UNKNOWN},
+		{SIGN_ML_DSA_65,				{CKM_ML_DSA,			NULL, 0},
+		 KEY_ML_DSA_65, 0,								   HASH_UNKNOWN},
+		{SIGN_ML_DSA_87,				{CKM_ML_DSA,			NULL, 0},
+		 KEY_ML_DSA_87, 0,								   HASH_UNKNOWN},
 	};
 
 	CK_MECHANISM_PTR mechanism;
@@ -343,6 +350,36 @@ CK_MECHANISM_PTR pkcs11_signature_scheme_to_mech(pkcs11_library_t *p11,
 				mechanism->pParameter = rsa_pkcs_pss_params;
 				mechanism->ulParameterLen = sizeof(CK_RSA_PKCS_PSS_PARAMS);
 			}
+			else if (scheme == SIGN_ML_DSA_44 ||
+					 scheme == SIGN_ML_DSA_65 ||
+					 scheme == SIGN_ML_DSA_87)
+			{
+				pqc_params_t pqc_params;
+				CK_SIGN_ADDITIONAL_CONTEXT *ctx_params;
+
+				if (!pqc_params_create(params, &pqc_params))
+				{
+					free(mechanism);
+					return NULL;
+				}
+				INIT_EXTRA(ctx_params, pqc_params.ctx.len,
+					.hedgeVariant = CKH_HEDGE_REQUIRED,
+					.ulContextLen = pqc_params.ctx.len,
+				);
+				if (pqc_params.deterministic)
+				{
+					ctx_params->hedgeVariant = CKH_DETERMINISTIC_REQUIRED;
+				}
+				if (pqc_params.ctx.len)
+				{
+					ctx_params->pContext = (CK_BYTE_PTR)(ctx_params + 1);
+					memcpy(ctx_params->pContext, pqc_params.ctx.ptr,
+						   pqc_params.ctx.len);
+				}
+				pqc_params_free(&pqc_params);
+				mechanism->pParameter = ctx_params;
+				mechanism->ulParameterLen = sizeof(CK_SIGN_ADDITIONAL_CONTEXT);
+			}
 			else
 			{
 				hash_alg = mappings[i].hash;
@@ -424,8 +461,8 @@ METHOD(private_key_t, sign, bool,
 {
 	CK_MECHANISM_PTR mechanism;
 	CK_SESSION_HANDLE session;
-	CK_BYTE_PTR buf;
-	CK_ULONG len;
+	CK_BYTE_PTR buf = NULL;
+	CK_ULONG len = 0;
 	CK_RV rv;
 	hash_algorithm_t hash_alg;
 	chunk_t hash = chunk_empty;
@@ -488,13 +525,12 @@ METHOD(private_key_t, sign, bool,
 		}
 		data = hash;
 	}
-	len = (get_keysize(this) + 7) / 8;
-	if (this->type == KEY_ECDSA)
-	{	/* signature is twice the length of the base point order */
-		len *= 2;
+	rv = this->lib->f->C_Sign(session, data.ptr, data.len, NULL, &len);
+	if (rv == CKR_OK)
+	{
+		buf = malloc(len);
+		rv = this->lib->f->C_Sign(session, data.ptr, data.len, buf, &len);
 	}
-	buf = malloc(len);
-	rv = this->lib->f->C_Sign(session, data.ptr, data.len, buf, &len);
 	this->lib->f->C_CloseSession(session);
 	chunk_free(&hash);
 	if (rv != CKR_OK)
@@ -838,45 +874,67 @@ static bool find_key(private_pkcs11_private_key_t *this, chunk_t keyid)
 	CK_OBJECT_HANDLE object;
 	CK_KEY_TYPE type;
 	CK_BBOOL reauth = FALSE;
+	CK_ULONG param_set = 0;
 	CK_ATTRIBUTE attr[] = {
 		{CKA_KEY_TYPE, &type, sizeof(type)},
+		{CKA_PARAMETER_SET, &param_set, sizeof(param_set)},
 		{CKA_ALWAYS_AUTHENTICATE, &reauth, sizeof(reauth)},
 	};
 	enumerator_t *enumerator;
 	int count = countof(attr);
-	bool found = FALSE;
 
 	/* do not use CKA_ALWAYS_AUTHENTICATE if not supported */
 	if (!(this->lib->get_features(this->lib) & PKCS11_ALWAYS_AUTH_KEYS))
 	{
+		attr[2].ulValueLen = CK_UNAVAILABLE_INFORMATION;
 		count--;
 	}
+
 	enumerator = this->lib->create_object_enumerator(this->lib,
 							this->session, tmpl, countof(tmpl), attr, count);
 	if (enumerator->enumerate(enumerator, &object) &&
 		attr[0].ulValueLen != CK_UNAVAILABLE_INFORMATION)
 	{
-		this->type = KEY_RSA;
 		switch (type)
 		{
+			case CKK_RSA:
+				this->type = KEY_RSA;
+				break;
 			case CKK_ECDSA:
 				this->type = KEY_ECDSA;
-				/* fall-through */
-			case CKK_RSA:
+				break;
+			case CKK_ML_DSA:
 				if (attr[1].ulValueLen != CK_UNAVAILABLE_INFORMATION)
 				{
-					this->reauth = reauth;
+					switch (param_set)
+					{
+						case CKP_ML_DSA_44:
+							this->type = KEY_ML_DSA_44;
+							break;
+						case CKP_ML_DSA_65:
+							this->type = KEY_ML_DSA_65;
+							break;
+						case CKP_ML_DSA_87:
+							this->type = KEY_ML_DSA_87;
+							break;
+					}
 				}
-				this->object = object;
-				found = TRUE;
 				break;
 			default:
 				DBG1(DBG_CFG, "PKCS#11 key type %d not supported", type);
 				break;
 		}
+		if (this->type != KEY_ANY)
+		{
+			if (attr[2].ulValueLen != CK_UNAVAILABLE_INFORMATION)
+			{
+				this->reauth = reauth;
+			}
+			this->object = object;
+		}
 	}
 	enumerator->destroy(enumerator);
-	return found;
+	return this->type != KEY_ANY;
 }
 
 /**
