@@ -110,6 +110,11 @@ struct entry_t {
 	 * message ID or hash of currently processing message, -1 if none
 	 */
 	uint32_t processing;
+
+	/**
+	 * Whether the currently processed IKEv2 message is a request.
+	 */
+	bool processing_request;
 };
 
 /**
@@ -1404,6 +1409,7 @@ METHOD(ike_sa_manager_t, checkout_by_message, ike_sa_t*,
 						entry->ike_sa = ike_sa;
 						entry->ike_sa_id = id;
 						entry->processing = get_message_id_or_hash(message);
+						entry->processing_request = message->get_request(message);
 						entry->init_hash = hash;
 						entry->half_open = TRUE;
 						entry->other = message->get_source(message);
@@ -1456,11 +1462,15 @@ METHOD(ike_sa_manager_t, checkout_by_message, ike_sa_t*,
 
 	if (get_entry_by_id(this, id, &entry, &segment) == SUCCESS)
 	{
-		/* only check out if we are not already processing it. */
-		if (entry->processing == get_message_id_or_hash(message))
+		/* IKEv2 requests and responses use independent message ID spaces. */
+		if (entry->processing == get_message_id_or_hash(message) &&
+			(message->get_major_version(message) != IKEV2_MAJOR_VERSION ||
+			 entry->processing_request == message->get_request(message)))
 		{
-			DBG1(DBG_MGR, "ignoring request with ID %u, already processing",
-				 entry->processing);
+			DBG1(DBG_MGR, "ignoring %s with ID %u, already processing %s",
+				 message->get_request(message) ? "request" : "response",
+				 entry->processing,
+				 entry->processing_request ? "request" : "response");
 		}
 		else if (wait_for_entry(this, entry, segment))
 		{
@@ -1472,6 +1482,7 @@ METHOD(ike_sa_manager_t, checkout_by_message, ike_sa_t*,
 				message->get_first_payload_type(message) != PLV2_FRAGMENT)
 			{	/* TODO-FRAG: this fails if there are unencrypted payloads */
 				entry->processing = get_message_id_or_hash(message);
+				entry->processing_request = message->get_request(message);
 			}
 			if (ike_id->get_responder_spi(ike_id) == 0)
 			{

@@ -16,6 +16,7 @@
 
 TEST_SUITE(ike_delete_suite_create)
 TEST_SUITE(ike_mid_sync_suite_create)
+TEST_SUITE(ike_sa_manager_suite_create)
 TEST_SUITE(ike_rekey_suite_create)
 TEST_SUITE(child_create_suite_create)
 TEST_SUITE(child_delete_suite_create)
