@@ -548,7 +548,8 @@ static bool decrypt_symmetric(private_openssl_pkcs7_t *this, chunk_t key,
 												contentEncryptionAlgorithm;
 	encr = encryption_algorithm_from_oid(openssl_asn1_known_oid(alg->algorithm),
 										 &key_size);
-	if (alg->parameter->type != V_ASN1_OCTET_STRING)
+	if (encr == ENCR_UNDEFINED || !alg->parameter ||
+		alg->parameter->type != V_ASN1_OCTET_STRING)
 	{
 		return FALSE;
 	}
@@ -557,8 +558,8 @@ static bool decrypt_symmetric(private_openssl_pkcs7_t *this, chunk_t key,
 	crypter = lib->crypto->create_crypter(lib->crypto, encr, key_size / 8);
 	if (!crypter)
 	{
-		DBG1(DBG_LIB, "crypter %N-%d not available",
-			 encryption_algorithm_names, alg, key_size);
+		DBG1(DBG_LIB, "crypter %N-%zu not available",
+			 encryption_algorithm_names, encr, key_size);
 		return FALSE;
 	}
 	if (key.len != crypter->get_key_size(crypter))
