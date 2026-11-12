@@ -321,6 +321,7 @@ static void process_ike_add(private_ha_dispatcher_t *this, ha_message_t *message
 													 ike_sa);
 				ike_sa->inherit_pre(ike_sa, old_sa);
 				ike_sa->inherit_post(ike_sa, old_sa);
+				this->attr->migrate(this->attr, old_sa, ike_sa);
 				charon->ike_sa_manager->checkin_and_destroy(
 												charon->ike_sa_manager, old_sa);
 				old_sa = NULL;
@@ -522,7 +523,7 @@ static void process_ike_update(private_ha_dispatcher_t *this,
 					vips = ike_sa->create_virtual_ip_enumerator(ike_sa, FALSE);
 					while (vips->enumerate(vips, &vip))
 					{
-						this->attr->reserve(this->attr, pool, vip);
+						this->attr->reserve(this->attr, ike_sa, pool, vip);
 					}
 					vips->destroy(vips);
 				}

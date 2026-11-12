@@ -28,6 +28,7 @@ typedef struct ha_ike_t ha_ike_t;
 #include "ha_tunnel.h"
 #include "ha_segments.h"
 #include "ha_cache.h"
+#include "ha_attribute.h"
 
 #include <daemon.h>
 
@@ -53,9 +54,10 @@ struct ha_ike_t {
  * @param socket		socket to use for sending synchronization messages
  * @param tunnel		tunnel securing sync messages, if any
  * @param cache			message cache
+ * @param attr			HA enabled pool
  * @return				IKE listener
  */
 ha_ike_t *ha_ike_create(ha_socket_t *socket, ha_tunnel_t *tunnel,
-						ha_cache_t *cache);
+						ha_cache_t *cache, ha_attribute_t *attr);
 
 #endif /** HA_IKE_ @}*/
