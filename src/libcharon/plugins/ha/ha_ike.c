@@ -46,6 +46,11 @@ struct private_ha_ike_t {
 	 * message cache
 	 */
 	ha_cache_t *cache;
+
+	/**
+	 * HA enabled pool
+	 */
+	ha_attribute_t *attr;
 };
 
 /**
@@ -243,8 +248,35 @@ METHOD(listener_t, ike_updown, bool,
 METHOD(listener_t, ike_rekey, bool,
 	private_ha_ike_t *this, ike_sa_t *old, ike_sa_t *new)
 {
+	if (this->tunnel && this->tunnel->is_sa(this->tunnel, old))
+	{	/* do not sync SA between nodes */
+		return TRUE;
+	}
+	this->attr->migrate(this->attr, old, new);
 	ike_updown(this, old, FALSE);
 	ike_updown(this, new, TRUE);
+	return TRUE;
+}
+
+METHOD(listener_t, ike_update, bool,
+	private_ha_ike_t *this, ike_sa_t *ike_sa, host_t *local, host_t *remote)
+{
+	if (this->tunnel && this->tunnel->is_sa(this->tunnel, ike_sa))
+	{	/* do not sync SA between nodes */
+		return TRUE;
+	}
+	/* address updates are currently only effective on the active node */
+	this->attr->update(this->attr, ike_sa, remote);
+	return TRUE;
+}
+
+METHOD(listener_t, assign_vips, bool,
+	private_ha_ike_t *this, ike_sa_t *ike_sa, bool assign)
+{
+	if (assign && ike_sa->get_version(ike_sa) == IKEV1)
+	{
+		this->attr->adopt(this->attr, ike_sa);
+	}
 	return TRUE;
 }
 
@@ -265,10 +297,16 @@ METHOD(listener_t, alert, bool,
 METHOD(listener_t, ike_state_change, bool,
 	private_ha_ike_t *this, ike_sa_t *ike_sa, ike_sa_state_t new)
 {
-	/* delete any remaining cache entry if IKE_SA gets destroyed */
 	if (new == IKE_DESTROYING)
 	{
+		/* delete any remaining cache entry if IKE_SA gets destroyed */
 		this->cache->delete(this->cache, ike_sa);
+
+		/* remove leases of adopted VIPs for IKEv1 only */
+		if (ike_sa->get_version(ike_sa) == IKEV1)
+		{
+			this->attr->cleanup(this->attr, ike_sa);
+		}
 	}
 	return TRUE;
 }
@@ -403,7 +441,7 @@ METHOD(ha_ike_t, destroy, void,
  * See header
  */
 ha_ike_t *ha_ike_create(ha_socket_t *socket, ha_tunnel_t *tunnel,
-						ha_cache_t *cache)
+						ha_cache_t *cache, ha_attribute_t *attr)
 {
 	private_ha_ike_t *this;
 
@@ -414,6 +452,8 @@ ha_ike_t *ha_ike_create(ha_socket_t *socket, ha_tunnel_t *tunnel,
 				.ike_keys = _ike_keys,
 				.ike_updown = _ike_updown,
 				.ike_rekey = _ike_rekey,
+				.ike_update = _ike_update,
+				.assign_vips = _assign_vips,
 				.ike_state_change = _ike_state_change,
 				.message = _message_hook,
 			},
@@ -422,6 +462,7 @@ ha_ike_t *ha_ike_create(ha_socket_t *socket, ha_tunnel_t *tunnel,
 		.socket = socket,
 		.tunnel = tunnel,
 		.cache = cache,
+		.attr = attr,
 	);
 
 	return &this->public;

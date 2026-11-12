@@ -147,7 +147,8 @@ static bool initialize_plugin(private_ha_plugin_t *this)
 	this->attr = ha_attribute_create(this->kernel, this->segments);
 	this->dispatcher = ha_dispatcher_create(this->socket, this->segments,
 										this->cache, this->kernel, this->attr);
-	this->ike = ha_ike_create(this->socket, this->tunnel, this->cache);
+	this->ike = ha_ike_create(this->socket, this->tunnel, this->cache,
+							  this->attr);
 	this->child = ha_child_create(this->socket, this->tunnel, this->segments,
 								  this->kernel);
 	return TRUE;

@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2026 Tobias Brunner
  * Copyright (C) 2010 Martin Willi
  *
  * Copyright (C) secunet Security Networks AG
@@ -42,10 +43,53 @@ struct ha_attribute_t {
 	/**
 	 * Reserve an address for a passive IKE_SA.
 	 *
+	 * @param ike_sa		passive IKE_SA the address is reserved for
 	 * @param name			pool name to reserve address in
 	 * @param address		address to reserve
 	 */
-	void (*reserve)(ha_attribute_t *this, char *name, host_t *address);
+	void (*reserve)(ha_attribute_t *this, ike_sa_t *ike_sa, char *name,
+					host_t *address);
+
+	/**
+	 * Migrate address ownership from one IKE_SA to another.
+	 *
+	 * Used when IKE rekeying moves remote virtual IPs from an old SA to the
+	 * new one without releasing them to the pool.
+	 *
+	 * @param old			old IKE_SA
+	 * @param new			new IKE_SA that inherits the virtual IPs
+	 */
+	void (*migrate)(ha_attribute_t *this, ike_sa_t *old, ike_sa_t *new);
+
+	/**
+	 * Update the remote endpoint hash associated with leases of an SA so
+	 * make-before-break reauth can reassign the same virtual IP later.
+	 *
+	 * @param ike_sa		IKE_SA that changed
+	 * @param remote		new remote endpoint
+	 */
+	void (*update)(ha_attribute_t *this, ike_sa_t *ike_sa, host_t *remote);
+
+	/**
+	 * Let leases get adopted by the given IKE_SA.
+	 *
+	 * This is only used for IKEv1 to cover the multiple adopt/migrate VIPs
+	 * paths.
+	 *
+	 * @param ike_sa		new IKE_SA that adopted the virtual IPs
+	 */
+	void (*adopt)(ha_attribute_t *this, ike_sa_t *ike_sa);
+
+	/**
+	 * Cleanup leases owned by the given IKE_SA if another still owns the same
+	 * address or if it can't release them itself later.
+	 *
+	 * This is only used by IKEv1 to handle VIPs that were adopted without being
+	 * released.
+	 *
+	 * @param ike_sa		IKE_SA for which to release virtual IPs
+	 */
+	void (*cleanup)(ha_attribute_t *this, ike_sa_t *ike_sa);
 
 	/**
 	 * Destroy a ha_attribute_t.
