@@ -322,6 +322,13 @@ static status_t process_server_hello(private_tls_peer_t *this,
 
 	if (this->tls->get_version_max(this->tls) < TLS_1_3)
 	{
+		if (is_retry_request)
+		{
+			DBG1(DBG_TLS, "received HelloRetryRequest for %N",
+				 tls_version_names, version);
+			this->alert->add(this->alert, TLS_FATAL, TLS_ILLEGAL_PARAMETER);
+			return NEED_MORE;
+		}
 		if (chunk_equals(this->session, session))
 		{
 			suite = this->crypto->resume_session(this->crypto, session,
