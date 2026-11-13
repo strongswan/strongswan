@@ -107,6 +107,8 @@ enum auth_rule_t {
 	AUTH_RULE_RSA_STRENGTH,
 	/** required ECDSA public key strength, u_int in bits */
 	AUTH_RULE_ECDSA_STRENGTH,
+	/** required ECDSA curve, name/OID (via ecdsa_curve_to_string()) as char* */
+	AUTH_RULE_ECDSA_CURVE,
 	/** required signature scheme, signature_params_t* */
 	AUTH_RULE_SIGNATURE_SCHEME,
 	/** required signature scheme for IKE authentication, signature_params_t* */
@@ -281,5 +283,13 @@ struct auth_cfg_t {
  * Create a authentication config.
  */
 auth_cfg_t *auth_cfg_create();
+
+/**
+ * Check if the given string starts with a known public key constraint prefix.
+ *
+ * @param str			string to check
+ * @return				TRUE if prefix matched
+ */
+bool auth_cfg_is_pubkey_prefix(const char *str);
 
 #endif /** AUTH_CFG_H_ @}*/

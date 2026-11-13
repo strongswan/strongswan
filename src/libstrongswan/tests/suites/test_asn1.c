@@ -181,6 +181,8 @@ START_TEST(test_asn1_oid_from_string)
 	testdata_t test[] = {
 		{ "",  chunk_empty },
 		{ " ", chunk_empty },
+		{ ".", chunk_empty },
+		{ "0", chunk_empty },
 		{ "0.2.262.1", chunk_from_chars(
 			0x02, 0x82, 0x06, 0x01) },
 		{ "1.2.840.10045.4.1", chunk_from_chars(
