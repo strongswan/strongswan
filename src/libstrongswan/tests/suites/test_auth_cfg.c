@@ -203,6 +203,119 @@ START_TEST(test_sig_constraints_rsa_pss)
 }
 END_TEST
 
+struct {
+	char *constraints;
+	char *curves[3];
+} curve_constraints_tests[] = {
+	{ "ecdsa-p256", { "prime256v1" }},
+	{ "ecdsa-bp384", { "brainpoolP384r1" }},
+	{ "ecdsa-brainpoolP256r1", { "brainpoolP256r1" }},
+	{ "ecdsa-1.3.36.3.3.2.8.1.1.7", { "brainpoolP256r1" }},
+	{ "ecdsa-1.3.6.1.4.1.36906.15", { "1.3.6.1.4.1.36906.15" }},
+	{ "ecdsa-p256-bp384", { "prime256v1", "brainpoolP384r1" }},
+	{ "ecdsa-384-brainpoolP384r1-sha384", { "brainpoolP384r1" }},
+	{ "pubkey-p256", {}},
+	{ "rsa-p256", {}},
+};
+
+static void check_curve_constraints(auth_cfg_t *cfg, char *curves[])
+{
+	enumerator_t *enumerator;
+	auth_rule_t t;
+	char *value;
+	int i = 0;
+
+	enumerator = cfg->create_enumerator(cfg);
+	while (enumerator->enumerate(enumerator, &t, &value))
+	{
+		if (t == AUTH_RULE_ECDSA_CURVE)
+		{
+			ck_assert_str_eq(curves[i], value);
+			i++;
+		}
+	}
+	enumerator->destroy(enumerator);
+	ck_assert(!curves[i]);
+}
+
+START_TEST(test_curve_constraints)
+{
+	auth_cfg_t *cfg;
+
+	cfg = auth_cfg_create();
+	cfg->add_pubkey_constraints(cfg, curve_constraints_tests[_i].constraints, TRUE);
+	check_curve_constraints(cfg, curve_constraints_tests[_i].curves);
+	cfg->destroy(cfg);
+}
+END_TEST
+
+struct {
+	bool compliant;
+	char *constraints;
+	struct {
+		auth_rule_t type;
+		void *value;
+	} rules[5];
+} complies_curves_tests[] = {
+	{ TRUE, "ecdsa-p256", {}},
+	{ TRUE, "rsa-2048-ecdsa-p256", {}},
+	{ FALSE, "ecdsa-p256", {
+		{ AUTH_RULE_ECDSA_STRENGTH, (void*)(uintptr_t)256 }, }},
+	{ TRUE, "ecdsa-256", {
+		{ AUTH_RULE_ECDSA_STRENGTH, (void*)(uintptr_t)256 }, }},
+	{ TRUE, "ecdsa-256", {
+		{ AUTH_RULE_ECDSA_STRENGTH, (void*)(uintptr_t)256 },
+		{ AUTH_RULE_ECDSA_CURVE, "prime256v1" }, }},
+	{ TRUE, "ecdsa-p256", {
+		{ AUTH_RULE_ECDSA_STRENGTH, (void*)(uintptr_t)256 },
+		{ AUTH_RULE_ECDSA_CURVE, "prime256v1" }, }},
+	{ TRUE, "ecdsa-256-p256", {
+		{ AUTH_RULE_ECDSA_STRENGTH, (void*)(uintptr_t)256 },
+		{ AUTH_RULE_ECDSA_CURVE, "prime256v1" }, }},
+	{ FALSE, "ecdsa-p384", {
+		{ AUTH_RULE_ECDSA_STRENGTH, (void*)(uintptr_t)256 },
+		{ AUTH_RULE_ECDSA_CURVE, "prime256v1" }, }},
+	{ TRUE, "ecdsa-p256-p384", {
+		{ AUTH_RULE_ECDSA_STRENGTH, (void*)(uintptr_t)256 },
+		{ AUTH_RULE_ECDSA_CURVE, "prime256v1" }, }},
+	{ TRUE, "ecdsa-p256-p384", {
+		{ AUTH_RULE_ECDSA_STRENGTH, (void*)(uintptr_t)384 },
+		{ AUTH_RULE_ECDSA_CURVE, "secp384r1" }, }},
+	{ TRUE, "ecdsa-p256-p384", {
+		{ AUTH_RULE_ECDSA_STRENGTH, (void*)(uintptr_t)384 },
+		{ AUTH_RULE_ECDSA_CURVE, "secp384r1" },
+		{ AUTH_RULE_ECDSA_STRENGTH, (void*)(uintptr_t)256 },
+		{ AUTH_RULE_ECDSA_CURVE, "prime256v1" }, }},
+};
+
+START_TEST(test_complies_curves)
+{
+	auth_cfg_t *constraints, *cfg;
+	int i;
+
+	constraints = auth_cfg_create();
+	constraints->add_pubkey_constraints(constraints,
+										complies_curves_tests[_i].constraints,
+										TRUE);
+
+	cfg = auth_cfg_create();
+	for (i = 0; i < countof(complies_curves_tests[_i].rules); i++)
+	{
+		if (!complies_curves_tests[_i].rules[i].value)
+		{
+			break;
+		}
+		cfg->add(cfg, complies_curves_tests[_i].rules[i].type,
+				 auth_cfg_clone_value(complies_curves_tests[_i].rules[i].type,
+									  complies_curves_tests[_i].rules[i].value));
+	}
+	ck_assert(complies_curves_tests[_i].compliant ==
+				cfg->complies(cfg, constraints, TRUE));
+	cfg->destroy(cfg);
+	constraints->destroy(constraints);
+}
+END_TEST
+
 Suite *auth_cfg_suite_create()
 {
 	Suite *s;
@@ -218,6 +331,14 @@ Suite *auth_cfg_suite_create()
 	tc = tcase_create("add_pubkey_constraints parameters");
 	tcase_add_loop_test(tc, test_sig_constraints_params, 0, countof(sig_constraints_params_tests));
 	tcase_add_loop_test(tc, test_sig_constraints_rsa_pss, 0, countof(sig_constraints_rsa_pss_tests));
+	suite_add_tcase(s, tc);
+
+	tc = tcase_create("add_pubkey_constraints curves");
+	tcase_add_loop_test(tc, test_curve_constraints, 0, countof(curve_constraints_tests));
+	suite_add_tcase(s, tc);
+
+	tc = tcase_create("complies");
+	tcase_add_loop_test(tc, test_complies_curves, 0, countof(complies_curves_tests));
 	suite_add_tcase(s, tc);
 
 	return s;
