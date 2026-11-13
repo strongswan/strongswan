@@ -81,7 +81,7 @@ Minimum number of participating RSA key shares.
 Below is a list of the known elliptic curves that can be used for ECDSA
 keys. The names/aliases are matched case-insensitive.
 .TP
-.B "p256, p-256, secp256r1"
+.B "p256, p-256, secp256r1, prime256v1"
 256-bit NIST curve P-256 (1.2.840.10045.3.1.7)
 .TP
 .B "p384, p-384, secp384r1"

@@ -18,57 +18,6 @@
 
 #include "pki.h"
 
-#include <asn1/asn1.h>
-#include <asn1/oid.h>
-
-/**
- * Known elliptic curves.
- */
-static const struct {
-	char *name;
-	int oid;
-} known_curves[] = {
-	{ "p256", OID_PRIME256V1, },
-	{ "p384", OID_SECP384R1, },
-	{ "p521", OID_SECP521R1, },
-	{ "p-256", OID_PRIME256V1, },
-	{ "p-384", OID_SECP384R1, },
-	{ "p-521", OID_SECP521R1, },
-	{ "secp256r1", OID_PRIME256V1, },
-	{ "secp384r1", OID_SECP384R1, },
-	{ "secp521r1", OID_SECP521R1, },
-	{ "bp256", OID_BRAINPOOLP256R1, },
-	{ "bp384", OID_BRAINPOOLP384R1, },
-	{ "bp512", OID_BRAINPOOLP512R1, },
-	{ "brainpoolP256r1", OID_BRAINPOOLP256R1, },
-	{ "brainpoolP384r1", OID_BRAINPOOLP384R1, },
-	{ "brainpoolP512r1", OID_BRAINPOOLP512R1, },
-};
-
-/**
- * Try to find an elliptic curve with the given name or parse it as an OID.
- */
-static bool get_curve(char *name, chunk_t *curve)
-{
-	int i;
-
-	if (strchr(name, '.'))
-	{
-		*curve = asn1_wrap(ASN1_OID, "m", asn1_oid_from_string(name));
-		return TRUE;
-	}
-
-	for (i = 0; i < countof(known_curves); i++)
-	{
-		if (strcaseeq(name, known_curves[i].name))
-		{
-			*curve = asn1_build_known_oid(known_curves[i].oid);
-			return TRUE;
-		}
-	}
-	return FALSE;
-}
-
 /**
  * Generate a private key
  */
@@ -124,7 +73,8 @@ static int gen()
 				continue;
 			case 'c':
 				chunk_free(&curve);
-				if (!get_curve(arg, &curve))
+				curve = ecdsa_curve_from_string(arg);
+				if (!curve.len)
 				{
 					return command_usage("invalid elliptic curve");
 				}
