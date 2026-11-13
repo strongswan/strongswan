@@ -521,10 +521,7 @@ static auth_cfg_t *build_auth_cfg(private_stroke_config_t *this,
 	}
 
 	/* authentication method (class, actually) */
-	if (strpfx(auth, "ike:") ||
-		strpfx(auth, "pubkey") ||
-		strpfx(auth, "rsa") ||
-		strpfx(auth, "ecdsa"))
+	if (auth_cfg_is_pubkey_prefix(auth))
 	{
 		cfg->add(cfg, AUTH_RULE_AUTH_CLASS, AUTH_CLASS_PUBKEY);
 		build_crl_policy(cfg, local, msg->add_conn.crl_policy);

@@ -709,6 +709,25 @@ static certificate_t *get_issuer_cert(private_credential_manager_t *this,
 }
 
 /**
+ * Get the ECDSA curve from the given public key, add it to auth
+ */
+static void get_ecdsa_curve(public_key_t *key, auth_cfg_t *auth)
+{
+	chunk_t curve;
+	char *name;
+
+	if (key->get_encoding(key, PUBKEY_ECDSA_CURVE_DER, &curve))
+	{
+		name = ecdsa_curve_to_string(curve);
+		if (name)
+		{
+			auth->add(auth, AUTH_RULE_ECDSA_CURVE, name);
+		}
+		chunk_free(&curve);
+	}
+}
+
+/**
  * Get the strength of certificate, add it to auth
  */
 static void get_key_strength(certificate_t *cert, auth_cfg_t *auth)
@@ -731,6 +750,7 @@ static void get_key_strength(certificate_t *cert, auth_cfg_t *auth)
 				break;
 			case KEY_ECDSA:
 				auth->add(auth, AUTH_RULE_ECDSA_STRENGTH, strength);
+				get_ecdsa_curve(key, auth);
 				break;
 			default:
 				break;
