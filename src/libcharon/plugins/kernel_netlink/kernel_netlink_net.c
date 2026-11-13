@@ -427,6 +427,12 @@ struct private_kernel_netlink_net_t {
 	bool rta_mark;
 
 	/**
+	 * whether we can query the routing table with a route lookup (always the
+	 * case for IPv6)
+	 */
+	bool rtm_lookup_table;
+
+	/**
 	 * the mark excluded from the routing rule used for virtual IPs
 	 */
 	mark_t routing_mark;
@@ -1803,11 +1809,20 @@ static rt_entry_t *parse_route(struct nlmsghdr *hdr, rt_entry_t *route)
 }
 
 /**
- * Get a route: If "nexthop", the nexthop is returned. source addr otherwise.
+ * Forward declaration for recursive calls.
  */
 static host_t *get_route(private_kernel_netlink_net_t *this, host_t *dest,
 						 int prefix, bool nexthop, host_t *candidate,
-						 char **iface, u_int recursion)
+						 char **iface, u_int recursion);
+
+/**
+ * Do the actual route/nexthop lookup. Either dumping all routes or letting
+ * the kernel do a single-route lookup.
+ */
+static host_t *get_route_impl(private_kernel_netlink_net_t *this, host_t *dest,
+							  int prefix, bool match_net, bool nexthop,
+							  host_t *candidate, char **iface, u_int recursion,
+							  bool dump)
 {
 	netlink_buf_t request;
 	struct nlmsghdr *hdr, *out, *current;
@@ -1818,17 +1833,7 @@ static host_t *get_route(private_kernel_netlink_net_t *this, host_t *dest,
 	rt_entry_t *route = NULL, *best = NULL;
 	enumerator_t *enumerator;
 	host_t *addr = NULL;
-	bool match_net;
 	int family;
-
-	if (recursion > MAX_ROUTE_RECURSION)
-	{
-		return NULL;
-	}
-	chunk = dest->get_address(dest);
-	len = chunk.len * 8;
-	prefix = prefix < 0 ? len : min(prefix, len);
-	match_net = prefix != len;
 
 	memset(&request, 0, sizeof(request));
 
@@ -1840,34 +1845,29 @@ static host_t *get_route(private_kernel_netlink_net_t *this, host_t *dest,
 
 	msg = NLMSG_DATA(hdr);
 	msg->rtm_family = family;
-	if (!match_net && this->rta_mark && this->routing_mark.value)
+	if (dump)
 	{
-		/* if our routing rule excludes packets with a certain mark we can
-		 * get the preferred route without having to dump all routes */
-		chunk = chunk_from_thing(this->routing_mark.value);
-		netlink_add_attribute(hdr, RTA_MARK, chunk, sizeof(request));
+		hdr->nlmsg_flags |= NLM_F_DUMP;
 	}
-	else if (family == AF_INET || this->rta_prefsrc_for_ipv6 ||
-			 this->routing_table || match_net)
-	{	/* kernels prior to 3.0 do not support RTA_PREFSRC for IPv6 routes.
-		 * as we want to ignore routes with virtual IPs we cannot use DUMP
-		 * if these routes are not installed in a separate table */
-		if (this->install_routes)
-		{
-			hdr->nlmsg_flags |= NLM_F_DUMP;
+	else
+	{
+		if (this->rta_mark && this->routing_mark.value)
+		{	/* our routing rule excludes packets with a certain mark */
+			chunk = chunk_from_thing(this->routing_mark.value);
+			netlink_add_attribute(hdr, RTA_MARK, chunk, sizeof(request));
 		}
+#ifdef RTM_F_LOOKUP_TABLE
+		if (family == AF_INET && this->rtm_lookup_table)
+		{	/* make sure we get table information (always the case for IPv6) */
+			msg->rtm_flags |= RTM_F_LOOKUP_TABLE;
+		}
+#endif
 	}
 	if (candidate)
 	{
 		chunk = candidate->get_address(candidate);
-		if (hdr->nlmsg_flags & NLM_F_DUMP)
-		{
-			netlink_add_attribute(hdr, RTA_PREFSRC, chunk, sizeof(request));
-		}
-		else
-		{
-			netlink_add_attribute(hdr, RTA_SRC, chunk, sizeof(request));
-		}
+		netlink_add_attribute(hdr, dump ? RTA_PREFSRC : RTA_SRC, chunk,
+							  sizeof(request));
 	}
 	/* we use this below to match against the routes */
 	chunk = dest->get_address(dest);
@@ -2082,6 +2082,76 @@ static host_t *get_route(private_kernel_netlink_net_t *this, host_t *dest,
 	this->lock->unlock(this->lock);
 	routes->destroy_function(routes, (void*)rt_entry_destroy);
 	free(out);
+	return addr;
+}
+
+/**
+ * Determine whether we get a definite result from a single-route lookup.
+ */
+static bool no_dump_required(private_kernel_netlink_net_t *this)
+{
+	if (!this->install_routes)
+	{	/* no routes, no interference */
+		return TRUE;
+	}
+	if (this->rta_mark && this->routing_mark.value)
+	{	/* the inverted routing rule excludes our table automatically */
+		return TRUE;
+	}
+	return FALSE;
+}
+
+/**
+ * Determine whether we can attempt a single-route lookup (i.e. we can safely
+ * dismiss an unsuitable route).
+ */
+static bool try_without_dump(private_kernel_netlink_net_t *this, int family)
+{
+	if (no_dump_required(this))
+	{
+		return TRUE;
+	}
+	if (family == AF_INET6 || this->rtm_lookup_table)
+	{	/* we can check the routing table a route came from to avoid ours */
+		return TRUE;
+	}
+	/* without table information, a single-route lookup can only be used if
+	 * we don't exclude tables or are not using a separate table anyway */
+	return !this->rt_exclude->get_count(this->rt_exclude) &&
+		   !this->routing_table;
+}
+
+/**
+ * Get a route: If "nexthop", the nexthop is returned. source addr otherwise.
+ */
+static host_t *get_route(private_kernel_netlink_net_t *this, host_t *dest,
+						 int prefix, bool nexthop, host_t *candidate,
+						 char **iface, u_int recursion)
+{
+	host_t *addr = NULL;
+	chunk_t chunk;
+	size_t len;
+	bool match_net;
+
+	if (recursion > MAX_ROUTE_RECURSION)
+	{
+		return NULL;
+	}
+	chunk = dest->get_address(dest);
+	len = chunk.len * 8;
+	prefix = prefix < 0 ? len : min(prefix, len);
+	match_net = prefix != len;
+
+	if (!match_net && try_without_dump(this, dest->get_family(dest)))
+	{
+		addr = get_route_impl(this, dest, prefix, match_net, nexthop, candidate,
+							  iface, recursion, FALSE);
+	}
+	if (!addr && (match_net || !no_dump_required(this)))
+	{
+		addr = get_route_impl(this, dest, prefix, match_net, nexthop, candidate,
+							  iface, recursion, TRUE);
+	}
 
 	if (addr)
 	{
@@ -2994,6 +3064,9 @@ static void check_kernel_features(private_kernel_netlink_net_t *this)
 				/* only 3.x+ uses two part version numbers */
 				this->rta_prefsrc_for_ipv6 = TRUE;
 				this->rta_mark = TRUE;
+#ifdef RTM_F_LOOKUP_TABLE
+				this->rtm_lookup_table = a > 4 || (a == 4 && b >= 4);
+#endif
 				break;
 			default:
 				break;
