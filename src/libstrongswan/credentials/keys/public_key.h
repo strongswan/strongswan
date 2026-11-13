@@ -318,6 +318,15 @@ signature_scheme_t signature_scheme_from_oid(int oid);
 chunk_t ecdsa_curve_from_string(char *str);
 
 /**
+ * Convert the given DER-encoded OID to a string (name if known or dotted
+ * notation).
+ *
+ * @param curve			DER-encoded OID
+ * @return				allocated name/OID string, NULL on error
+ */
+char *ecdsa_curve_to_string(chunk_t curve);
+
+/**
  * Conversion of signature scheme to ASN.1 signature OID.
  *
  * @param scheme		signature scheme
