@@ -497,6 +497,26 @@ chunk_t ecdsa_curve_from_string(char *str)
 /*
  * Described in header
  */
+char *ecdsa_curve_to_string(chunk_t curve)
+{
+	chunk_t oid = curve;
+	int known;
+
+	if (asn1_unwrap(&oid, &oid) != ASN1_OID)
+	{
+		oid = curve;
+	}
+	known = asn1_known_oid(oid);
+	if (known != OID_UNKNOWN)
+	{
+		return strdup(oid_names[known].name);
+	}
+	return asn1_oid_to_string(oid);
+}
+
+/*
+ * Described in header
+ */
 chunk_t ecdsa_curve_from_spki(chunk_t spki)
 {
 	chunk_t inner, params;
