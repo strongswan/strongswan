@@ -610,14 +610,16 @@ void certificate_printer_print_pubkey(FILE *f, char *prefix, public_key_t *key,
 	if (type == KEY_ECDSA &&
 		key->get_encoding(key, PUBKEY_ECDSA_CURVE_DER, &chunk))
 	{
-		chunk_t curve = chunk;
-		if (asn1_unwrap(&curve, &curve) != ASN1_OID)
+		char *name = ecdsa_curve_to_string(chunk);
+		if (name)
 		{
-			curve = chunk;
+			fprintf(f, "  curve:     %s\n", name);
+			free(name);
 		}
-		fprintf(f, "  curve:     ");
-		print_oid(f, curve);
-		fprintf(f, "\n");
+		else
+		{
+			fprintf(f, "  curve:     OID:%#B\n", &chunk);
+		}
 		chunk_free(&chunk);
 	}
 
