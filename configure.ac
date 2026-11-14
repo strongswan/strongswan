@@ -239,6 +239,7 @@ ARG_ENABL_SET([osx-attr],       [enable OS X SystemConfiguration attribute handl
 ARG_ENABL_SET([p-cscf],         [enable plugin to request P-CSCF server addresses from an ePDG.])
 ARG_DISBL_SET([resolve],        [disable resolve DNS handler plugin.])
 ARG_ENABL_SET([unity],          [enables Cisco Unity extension plugin.])
+ARG_ENABL_SET([cfg-subnet],     [enable cfg payload subnet attribute plugin.])
 # TNC modules/plugins
 ARG_ENABL_SET([imc-test],       [enable IMC test module.])
 ARG_ENABL_SET([imv-test],       [enable IMV test module.])
@@ -1577,6 +1578,7 @@ ADD_PLUGIN([coupling],             [c charon])
 ADD_PLUGIN([radattr],              [c charon])
 ADD_PLUGIN([addrblock],            [c charon])
 ADD_PLUGIN([unity],                [c charon])
+ADD_PLUGIN([cfg-subnet],           [c charon])
 ADD_PLUGIN([counters],             [c charon])
 
 AC_SUBST(charon_plugins)
@@ -1735,6 +1737,7 @@ AM_CONDITIONAL(USE_FORECAST, test x$forecast = xtrue)
 AM_CONDITIONAL(USE_FARP, test x$farp = xtrue)
 AM_CONDITIONAL(USE_ADDRBLOCK, test x$addrblock = xtrue)
 AM_CONDITIONAL(USE_UNITY, test x$unity = xtrue)
+AM_CONDITIONAL(USE_CFG_SUBNET, test x$cfg_subnet = xtrue)
 AM_CONDITIONAL(USE_RESOLVE, test x$resolve = xtrue)
 AM_CONDITIONAL(USE_ATTR, test x$attr = xtrue)
 AM_CONDITIONAL(USE_ATTR_SQL, test x$attr_sql = xtrue)
@@ -2007,6 +2010,7 @@ AC_CONFIG_FILES([
 	src/libcharon/plugins/ipseckey/Makefile
 	src/libcharon/plugins/addrblock/Makefile
 	src/libcharon/plugins/unity/Makefile
+	src/libcharon/plugins/cfg_subnet/Makefile
 	src/libcharon/plugins/ha/Makefile
 	src/libcharon/plugins/kernel_netlink/Makefile
 	src/libcharon/plugins/kernel_pfkey/Makefile
