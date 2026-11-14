@@ -978,7 +978,7 @@ struct ike_sa_t {
 	status_t (*redirect)(ike_sa_t *this, identification_t *gateway);
 
 	/**
-	 * Handle a redirect request.
+	 * Handle a redirect request on the original initiator.
 	 *
 	 * The behavior is different depending on the state of the IKE_SA.
 	 *
