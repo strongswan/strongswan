@@ -1,0 +1,6 @@
+charon.plugins.cfg-subnet.request_subnets = no
+	Request the INTERNAL_IP4_SUBNET and INTERNAL_IP6_SUBNET attributes via
+	the IKEv2 configuration payload and, if any are received, narrow the
+	remote traffic selector of CHILD_SAs to the received subnets instead of
+	the configured remote_ts. Since this changes which routes get installed,
+	it is disabled by default.
