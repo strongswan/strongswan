@@ -136,7 +136,14 @@ METHOD(payload_t, verify, status_t,
 		{
 			if (this->data.len != 4)
 			{
-				DBG1(DBG_ENC, "EAP Success/Failure has data");
+				chunk_t data = chunk_skip(this->data, 4);
+				u_int len = data.len;
+
+				/* log the code and the (truncated) data as some peers use
+				 * this for proprietary extensions */
+				data.len = min(data.len, 16);
+				DBG1(DBG_ENC, "%N contains %u byte%s of unexpected data: %#B",
+					 eap_code_names, code, len, len == 1 ? "" : "s", &data);
 				return FAILED;
 			}
 			break;
