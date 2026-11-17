@@ -1350,7 +1350,7 @@ static bool parse_cert(auth_data_t *auth, auth_rule_t rule, chunk_t v)
 	else
 	{
 		cert = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509,
-								  BUILD_BLOB, v, BUILD_END);
+								  builder_part_for_blob(v), v, BUILD_END);
 	}
 	if (cert)
 	{
@@ -1403,7 +1403,8 @@ static bool parse_and_add_pubkeys(auth_data_t *auth, identification_t *id)
 	while (array_remove(auth->pubkeys, ARRAY_HEAD, &pubkey))
 	{
 		cert = lib->creds->create(lib->creds, CRED_CERTIFICATE,
-								  CERT_TRUSTED_PUBKEY, BUILD_BLOB, pubkey,
+								  CERT_TRUSTED_PUBKEY,
+								  builder_part_for_blob(pubkey), pubkey,
 								  id_usable ? BUILD_SUBJECT : BUILD_END,
 								  id, BUILD_END);
 		if (!cert || !add_cert(auth, AUTH_RULE_SUBJECT_CERT, cert))

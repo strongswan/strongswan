@@ -17,6 +17,8 @@
 
 #include "builder.h"
 
+#include <asn1/asn1.h>
+
 ENUM(builder_part_names, BUILD_FROM_FILE, BUILD_END,
 	"BUILD_FROM_FILE",
 	"BUILD_AGENT_SOCKET",
@@ -85,3 +87,11 @@ ENUM(builder_part_names, BUILD_FROM_FILE, BUILD_END,
 	"BUILD_OCSP_RESPONSES",
 	"BUILD_END",
 );
+
+/*
+ * Described in header
+ */
+builder_part_t builder_part_for_blob(chunk_t blob)
+{
+	return is_asn1(blob) ? BUILD_BLOB_ASN1_DER : BUILD_BLOB;
+}

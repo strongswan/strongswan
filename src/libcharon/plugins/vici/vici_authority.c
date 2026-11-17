@@ -288,7 +288,7 @@ CALLBACK(parse_cacert, bool,
 	x509_t *x509;
 
 	cert = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509,
-										  BUILD_BLOB_PEM, v, BUILD_END);
+							  builder_part_for_blob(v), v, BUILD_END);
 	if (!cert)
 	{
 		return FALSE;
