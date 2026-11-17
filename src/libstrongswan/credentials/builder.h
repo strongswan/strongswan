@@ -182,4 +182,13 @@ enum builder_part_t {
  */
 extern enum_name_t *builder_part_names;
 
+/**
+ * Determine the builder part for a blob to load a certificate or key based
+ * on its guessed encoding.
+ *
+ * @param blob		blob to check
+ * @return			builder part (BUILD_BLOB_ASN1_DER or BUILD_BLOB)
+ */
+builder_part_t builder_part_for_blob(chunk_t blob);
+
 #endif /** BUILDER_H_ @}*/

@@ -119,6 +119,7 @@ CALLBACK(load_cert, vici_message_t*,
 	certificate_t *cert;
 	certificate_type_t type;
 	x509_flag_t ext_flag, flag = X509_NONE;
+	builder_part_t part;
 	x509_t *x509;
 	chunk_t data;
 	char *str;
@@ -150,20 +151,27 @@ CALLBACK(load_cert, vici_message_t*,
 		return vici_create_reply("certificate data missing");
 	}
 
+	part = builder_part_for_blob(data);
+	if (type == CERT_ANY && part == BUILD_BLOB_ASN1_DER)
+	{	/* CERT_ANY is really only supported for PEM-encoded blobs (X.509 vs.
+		 * PGP), so we default to X.509 for DER-encoded blobs */
+		type = CERT_X509;
+	}
+
 	/* do not set CA flag externally */
 	ext_flag = (flag & X509_CA) ? X509_NONE : flag;
 
-	cert = lib->creds->create(lib->creds, CRED_CERTIFICATE, type,
-							  BUILD_BLOB, data,
-							  BUILD_X509_FLAG, ext_flag,
-							  BUILD_END);
+	cert = lib->creds->create(lib->creds, CRED_CERTIFICATE, type, part, data,
+							  ext_flag ? BUILD_X509_FLAG : BUILD_END,
+							  ext_flag, BUILD_END);
 	if (!cert)
 	{
 		return vici_create_reply("parsing %N certificate failed",
-							certificate_type_names, type);
+								 certificate_type_names, type);
 	}
 	DBG1(DBG_CFG, "loaded certificate '%Y'", cert->get_subject(cert));
 
+	type = cert->get_type(cert);
 	if (type == CERT_X509)
 	{
 		x509 = (x509_t*)cert;
@@ -217,7 +225,7 @@ CALLBACK(load_key, vici_message_t*,
 		return vici_create_reply("key data missing");
 	}
 	key = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, type,
-							 BUILD_BLOB_PEM, data, BUILD_END);
+							 builder_part_for_blob(data), data, BUILD_END);
 	if (!key)
 	{
 		return vici_create_reply("parsing %N private key failed",
