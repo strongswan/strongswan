@@ -310,6 +310,14 @@ key_type_t key_type_from_oid(int oid);
 signature_scheme_t signature_scheme_from_oid(int oid);
 
 /**
+ * Extract a DER-encoded curve OID from a subjectPublicKeyInfo structure.
+ *
+ * @param spki			subjectPublicKeyInfo structure
+ * @return				DER-encoded OID (allocated), chunk_empty on error
+ */
+chunk_t ecdsa_curve_from_spki(chunk_t spki);
+
+/**
  * Conversion of signature scheme to ASN.1 signature OID.
  *
  * @param scheme		signature scheme
