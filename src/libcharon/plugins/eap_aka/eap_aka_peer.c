@@ -453,7 +453,7 @@ static status_t process_reauthentication(private_eap_aka_peer_t *this,
 		{
 			identification_t *reauth;
 
-			reauth = identification_create_from_data(data);
+			reauth = identification_create_from_data(id);
 			this->mgr->card_set_reauth(this->mgr, this->permanent, reauth,
 									   this->mk, this->counter);
 			reauth->destroy(reauth);
