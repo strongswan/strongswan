@@ -194,6 +194,13 @@ bool imv_attestation_process(pa_tnc_attr_t *attr, imv_msg_t *out_msg,
 			public->destroy(public);
 			chunk_free(&keyid_hex);
 
+			if (!trusted)
+			{
+				attestation_state->set_measurement_error(attestation_state,
+									IMV_ATTESTATION_ERROR_NO_TRUSTED_AIK);
+				break;
+			}
+
 			if (aik->get_type(aik) == CERT_X509)
 			{
 
@@ -210,7 +217,7 @@ bool imv_attestation_process(pa_tnc_attr_t *attr, imv_msg_t *out_msg,
 				e->destroy(e);
 				DBG1(DBG_IMV, "AIK certificate is %strusted",
 							   trusted_chain ? "" : "not ");
-				if (!trusted || !trusted_chain)
+				if (!trusted_chain)
 				{
 					attestation_state->set_measurement_error(attestation_state,
 										IMV_ATTESTATION_ERROR_NO_TRUSTED_AIK);
