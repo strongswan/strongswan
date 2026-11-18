@@ -446,6 +446,27 @@ enumerator_t *signature_schemes_for_key(key_type_t type, int size)
 }
 
 /*
+ * Described in header
+ */
+chunk_t ecdsa_curve_from_spki(chunk_t spki)
+{
+	chunk_t inner, params;
+
+	if (asn1_unwrap(&spki, &spki) == ASN1_SEQUENCE &&
+		asn1_unwrap(&spki, &spki) == ASN1_SEQUENCE &&
+		asn1_unwrap(&spki, &inner) == ASN1_OID &&
+		asn1_known_oid(inner) == OID_EC_PUBLICKEY)
+	{
+		params = spki;
+		if (asn1_unwrap(&spki, &inner) == ASN1_OID)
+		{
+			return chunk_clone(params);
+		}
+	}
+	return chunk_empty;
+}
+
+/*
  * Defined in header.
  */
 key_type_t key_type_from_signature_scheme(signature_scheme_t scheme)
