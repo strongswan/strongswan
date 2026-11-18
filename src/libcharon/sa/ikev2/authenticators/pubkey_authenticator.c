@@ -706,6 +706,7 @@ METHOD(authenticator_t, process, status_t,
 			auth->add(auth, AUTH_RULE_AUTH_CLASS, AUTH_CLASS_PUBKEY);
 			auth->add(auth, AUTH_RULE_IKE_SIGNATURE_SCHEME,
 					  signature_params_clone(params));
+			auth_cfg_add_ecdsa_curve(auth, AUTH_RULE_IKE_ECDSA_CURVE, public);
 			if (!online)
 			{
 				auth->add(auth, AUTH_RULE_CERT_VALIDATION_SUSPENDED, TRUE);

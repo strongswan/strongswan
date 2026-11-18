@@ -455,10 +455,11 @@ charon.signature_authentication = yes
 charon.signature_authentication_constraints = yes
 	Whether to enable constraints against IKEv2 signature schemes.
 
-	If enabled, signature schemes configured in _rightauth_, in addition to
-	getting used as constraints against signature schemes employed in the
-	certificate chain, are also used as constraints against the signature scheme
-	used by peers during IKEv2.
+	If enabled, signature schemes configured in the local/remote _auth_ setting,
+	in addition to getting used as constraints against signature schemes
+	employed in the certificate chain, are also used as constraints against the
+	signature scheme used by peers during IKEv2. The same applies for ECDSA
+	curve constraints.
 
 charon.spi_label = 0x0000000000000000
 	Value mixed into the local IKE SPIs after applying _spi_mask_.

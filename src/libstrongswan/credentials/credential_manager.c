@@ -709,25 +709,6 @@ static certificate_t *get_issuer_cert(private_credential_manager_t *this,
 }
 
 /**
- * Get the ECDSA curve from the given public key, add it to auth
- */
-static void get_ecdsa_curve(public_key_t *key, auth_cfg_t *auth)
-{
-	chunk_t curve;
-	char *name;
-
-	if (key->get_encoding(key, PUBKEY_ECDSA_CURVE_DER, &curve))
-	{
-		name = ecdsa_curve_to_string(curve);
-		if (name)
-		{
-			auth->add(auth, AUTH_RULE_ECDSA_CURVE, name);
-		}
-		chunk_free(&curve);
-	}
-}
-
-/**
  * Get the strength of certificate, add it to auth
  */
 static void get_key_strength(certificate_t *cert, auth_cfg_t *auth)
@@ -750,7 +731,7 @@ static void get_key_strength(certificate_t *cert, auth_cfg_t *auth)
 				break;
 			case KEY_ECDSA:
 				auth->add(auth, AUTH_RULE_ECDSA_STRENGTH, strength);
-				get_ecdsa_curve(key, auth);
+				auth_cfg_add_ecdsa_curve(auth, AUTH_RULE_ECDSA_CURVE, key);
 				break;
 			default:
 				break;
@@ -1209,10 +1190,52 @@ static auth_cfg_t *build_trustchain(private_credential_manager_t *this,
 }
 
 /**
+ * Make sure the public key matches any configured ECDSA curve constraints.
+ *
+ * If any constraints are found, only ECDSA keys will be allowed.
+ */
+static bool match_ecdsa_curve(auth_cfg_t *auth, public_key_t *public)
+{
+	enumerator_t *enumerator;
+	auth_rule_t rule;
+	chunk_t curve;
+	char *allowed, *name = NULL;
+	bool constrained = FALSE, matched = FALSE;
+
+	if (!auth)
+	{
+		return TRUE;
+	}
+	enumerator = auth->create_enumerator(auth);
+	while (enumerator->enumerate(enumerator, &rule, &allowed))
+	{
+		if (rule == AUTH_RULE_IKE_ECDSA_CURVE)
+		{
+			constrained = TRUE;
+			if (!name && public->get_type(public) == KEY_ECDSA &&
+				public->get_encoding(public, PUBKEY_ECDSA_CURVE_DER, &curve))
+			{
+				name = ecdsa_curve_to_string(curve);
+				chunk_free(&curve);
+			}
+			if (name && streq(name, allowed))
+			{
+				matched = TRUE;
+				break;
+			}
+		}
+	}
+	enumerator->destroy(enumerator);
+	free(name);
+	return !constrained || matched;
+}
+
+/**
  * find a private key of a given certificate
  */
 static private_key_t *get_private_by_cert(private_credential_manager_t *this,
-										  certificate_t *cert, key_type_t type)
+										  auth_cfg_t *auth, certificate_t *cert,
+										  key_type_t type)
 {
 	private_key_t *private = NULL;
 	identification_t *keyid;
@@ -1222,7 +1245,8 @@ static private_key_t *get_private_by_cert(private_credential_manager_t *this,
 	public = cert->get_public_key(cert);
 	if (public)
 	{
-		if (public->get_fingerprint(public, KEYID_PUBKEY_SHA1, &chunk))
+		if (match_ecdsa_curve(auth, public) &&
+			public->get_fingerprint(public, KEYID_PUBKEY_SHA1, &chunk))
 		{
 			keyid = identification_create_from_encoding(ID_KEY_ID, chunk);
 			private = get_private_by_keyid(this, type, keyid);
@@ -1288,7 +1312,7 @@ METHOD(credential_manager_t, get_private, private_key_t*,
 		{
 			if (rule == AUTH_RULE_SUBJECT_CERT)
 			{
-				private = get_private_by_cert(this, cert, type);
+				private = get_private_by_cert(this, NULL, cert, type);
 				if (private)
 				{
 					trustchain = build_trustchain(this, cert, auth, &found_anchor);
@@ -1324,7 +1348,7 @@ METHOD(credential_manager_t, get_private, private_key_t*,
 			enumerator = create_cert_enumerator(this, CERT_ANY, type, id, FALSE);
 			while (enumerator->enumerate(enumerator, &cert))
 			{
-				private = get_private_by_cert(this, cert, type);
+				private = get_private_by_cert(this, auth, cert, type);
 				if (private)
 				{
 					trustchain = build_trustchain(this, cert, auth, &found_anchor);
@@ -1373,7 +1397,7 @@ METHOD(credential_manager_t, get_private, private_key_t*,
 		enumerator = create_cert_enumerator(this, CERT_ANY, type, id, FALSE);
 		while (enumerator->enumerate(enumerator, &cert))
 		{
-			private = get_private_by_cert(this, cert, type);
+			private = get_private_by_cert(this, NULL, cert, type);
 			if (private)
 			{
 				break;
