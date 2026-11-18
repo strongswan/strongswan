@@ -328,30 +328,47 @@ static bool encode_ecdsa(private_pkcs11_public_key_t *this,
 		{CKA_EC_PARAMS, NULL, 0},
 		{CKA_EC_POINT, NULL, 0},
 	};
+	CK_ULONG count = countof(attr);
 
-	if (type != PUBKEY_SPKI_ASN1_DER && type != PUBKEY_PEM)
+	switch (type)
 	{
-		return FALSE;
+		case PUBKEY_SPKI_ASN1_DER:
+		case PUBKEY_PEM:
+			break;
+		case PUBKEY_ECDSA_CURVE_DER:
+			count--;
+			break;
+		default:
+			return FALSE;
 	}
 
 	enumerator = this->lib->create_object_attr_enumerator(this->lib,
-							this->session, this->object, attr, countof(attr));
+							this->session, this->object, attr, count);
 	if (enumerator && enumerator->enumerate(enumerator, NULL) &&
-		attr[0].ulValueLen > 0 && attr[1].ulValueLen > 0)
+		attr[0].ulValueLen > 0)
 	{
 		chunk_t ecparams, ecpoint;
+
 		ecparams = chunk_create(attr[0].pValue, attr[0].ulValueLen);
-		ecpoint = chunk_create(attr[1].pValue, attr[1].ulValueLen);
-		*encoding = public_key_info_encode(ecpoint, OID_EC_PUBLICKEY,
-										   &ecparams);
-		success = TRUE;
-		if (type == PUBKEY_PEM)
+		if (type == PUBKEY_ECDSA_CURVE_DER)
 		{
-			chunk_t asn1 = *encoding;
-			success = lib->encoding->encode(lib->encoding, PUBKEY_PEM,
-							NULL, encoding, CRED_PART_ECDSA_PUB_ASN1_DER,
-							asn1, CRED_PART_END);
-			chunk_clear(&asn1);
+			*encoding = chunk_clone(ecparams);
+			success = TRUE;
+		}
+		else if (attr[1].ulValueLen > 0)
+		{
+			ecpoint = chunk_create(attr[1].pValue, attr[1].ulValueLen);
+			*encoding = public_key_info_encode(ecpoint, OID_EC_PUBLICKEY,
+											   &ecparams);
+			success = TRUE;
+			if (type == PUBKEY_PEM)
+			{
+				chunk_t asn1 = *encoding;
+				success = lib->encoding->encode(lib->encoding, PUBKEY_PEM,
+								NULL, encoding, CRED_PART_ECDSA_PUB_ASN1_DER,
+								asn1, CRED_PART_END);
+				chunk_clear(&asn1);
+			}
 		}
 	}
 	DESTROY_IF(enumerator);
