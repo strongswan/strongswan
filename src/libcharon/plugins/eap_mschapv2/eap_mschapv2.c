@@ -899,6 +899,7 @@ static status_t process_peer_success(private_eap_mschapv2_t *this,
 			{
 				DBG1(DBG_IKE, "received invalid EAP-MS-CHAPv2 message: "
 					 "invalid auth string");
+				enumerator->destroy(enumerator);
 				goto error;
 			}
 			chunk_free(&auth_string);
@@ -991,8 +992,9 @@ static status_t process_peer_failure(private_eap_mschapv2_t *this,
 			token += 2;
 			if (strlen(token) != 2 * CHALLENGE_LEN)
 			{
-				DBG1(DBG_IKE, "received invalid EAP-MS-CHAPv2 message:"
+				DBG1(DBG_IKE, "received invalid EAP-MS-CHAPv2 message: "
 					 "invalid challenge");
+				enumerator->destroy(enumerator);
 				goto error;
 			}
 			chunk_free(&challenge);
