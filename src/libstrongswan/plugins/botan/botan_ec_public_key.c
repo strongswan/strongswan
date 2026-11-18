@@ -218,6 +218,18 @@ METHOD(public_key_t, get_encoding, bool,
 	private_botan_ec_public_key_t *this, cred_encoding_type_t type,
 	chunk_t *encoding)
 {
+	if (type == PUBKEY_ECDSA_CURVE_DER)
+	{
+		chunk_t spki;
+
+		if (botan_get_encoding(this->key, PUBKEY_SPKI_ASN1_DER, &spki))
+		{
+			*encoding = ecdsa_curve_from_spki(spki);
+			chunk_free(&spki);
+			return encoding->len != 0;
+		}
+		return FALSE;
+	}
 	return botan_get_encoding(this->key, type, encoding);
 }
 
