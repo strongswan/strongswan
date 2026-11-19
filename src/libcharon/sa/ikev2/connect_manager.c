@@ -530,10 +530,11 @@ static void remove_checklist(private_connect_manager_t *this,
 CALLBACK(match_endpoint_by_host, bool,
 	endpoint_notify_t *current, va_list args)
 {
-	host_t *host;
+	host_t *host, *current_host;
 
 	VA_ARGS_VGET(args, host);
-	return host->equals(host, current->get_host(current));
+	current_host = current->get_host(current);
+	return current_host && host->equals(host, current_host);
 }
 
 static bool endpoints_contain(linked_list_t *endpoints, host_t *host,
@@ -776,6 +777,14 @@ static status_t process_payloads(message_t *message, check_t *check)
 				if (!endpoint)
 				{
 					DBG1(DBG_IKE, "received invalid ME_ENDPOINT notify");
+					break;
+				}
+				if (!message->get_request(message) &&
+					!endpoint->get_host(endpoint))
+				{
+					DBG1(DBG_IKE, "ignoring ME_ENDPOINT notify without address "
+						 "in connectivity check response");
+					endpoint->destroy(endpoint);
 					break;
 				}
 				check->endpoint = endpoint;

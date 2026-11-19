@@ -201,6 +201,14 @@ static void process_payloads(private_ike_me_t *this, message_t *message)
 					DBG1(DBG_IKE, "received invalid ME_ENDPOINT notify");
 					break;
 				}
+				if (message->get_exchange_type(message) == ME_CONNECT &&
+					!endpoint->get_host(endpoint))
+				{
+					DBG1(DBG_IKE, "ignoring ME_ENDPOINT notify without address "
+						 "in ME_CONNECT");
+					endpoint->destroy(endpoint);
+					break;
+				}
 				DBG1(DBG_IKE, "received %N ME_ENDPOINT %#H",
 					 me_endpoint_type_names, endpoint->get_type(endpoint),
 					 endpoint->get_host(endpoint));
