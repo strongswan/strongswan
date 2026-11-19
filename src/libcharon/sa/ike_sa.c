@@ -2434,6 +2434,11 @@ METHOD(ike_sa_t, handle_redirect, bool,
 	private_ike_sa_t *this, identification_t *gateway)
 {
 	DBG1(DBG_IKE, "redirected to %Y", gateway);
+	if (!has_condition(this, COND_ORIGINAL_INITIATOR))
+	{
+		DBG1(DBG_IKE, "ignoring REDIRECT from original initiator");
+		return FALSE;
+	}
 	if (!this->follow_redirects)
 	{
 		DBG1(DBG_IKE, "server sent REDIRECT even though we disabled it");
