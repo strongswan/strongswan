@@ -30,6 +30,7 @@ exchange_tests_SOURCES = \
   suites/test_child_rekey.c \
   suites/test_ike_delete.c \
   suites/test_ike_mid_sync.c \
+  suites/test_ike_sa_manager.c \
   suites/test_ike_rekey.c \
   suites/test_childless.c \
   utils/exchange_test_asserts.h utils/exchange_test_asserts.c \
