@@ -164,6 +164,11 @@ static inline jbyteArray byte_array_from_chunk(JNIEnv *env, chunk_t chunk)
 	jbyteArray jbytearray;
 
 	jbytearray = (*env)->NewByteArray(env, chunk.len);
+	if (!jbytearray)
+	{
+		/* OutOfMemoryError is pending, return NULL to let it propagate */
+		return NULL;
+	}
 	(*env)->SetByteArrayRegion(env, jbytearray, 0, chunk.len, chunk.ptr);
 	return jbytearray;
 }

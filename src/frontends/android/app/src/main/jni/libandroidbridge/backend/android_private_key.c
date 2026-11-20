@@ -300,6 +300,10 @@ METHOD(private_key_t, sign, bool,
 		goto failed;
 	}
 	jdata = byte_array_from_chunk(env, data);
+	if (!jdata)
+	{
+		goto failed;
+	}
 	(*env)->CallVoidMethod(env, jsignature, method_id, jdata);
 	if (androidjni_exception_occurred(env))
 	{
