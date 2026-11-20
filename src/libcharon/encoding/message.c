@@ -2854,7 +2854,16 @@ METHOD(message_t, parse_body, status_t,
 	status = decrypt_payloads(this, keymat);
 	if (status != SUCCESS)
 	{
-		DBG1(DBG_ENC, "could not decrypt payloads");
+		if (this->major_version == IKEV2_MAJOR_VERSION &&
+			(status == PARSE_ERROR || status == VERIFY_ERROR))
+		{	/* the integrity of the message has been verified already, so
+			 * this is not caused by a decryption failure */
+			DBG1(DBG_ENC, "encrypted message contains invalid payloads");
+		}
+		else
+		{
+			DBG1(DBG_ENC, "could not decrypt payloads");
+		}
 		return status;
 	}
 
