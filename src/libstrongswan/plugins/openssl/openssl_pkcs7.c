@@ -574,6 +574,13 @@ static bool decrypt_symmetric(private_openssl_pkcs7_t *this, chunk_t key,
 		crypter->destroy(crypter);
 		return FALSE;
 	}
+	if (encrypted.len % crypter->get_block_size(crypter))
+	{
+		DBG1(DBG_LIB, "encrypted content length is not a multiple of the "
+			 "block size");
+		crypter->destroy(crypter);
+		return FALSE;
+	}
 	if (!crypter->set_key(crypter, key) ||
 		!crypter->decrypt(crypter, encrypted, iv, plain))
 	{
