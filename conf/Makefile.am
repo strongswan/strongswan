@@ -37,6 +37,7 @@ plugins = \
 	plugins/botan.opt \
 	plugins/bypass-lan.opt \
 	plugins/certexpire.opt \
+	plugins/cfg-subnet.opt \
 	plugins/coupling.opt \
 	plugins/curl.opt \
 	plugins/dhcp.opt \
