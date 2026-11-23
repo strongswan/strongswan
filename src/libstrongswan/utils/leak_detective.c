@@ -574,6 +574,8 @@ static char *whitelist[] = {
 	"OPENSSL_init_ssl",
 	"CRYPTO_THREAD_lock_new",
 	"ERR_add_error_data",
+	"ERR_clear_error",
+	"ERR_new",
 	"ERR_set_mark",
 	"ENGINE_load_builtin_engines",
 	"OPENSSL_load_builtin_modules",
