@@ -164,6 +164,14 @@ static bool decrypt(private_key_t *private, chunk_t key, chunk_t iv, int oid,
 		crypter->destroy(crypter);
 		return FALSE;
 	}
+	if (encrypted.len % crypter->get_block_size(crypter))
+	{
+		DBG1(DBG_LIB, "encrypted content length %d is not a multiple of the "
+			 "block size", encrypted.len);
+		free(plain_key.ptr);
+		crypter->destroy(crypter);
+		return FALSE;
+	}
 	if (!crypter->set_key(crypter, plain_key) ||
 		!crypter->decrypt(crypter, encrypted, iv, plain))
 	{
