@@ -354,6 +354,12 @@ static void find_child(private_child_rekey_t *this, message_t *message)
 METHOD(task_t, process_r, status_t,
 	private_child_rekey_t *this, message_t *message)
 {
+	if (this->flags & CHILD_REKEY_FOLLOWUP_KE &&
+		message->get_exchange_type(message) != IKE_FOLLOWUP_KE)
+	{
+		return FAILED;
+	}
+
 	/* let the CHILD_CREATE task process the message */
 	this->child_create->task.process(&this->child_create->task, message);
 
