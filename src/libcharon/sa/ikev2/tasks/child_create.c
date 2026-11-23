@@ -2863,6 +2863,8 @@ static void reuse_ts(private_child_create_t *this, bool local, child_sa_t *old,
 	traffic_selector_t *ts, *new_ts;
 	host_t *host;
 
+	DESTROY_IF(*target);
+
 	old_ts = old->create_ts_enumerator(old, local);
 	if (this->rekey)
 	{
