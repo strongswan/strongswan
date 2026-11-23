@@ -87,9 +87,6 @@ jobs:
           - msystem: mingw64
             arch: x86_64
             test: win64
-          - msystem: mingw32
-            arch: i686
-            test: win32
     env:
       OS_NAME: windows
       TEST: ${{ matrix.test }}

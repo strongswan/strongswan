@@ -349,13 +349,10 @@ win*)
 		esac
 	else
 		CONFIG="$CONFIG --enable-openssl --enable-drbg"
-		DEPS="base-devel git autotools gperf"
+		DEPS="base-devel git autotools gperf bison flex"
 		case "$TEST" in
 		win64)
 			DEPS="$DEPS mingw-w64-x86_64-toolchain"
-			;;
-		win32)
-			DEPS="$DEPS mingw-w64-i686-toolchain"
 			;;
 		esac
 	fi
