@@ -25,24 +25,14 @@
 /**
  * Print private key information
  */
-static void print_key(private_key_t *key)
+static void print_private_key(private_key_t *key)
 {
 	public_key_t *public;
-	chunk_t chunk;
 
 	public = key->get_public_key(key);
 	if (public)
 	{
-		printf("  privkey:   %N %d bits\n", key_type_names,
-			   public->get_type(public), public->get_keysize(public));
-		if (public->get_fingerprint(public, KEYID_PUBKEY_INFO_SHA1, &chunk))
-		{
-			printf("  keyid:     %#B\n", &chunk);
-		}
-		if (public->get_fingerprint(public, KEYID_PUBKEY_SHA1, &chunk))
-		{
-			printf("  subjkey:   %#B\n", &chunk);
-		}
+		certificate_printer_print_pubkey(stdout, "  privkey:", public, FALSE);
 		public->destroy(public);
 	}
 	else
@@ -86,8 +76,8 @@ static int print()
 				}
 				else if (streq(arg, "pub"))
 				{
-					type = CRED_CERTIFICATE;
-					subtype = CERT_TRUSTED_PUBKEY;
+					type = CRED_PUBLIC_KEY;
+					subtype = KEY_ANY;
 				}
 				else if (streq(arg, "priv"))
 				{
@@ -186,11 +176,18 @@ static int print()
 		printer->destroy(printer);
 		cert->destroy(cert);
 	}
-	if (type == CRED_PRIVATE_KEY)
+	else if (type == CRED_PUBLIC_KEY)
+	{
+		public_key_t *public = (public_key_t*)cred;
+
+		certificate_printer_print_pubkey(stdout, "  pubkey:", public, FALSE);
+		public->destroy(public);
+	}
+	else if (type == CRED_PRIVATE_KEY)
 	{
 		private_key_t *key = (private_key_t*)cred;
 
-		print_key(key);
+		print_private_key(key);
 		key->destroy(key);
 	}
 

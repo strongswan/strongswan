@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 Tobias Brunner
+ * Copyright (C) 2018-2026 Tobias Brunner
  *
  * Copyright (C) 2018 René Korthaus
  * Copyright (C) 2018 Konstantinos Kolelis
@@ -58,11 +58,6 @@ struct private_botan_ec_private_key_t {
 	botan_privkey_t key;
 
 	/**
-	 * OID of the curve
-	 */
-	int oid;
-
-	/**
 	 * Reference count
 	 */
 	refcount_t ref;
@@ -98,6 +93,28 @@ static bool build_signature(botan_privkey_t key, const char *hash_and_padding,
 	return TRUE;
 }
 
+METHOD(private_key_t, get_keysize, int,
+	private_botan_ec_private_key_t *this)
+{
+	botan_mp_t p;
+	size_t bits = 0;
+
+	if (botan_mp_init(&p))
+	{
+		return 0;
+	}
+
+	if (botan_privkey_get_field(p, this->key, "p") ||
+		botan_mp_num_bits(p, &bits))
+	{
+		botan_mp_destroy(p);
+		return 0;
+	}
+
+	botan_mp_destroy(p);
+	return bits;
+}
+
 METHOD(private_key_t, sign, bool,
 	private_botan_ec_private_key_t *this, signature_scheme_t scheme,
 	void *params, chunk_t data, chunk_t *signature)
@@ -121,21 +138,36 @@ METHOD(private_key_t, sign, bool,
 		case SIGN_ECDSA_WITH_SHA512_DER:
 			return build_signature(this->key, "EMSA1(SHA-512)",
 								   SIG_FORMAT_DER_SEQUENCE, data, signature);
-		/* r||s -> Botan::IEEE_1363 */
+		/* r||s -> Botan::IEEE_1363, these schemes are only defined with
+		 * matching NIST curves. as we can't determine the curve easily, just
+		 * check the size */
 		case SIGN_ECDSA_256:
-			return build_signature(this->key, "EMSA1(SHA-256)",
-								   SIG_FORMAT_IEEE_1363, data, signature);
+			if (get_keysize(this) == 256)
+			{
+				return build_signature(this->key, "EMSA1(SHA-256)",
+									   SIG_FORMAT_IEEE_1363, data, signature);
+			}
+			break;
 		case SIGN_ECDSA_384:
-			return build_signature(this->key, "EMSA1(SHA-384)",
-								   SIG_FORMAT_IEEE_1363, data, signature);
+			if (get_keysize(this) == 384)
+			{
+				return build_signature(this->key, "EMSA1(SHA-384)",
+									   SIG_FORMAT_IEEE_1363, data, signature);
+			}
+			break;
 		case SIGN_ECDSA_521:
-			return build_signature(this->key, "EMSA1(SHA-512)",
-								   SIG_FORMAT_IEEE_1363, data, signature);
+			if (get_keysize(this) == 521)
+			{
+				return build_signature(this->key, "EMSA1(SHA-512)",
+									   SIG_FORMAT_IEEE_1363, data, signature);
+			}
+			break;
 		default:
-			DBG1(DBG_LIB, "signature scheme %N not supported via botan",
-				 signature_scheme_names, scheme);
-			return FALSE;
+			break;
 	}
+	DBG1(DBG_LIB, "signature scheme %N not supported via botan",
+		 signature_scheme_names, scheme);
+	return FALSE;
 }
 
 METHOD(private_key_t, decrypt, bool,
@@ -144,28 +176,6 @@ METHOD(private_key_t, decrypt, bool,
 {
 	DBG1(DBG_LIB, "EC private key decryption not implemented");
 	return FALSE;
-}
-
-METHOD(private_key_t, get_keysize, int,
-	private_botan_ec_private_key_t *this)
-{
-	botan_mp_t p;
-	size_t bits = 0;
-
-	if (botan_mp_init(&p))
-	{
-		return 0;
-	}
-
-	if (botan_privkey_get_field(p, this->key, "p") ||
-		botan_mp_num_bits(p, &bits))
-	{
-		botan_mp_destroy(p);
-		return 0;
-	}
-
-	botan_mp_destroy(p);
-	return bits;
 }
 
 METHOD(private_key_t, get_type, key_type_t,
@@ -236,7 +246,7 @@ METHOD(private_key_t, destroy, void,
 /**
  * Internal generic constructor
  */
-static private_botan_ec_private_key_t *create_empty(int oid)
+static private_botan_ec_private_key_t *create_empty()
 {
 	private_botan_ec_private_key_t *this;
 
@@ -257,21 +267,33 @@ static private_botan_ec_private_key_t *create_empty(int oid)
 				.destroy = _destroy,
 			},
 		},
-		.oid = oid,
 		.ref = 1,
 	);
 
 	return this;
 }
 
+#ifdef HAVE_BOTAN_OID_FROM_STRING
+/**
+ * View callback that copies the given string.
+ */
+static int botan_view_str_alloc(botan_view_ctx ctx, const char *str, size_t len)
+{
+	char **out = (char**)ctx;
+
+	*out = strdup(str);
+	return 0;
+}
+#endif /* HAVE_BOTAN_OID_FROM_STRING */
+
 /*
  * Described in header
  */
-botan_ec_private_key_t *botan_ec_private_key_adopt(botan_privkey_t key, int oid)
+botan_ec_private_key_t *botan_ec_private_key_adopt(botan_privkey_t key)
 {
 	private_botan_ec_private_key_t *this;
 
-	this = create_empty(oid);
+	this = create_empty();
 	this->key = key;
 
 	return &this->public;
@@ -284,9 +306,9 @@ botan_ec_private_key_t *botan_ec_private_key_gen(key_type_t type, va_list args)
 {
 	private_botan_ec_private_key_t *this;
 	botan_rng_t rng;
+	chunk_t curve = chunk_empty;
 	u_int key_size = 0;
-	int oid;
-	const char *curve;
+	char *curvename = NULL;
 
 	while (TRUE)
 	{
@@ -294,6 +316,9 @@ botan_ec_private_key_t *botan_ec_private_key_gen(key_type_t type, va_list args)
 		{
 			case BUILD_KEY_SIZE:
 				key_size = va_arg(args, u_int);
+				continue;
+			case BUILD_ECDSA_CURVE:
+				curve = va_arg(args, chunk_t);
 				continue;
 			case BUILD_END:
 				break;
@@ -303,47 +328,78 @@ botan_ec_private_key_t *botan_ec_private_key_gen(key_type_t type, va_list args)
 		break;
 	}
 
-	if (!key_size)
+	if (curve.len)
 	{
+		if (asn1_unwrap(&curve, &curve) == ASN1_OID)
+		{
+#ifdef HAVE_BOTAN_OID_FROM_STRING
+			char *dotted = asn1_oid_to_string(curve);
+			botan_asn1_oid_t oid;
+
+			if (dotted)
+			{
+				if (!botan_oid_from_string(&oid, dotted))
+				{
+					botan_oid_view_name(oid, &curvename, botan_view_str_alloc);
+					botan_oid_destroy(oid);
+				}
+				free(dotted);
+			}
+#else /* HAVE_BOTAN_OID_FROM_STRING */
+			switch (asn1_known_oid(curve))
+			{
+				case OID_PRIME256V1:
+					curvename = strdup("secp256r1");
+					break;
+				case OID_SECP384R1:
+					curvename = strdup("secp384r1");
+					break;
+				case OID_SECP521R1:
+					curvename = strdup("secp521r1");
+					break;
+				default:
+					break;
+			}
+#endif /* HAVE_BOTAN_OID_FROM_STRING */
+		}
+	}
+	else if (key_size)
+	{
+		switch (key_size)
+		{
+			case 256:
+				curvename = strdup("secp256r1");
+				break;
+			case 384:
+				curvename = strdup("secp384r1");
+				break;
+			case 521:
+				curvename = strdup("secp521r1");
+				break;
+			default:
+				DBG1(DBG_LIB, "EC private key size %d not supported via botan",
+					 key_size);
+				break;
+		}
+	}
+	if (!curvename || !botan_get_rng(&rng, RNG_TRUE))
+	{
+		free(curvename);
 		return NULL;
 	}
 
-	switch (key_size)
-	{
-		case 256:
-			curve = "secp256r1";
-			oid = OID_PRIME256V1;
-			break;
-		case 384:
-			curve = "secp384r1";
-			oid = OID_SECP384R1;
-			break;
-		case 521:
-			curve = "secp521r1";
-			oid = OID_SECP521R1;
-			break;
-		default:
-			DBG1(DBG_LIB, "EC private key size %d not supported via botan",
-				 key_size);
-			return NULL;
-	}
+	this = create_empty();
 
-	if (!botan_get_rng(&rng, RNG_TRUE))
-	{
-		return NULL;
-	}
-
-	this = create_empty(oid);
-
-	if (botan_privkey_create(&this->key, "ECDSA", curve, rng))
+	if (botan_privkey_create(&this->key, "ECDSA", curvename, rng))
 	{
 		DBG1(DBG_LIB, "EC private key generation failed");
 		botan_rng_destroy(rng);
+		free(curvename);
 		free(this);
 		return NULL;
 	}
-
 	botan_rng_destroy(rng);
+	free(curvename);
 	return &this->public;
 }
 
@@ -356,7 +412,6 @@ botan_ec_private_key_t *botan_ec_private_key_load(key_type_t type, va_list args)
 	chunk_t params = chunk_empty, key = chunk_empty;
 	chunk_t alg_id = chunk_empty, pkcs8 = chunk_empty;
 	botan_rng_t rng;
-	int oid = OID_UNKNOWN;
 
 	while (TRUE)
 	{
@@ -386,9 +441,9 @@ botan_ec_private_key_t *botan_ec_private_key_load(key_type_t type, va_list args)
 		/* if ECParameters is passed, just use it */
 		alg_id = asn1_algorithmIdentifier_params(OID_EC_PUBLICKEY,
 												 chunk_clone(params));
-		if (asn1_unwrap(&params, &params) == ASN1_OID)
-		{
-			oid = asn1_known_oid(params);
+		if (asn1_unwrap(&params, &params) != ASN1_OID)
+		{	/* only accept named curves */
+			chunk_free(&alg_id);
 		}
 	}
 	else
@@ -406,18 +461,13 @@ botan_ec_private_key_t *botan_ec_private_key_load(key_type_t type, va_list args)
 			asn1_unwrap(&unwrap, &inner) == ASN1_CONTEXT_C_0 &&
 			asn1_unwrap(&inner, &inner) == ASN1_OID)
 		{
-			oid = asn1_known_oid(inner);
-			if (oid != OID_UNKNOWN)
-			{
-				alg_id = asn1_algorithmIdentifier_params(OID_EC_PUBLICKEY,
-										asn1_simple_object(ASN1_OID, inner));
-			}
+			alg_id = asn1_algorithmIdentifier_params(OID_EC_PUBLICKEY,
+									asn1_simple_object(ASN1_OID, inner));
 		}
 	}
 
-	if (oid == OID_UNKNOWN)
+	if (!alg_id.ptr)
 	{
-		chunk_free(&alg_id);
 		return NULL;
 	}
 
@@ -426,7 +476,7 @@ botan_ec_private_key_t *botan_ec_private_key_load(key_type_t type, va_list args)
 					  alg_id,
 					  asn1_wrap(ASN1_OCTET_STRING, "c", key));
 
-	this = create_empty(oid);
+	this = create_empty();
 
 	if (!botan_get_rng(&rng, RNG_STRONG))
 	{

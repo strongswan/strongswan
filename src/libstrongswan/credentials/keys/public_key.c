@@ -445,6 +445,96 @@ enumerator_t *signature_schemes_for_key(key_type_t type, int size)
 	return &this->public;
 }
 
+/**
+ * Known elliptic curves.
+ */
+static const struct {
+	const char *name;
+	int oid;
+} known_curves[] = {
+	{ "p256", OID_PRIME256V1, },
+	{ "p384", OID_SECP384R1, },
+	{ "p521", OID_SECP521R1, },
+	{ "p-256", OID_PRIME256V1, },
+	{ "p-384", OID_SECP384R1, },
+	{ "p-521", OID_SECP521R1, },
+	{ "secp256r1", OID_PRIME256V1, },
+	{ "secp384r1", OID_SECP384R1, },
+	{ "secp521r1", OID_SECP521R1, },
+	{ "prime256v1", OID_PRIME256V1, },
+	{ "bp256", OID_BRAINPOOLP256R1, },
+	{ "bp384", OID_BRAINPOOLP384R1, },
+	{ "bp512", OID_BRAINPOOLP512R1, },
+	{ "brainpoolP256r1", OID_BRAINPOOLP256R1, },
+	{ "brainpoolP384r1", OID_BRAINPOOLP384R1, },
+	{ "brainpoolP512r1", OID_BRAINPOOLP512R1, },
+};
+
+/*
+ * Described in header
+ */
+chunk_t ecdsa_curve_from_string(char *str)
+{
+	chunk_t oid;
+	int i;
+
+	if (strchr(str, '.'))
+	{
+		oid = asn1_oid_from_string(str);
+		return oid.len ? asn1_wrap(ASN1_OID, "m", oid) : chunk_empty;
+	}
+
+	for (i = 0; i < countof(known_curves); i++)
+	{
+		if (strcaseeq(str, known_curves[i].name))
+		{
+			return asn1_build_known_oid(known_curves[i].oid);
+		}
+	}
+	return chunk_empty;
+}
+
+/*
+ * Described in header
+ */
+char *ecdsa_curve_to_string(chunk_t curve)
+{
+	chunk_t oid = curve;
+	int known;
+
+	if (asn1_unwrap(&oid, &oid) != ASN1_OID)
+	{
+		oid = curve;
+	}
+	known = asn1_known_oid(oid);
+	if (known != OID_UNKNOWN)
+	{
+		return strdup(oid_names[known].name);
+	}
+	return asn1_oid_to_string(oid);
+}
+
+/*
+ * Described in header
+ */
+chunk_t ecdsa_curve_from_spki(chunk_t spki)
+{
+	chunk_t inner, params;
+
+	if (asn1_unwrap(&spki, &spki) == ASN1_SEQUENCE &&
+		asn1_unwrap(&spki, &spki) == ASN1_SEQUENCE &&
+		asn1_unwrap(&spki, &inner) == ASN1_OID &&
+		asn1_known_oid(inner) == OID_EC_PUBLICKEY)
+	{
+		params = spki;
+		if (asn1_unwrap(&spki, &inner) == ASN1_OID)
+		{
+			return chunk_clone(params);
+		}
+	}
+	return chunk_empty;
+}
+
 /*
  * Defined in header.
  */

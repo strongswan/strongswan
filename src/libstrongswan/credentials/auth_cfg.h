@@ -23,6 +23,7 @@
 #ifndef AUTH_CFG_H_
 #define AUTH_CFG_H_
 
+#include <credentials/keys/public_key.h>
 #include <collections/enumerator.h>
 
 typedef struct auth_cfg_t auth_cfg_t;
@@ -107,6 +108,10 @@ enum auth_rule_t {
 	AUTH_RULE_RSA_STRENGTH,
 	/** required ECDSA public key strength, u_int in bits */
 	AUTH_RULE_ECDSA_STRENGTH,
+	/** required ECDSA curve, name/OID (via ecdsa_curve_to_string()) as char* */
+	AUTH_RULE_ECDSA_CURVE,
+	/** required ECDSA curve for IKE authentication, name/OID as char* */
+	AUTH_RULE_IKE_ECDSA_CURVE,
 	/** required signature scheme, signature_params_t* */
 	AUTH_RULE_SIGNATURE_SCHEME,
 	/** required signature scheme for IKE authentication, signature_params_t* */
@@ -130,6 +135,12 @@ enum auth_rule_t {
 	/** helper to determine the number of elements in this enum */
 	AUTH_RULE_MAX,
 };
+
+/**
+ * Marker used with AUTH_RULE_(IKE_)ECDSA_CURVE if an ECDSA curve could not be
+ * determined.
+ */
+#define AUTH_CFG_ECDSA_CURVE_UNKNOWN "<unknown>"
 
 /**
  * Names for auth_rule_t (upper case).
@@ -281,5 +292,25 @@ struct auth_cfg_t {
  * Create a authentication config.
  */
 auth_cfg_t *auth_cfg_create();
+
+/**
+ * Check if the given string starts with a known public key constraint prefix.
+ *
+ * @param str			string to check
+ * @return				TRUE if prefix matched
+ */
+bool auth_cfg_is_pubkey_prefix(const char *str);
+
+/**
+ * Add the ECDSA curve of the given public key to the config.  If the curve
+ * can't be determined, a marker is added to check against in
+ * authc_cfg_t::complies().
+ *
+ * @param cfg			config to add the curve to
+ * @param type			AUTH_RULE_ECDSA_CURVE or AUTH_RULE_IKE_ECDSA_CURVE
+ * @param key			public key (only ECDSA keys are handled)
+ */
+void auth_cfg_add_ecdsa_curve(auth_cfg_t *cfg, auth_rule_t type,
+							  public_key_t *key);
 
 #endif /** AUTH_CFG_H_ @}*/

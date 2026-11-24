@@ -1151,7 +1151,7 @@ if test x$botan = xtrue; then
 	AC_SUBST(botan_LIBS)
 	saved_LIBS=$LIBS
 	LIBS="$botan_LIBS"
-	AC_CHECK_FUNCS(botan_rng_init_custom botan_pubkey_ecc_key_used_explicit_encoding)
+	AC_CHECK_FUNCS(botan_rng_init_custom botan_pubkey_ecc_key_used_explicit_encoding botan_oid_from_string)
 	LIBS=$saved_LIBS
 fi
 
@@ -1477,7 +1477,7 @@ ADD_PLUGIN([x509],                 [s charon swanctl pki scripts attest nm cmd a
 ADD_PLUGIN([revocation],           [s charon pki nm cmd])
 ADD_PLUGIN([constraints],          [s charon pki nm cmd])
 ADD_PLUGIN([acert],                [s charon])
-ADD_PLUGIN([pubkey],               [s charon swanctl pki cmd aikgen])
+ADD_PLUGIN([pubkey],               [s charon swanctl cmd aikgen])
 ADD_PLUGIN([pkcs1],                [s charon swanctl pki scripts attest nm cmd aikgen fd fc])
 ADD_PLUGIN([pkcs7],                [s charon swanctl pki scripts nm cmd])
 ADD_PLUGIN([pkcs12],               [s charon swanctl pki scripts cmd])

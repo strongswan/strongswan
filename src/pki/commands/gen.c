@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2026 Tobias Brunner
  * Copyright (C) 2009 Martin Willi
  * Copyright (C) 2014-2016 Andreas Steffen
  *
@@ -26,7 +27,7 @@ static int gen()
 	key_type_t type = KEY_RSA;
 	u_int size = 0, shares = 0, threshold = 1;
 	private_key_t *key;
-	chunk_t encoding;
+	chunk_t encoding, curve = chunk_empty;
 	bool safe_primes = FALSE;
 	char *arg;
 
@@ -68,6 +69,14 @@ static int gen()
 				else
 				{
 					return command_usage("invalid key type");
+				}
+				continue;
+			case 'c':
+				chunk_free(&curve);
+				curve = ecdsa_curve_from_string(arg);
+				if (!curve.len)
+				{
+					return command_usage("invalid elliptic curve");
 				}
 				continue;
 			case 'f':
@@ -138,11 +147,17 @@ static int gen()
 		key = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, type,
 							BUILD_KEY_SIZE, size, BUILD_SAFE_PRIMES, BUILD_END);
 	}
+	else if (type == KEY_ECDSA && curve.len)
+	{
+		key = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, type,
+							BUILD_ECDSA_CURVE, curve, BUILD_END);
+	}
 	else
 	{
 		key = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, type,
 							BUILD_KEY_SIZE, size, BUILD_END);
 	}
+	chunk_free(&curve);
 	if (!key)
 	{
 		fprintf(stderr, "private key generation failed\n");
@@ -173,12 +188,14 @@ static void __attribute__ ((constructor))reg()
 {
 	command_register((command_t) {
 		gen, 'g', "gen", "generate a new private key",
-		{"[--type rsa|ecdsa|ed25519|ed448|mldsa44|mldsa65|mldsa87] [--size bits]",
-		 "[--safe-primes] [--shares n] [--threshold l] [--outform der|pem]"},
+		{"[--type rsa|ecdsa|ed25519|ed448|mldsa44|mldsa65|mldsa87]",
+		 "[--size bits] [--curve <name|oid>] [--safe-primes]",
+		 "[--shares n] [--threshold l] [--outform der|pem]"},
 		{
 			{"help",		'h', 0, "show usage information"},
 			{"type",		't', 1, "type of key, default: rsa"},
 			{"size",		's', 1, "keylength in bits, default: rsa 2048, ecdsa 384"},
+			{"curve",		'c', 1, "curve for ecdsa key (name or oid, --size is ignored)"},
 			{"safe-primes", 'p', 0, "generate rsa safe primes"},
 			{"shares",		'n', 1, "number of private rsa key shares"},
 			{"threshold",	'l', 1, "minimum number of participating rsa key shares"},

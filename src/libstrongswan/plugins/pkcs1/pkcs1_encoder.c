@@ -81,6 +81,24 @@ static bool build_pub_modulus(chunk_t *encoding, va_list args)
 }
 
 /**
+ * Encode the DER-encoded OID of an ECDSA public key we expect as
+ * subjectPublicKeyInfo structure
+ */
+static bool build_pub_curve(chunk_t *encoding, va_list args)
+{
+	chunk_t spki;
+
+	if (cred_encoding_args(args, CRED_PART_ECDSA_PUB_ASN1_DER, &spki,
+						   CRED_PART_END) ||
+		cred_encoding_args(args, CRED_PART_PUB_ASN1_DER, &spki, CRED_PART_END))
+	{
+		*encoding = ecdsa_curve_from_spki(spki);
+		return encoding->len != 0;
+	}
+	return FALSE;
+}
+
+/**
  * Encode a private key in PKCS#1/ASN.1 DER
  */
 static bool build_priv(chunk_t *encoding, va_list args)
@@ -175,6 +193,8 @@ bool pkcs1_encoder_encode(cred_encoding_type_t type, chunk_t *encoding,
 			return build_pub_info(encoding, args);
 		case PUBKEY_RSA_MODULUS:
 			return build_pub_modulus(encoding, args);
+		case PUBKEY_ECDSA_CURVE_DER:
+			return build_pub_curve(encoding, args);
 		case PRIVKEY_ASN1_DER:
 			return build_priv(encoding, args);
 		default:

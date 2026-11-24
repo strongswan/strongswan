@@ -18,7 +18,7 @@
 
 #include <credentials/auth_cfg.h>
 
-struct {
+static struct {
 	char *constraints;
 	signature_scheme_t sig[5];
 	signature_scheme_t ike[5];
@@ -111,7 +111,7 @@ typedef union {
 	rsa_pss_params_t pss;
 } signature_param_types_t;
 
-struct {
+static struct {
 	char *constraints;
 	signature_scheme_t sig[5];
 	signature_param_types_t p[5];
@@ -177,7 +177,7 @@ START_TEST(test_sig_constraints_params)
 }
 END_TEST
 
-struct {
+static struct {
 	char *constraints;
 	signature_scheme_t sig[6];
 	signature_param_types_t p[6];
@@ -203,6 +203,191 @@ START_TEST(test_sig_constraints_rsa_pss)
 }
 END_TEST
 
+static struct {
+	char *constraints;
+	char *curves[3];
+	char *ike[3];
+} curve_constraints_tests[] = {
+	{ "ecdsa-p256", { "prime256v1" }, {}},
+	{ "ike:ecdsa-p256", {}, { "prime256v1" }},
+	{ "ecdsa-bp384", { "brainpoolP384r1" }, {}},
+	{ "ike:ecdsa-p256-ecdsa-bp384", { "brainpoolP384r1" }, { "prime256v1" }},
+	{ "ecdsa-brainpoolP256r1", { "brainpoolP256r1" }},
+	{ "ecdsa-1.3.36.3.3.2.8.1.1.7", { "brainpoolP256r1" }},
+	{ "ecdsa-1.3.6.1.4.1.36906.15", { "1.3.6.1.4.1.36906.15" }},
+	{ "ecdsa-p256-bp384", { "prime256v1", "brainpoolP384r1" }},
+	{ "ecdsa-384-brainpoolP384r1-sha384", { "brainpoolP384r1" }},
+	{ "pubkey-p256", {}},
+	{ "rsa-p256", {}},
+};
+
+static void check_curve_constraints(auth_cfg_t *cfg, auth_rule_t type,
+									char *expected[])
+{
+	enumerator_t *enumerator;
+	auth_rule_t t;
+	char *value;
+	int i = 0;
+
+	enumerator = cfg->create_enumerator(cfg);
+	while (enumerator->enumerate(enumerator, &t, &value))
+	{
+		if (t == type)
+		{
+			ck_assert_str_eq(expected[i], value);
+			i++;
+		}
+	}
+	enumerator->destroy(enumerator);
+	ck_assert(!expected[i]);
+}
+
+START_TEST(test_curve_constraints)
+{
+	auth_cfg_t *cfg;
+	char *none[] = {NULL};
+
+	cfg = auth_cfg_create();
+	cfg->add_pubkey_constraints(cfg, curve_constraints_tests[_i].constraints, FALSE);
+	check_curve_constraints(cfg, AUTH_RULE_ECDSA_CURVE,
+							curve_constraints_tests[_i].curves);
+	check_curve_constraints(cfg, AUTH_RULE_IKE_ECDSA_CURVE, none);
+	cfg->destroy(cfg);
+
+	lib->settings->set_bool(lib->settings, "%s.signature_authentication_constraints",
+							FALSE, lib->ns);
+
+	cfg = auth_cfg_create();
+	cfg->add_pubkey_constraints(cfg, curve_constraints_tests[_i].constraints, TRUE);
+	check_curve_constraints(cfg, AUTH_RULE_ECDSA_CURVE,
+							curve_constraints_tests[_i].curves);
+	check_curve_constraints(cfg, AUTH_RULE_IKE_ECDSA_CURVE,
+							curve_constraints_tests[_i].ike);
+	cfg->destroy(cfg);
+}
+END_TEST
+
+START_TEST(test_curve_constraints_fallback)
+{
+	auth_cfg_t *cfg;
+
+	lib->settings->set_bool(lib->settings, "%s.signature_authentication_constraints",
+							TRUE, lib->ns);
+
+	cfg = auth_cfg_create();
+	cfg->add_pubkey_constraints(cfg, curve_constraints_tests[_i].constraints, TRUE);
+	check_curve_constraints(cfg, AUTH_RULE_ECDSA_CURVE,
+							curve_constraints_tests[_i].curves);
+	if (curve_constraints_tests[_i].ike[0])
+	{
+		check_curve_constraints(cfg, AUTH_RULE_IKE_ECDSA_CURVE,
+								curve_constraints_tests[_i].ike);
+	}
+	else
+	{
+		check_curve_constraints(cfg, AUTH_RULE_IKE_ECDSA_CURVE,
+								curve_constraints_tests[_i].curves);
+	}
+	cfg->destroy(cfg);
+}
+END_TEST
+
+static struct {
+	bool compliant;
+	char *constraints;
+	struct {
+		auth_rule_t type;
+		void *value;
+	} rules[5];
+} complies_curves_tests[] = {
+	{ TRUE, "ecdsa-p256", {}},
+	{ TRUE, "rsa-2048-ecdsa-p256", {}},
+	{ TRUE, "ecdsa-p256", {
+		{ AUTH_RULE_ECDSA_STRENGTH, (void*)(uintptr_t)256 }, }},
+	{ TRUE, "ecdsa-256", {
+		{ AUTH_RULE_ECDSA_STRENGTH, (void*)(uintptr_t)256 }, }},
+	{ FALSE, "ecdsa-384", {
+		{ AUTH_RULE_ECDSA_STRENGTH, (void*)(uintptr_t)256 }, }},
+	{ TRUE, "ecdsa-256", {
+		{ AUTH_RULE_ECDSA_CURVE, "prime256v1" }, }},
+	{ FALSE, "ecdsa-p384", {
+		{ AUTH_RULE_ECDSA_CURVE, "prime256v1" }, }},
+	{ FALSE, "ecdsa-p256", {
+		{ AUTH_RULE_ECDSA_CURVE, AUTH_CFG_ECDSA_CURVE_UNKNOWN }, }},
+	{ FALSE, "ecdsa-p256", {
+		{ AUTH_RULE_ECDSA_CURVE, "prime256v1" },
+		{ AUTH_RULE_ECDSA_CURVE, AUTH_CFG_ECDSA_CURVE_UNKNOWN }, }},
+	{ TRUE, "ecdsa-256-p256", {
+		{ AUTH_RULE_ECDSA_STRENGTH, (void*)(uintptr_t)256 },
+		{ AUTH_RULE_ECDSA_CURVE, "prime256v1" }, }},
+	{ TRUE, "ecdsa-256-p256", {
+		{ AUTH_RULE_ECDSA_CURVE, "prime256v1" }, }},
+	{ TRUE, "ike:ecdsa-p256", {}},
+	{ TRUE, "ike:ecdsa-p256", {
+		{ AUTH_RULE_ECDSA_CURVE, "prime256v1" }, }},
+	{ TRUE, "ike:ecdsa-p256", {
+		{ AUTH_RULE_ECDSA_CURVE, "secp384r1" }, }},
+	{ TRUE, "ike:ecdsa-p256", {
+		{ AUTH_RULE_IKE_ECDSA_CURVE, "prime256v1" }, }},
+	{ FALSE, "ike:ecdsa-p384", {
+		{ AUTH_RULE_IKE_ECDSA_CURVE, "prime256v1" }, }},
+	{ FALSE, "ike:ecdsa-p384", {
+		{ AUTH_RULE_IKE_ECDSA_CURVE, AUTH_CFG_ECDSA_CURVE_UNKNOWN }, }},
+	{ TRUE, "ecdsa-p256-p384", {
+		{ AUTH_RULE_ECDSA_CURVE, "prime256v1" }, }},
+	{ TRUE, "ecdsa-p256-p384", {
+		{ AUTH_RULE_ECDSA_CURVE, "secp384r1" }, }},
+	{ TRUE, "ecdsa-p256-p384", {
+		{ AUTH_RULE_ECDSA_CURVE, "secp384r1" },
+		{ AUTH_RULE_ECDSA_CURVE, "prime256v1" }, }},
+};
+
+/**
+ * Add a test rule to the given config
+ */
+static void add_rule(auth_cfg_t *cfg, auth_rule_t type, void *value)
+{
+	switch (type)
+	{
+		case AUTH_RULE_ECDSA_STRENGTH:
+			cfg->add(cfg, type, (uintptr_t)value);
+			break;
+		case AUTH_RULE_ECDSA_CURVE:
+		case AUTH_RULE_IKE_ECDSA_CURVE:
+			cfg->add(cfg, type, strdup(value));
+			break;
+		default:
+			fail("unsupported rule type %N", auth_rule_names, type);
+	}
+}
+
+START_TEST(test_complies_curves)
+{
+	auth_cfg_t *constraints, *cfg;
+	int i;
+
+	constraints = auth_cfg_create();
+	constraints->add_pubkey_constraints(constraints,
+										complies_curves_tests[_i].constraints,
+										TRUE);
+
+	cfg = auth_cfg_create();
+	for (i = 0; i < countof(complies_curves_tests[_i].rules); i++)
+	{
+		if (!complies_curves_tests[_i].rules[i].value)
+		{
+			break;
+		}
+		add_rule(cfg, complies_curves_tests[_i].rules[i].type,
+				 complies_curves_tests[_i].rules[i].value);
+	}
+	ck_assert(complies_curves_tests[_i].compliant ==
+				cfg->complies(cfg, constraints, TRUE));
+	cfg->destroy(cfg);
+	constraints->destroy(constraints);
+}
+END_TEST
+
 Suite *auth_cfg_suite_create()
 {
 	Suite *s;
@@ -218,6 +403,15 @@ Suite *auth_cfg_suite_create()
 	tc = tcase_create("add_pubkey_constraints parameters");
 	tcase_add_loop_test(tc, test_sig_constraints_params, 0, countof(sig_constraints_params_tests));
 	tcase_add_loop_test(tc, test_sig_constraints_rsa_pss, 0, countof(sig_constraints_rsa_pss_tests));
+	suite_add_tcase(s, tc);
+
+	tc = tcase_create("add_pubkey_constraints curves");
+	tcase_add_loop_test(tc, test_curve_constraints, 0, countof(curve_constraints_tests));
+	tcase_add_loop_test(tc, test_curve_constraints_fallback, 0, countof(curve_constraints_tests));
+	suite_add_tcase(s, tc);
+
+	tc = tcase_create("complies");
+	tcase_add_loop_test(tc, test_complies_curves, 0, countof(complies_curves_tests));
 	suite_add_tcase(s, tc);
 
 	return s;

@@ -27,6 +27,7 @@
 #include "wolfssl_ec_public_key.h"
 #include "wolfssl_util.h"
 
+#include <asn1/asn1.h>
 #include <utils/debug.h>
 
 #include <wolfssl/wolfcrypt/ecc.h>
@@ -44,11 +45,6 @@ struct private_wolfssl_ec_public_key_t {
 	 * Public interface
 	 */
 	wolfssl_ec_public_key_t public;
-
-	/**
-	 * Key size
-	 */
-	int keysize;
 
 	/**
 	 * EC key object
@@ -204,7 +200,11 @@ METHOD(public_key_t, encrypt_, bool,
 METHOD(public_key_t, get_keysize, int,
 	private_wolfssl_ec_public_key_t *this)
 {
-	return this->keysize;
+	if (this->ec.dp->id == ECC_SECP521R1)
+	{	/* special case this as there is no API to determine the size in bits */
+		return 521;
+	}
+	return wc_ecc_size(&this->ec) * 8;
 }
 
 /**
@@ -270,6 +270,20 @@ METHOD(public_key_t, get_encoding, bool,
 {
 	bool success = TRUE;
 	int len;
+
+	if (type == PUBKEY_ECDSA_CURVE_DER)
+	{
+		const byte *oid = NULL;
+		word32 len = 0;
+
+		if (wc_ecc_get_oid(this->ec.dp->oidSum, &oid, &len) > 0 && len)
+		{
+			*encoding = asn1_simple_object(ASN1_OID,
+										   chunk_create((u_char*)oid, len));
+			return TRUE;
+		}
+		return FALSE;
+	}
 
 	/* space for algorithmIdentifier/bitString + one byte for the point type */
 	*encoding = chunk_alloc(2 * this->ec.dp->size + 2 * MAX_SEQ_SZ +
@@ -382,20 +396,6 @@ wolfssl_ec_public_key_t *wolfssl_ec_public_key_load(key_type_t type,
 	{
 		destroy(this);
 		return NULL;
-	}
-	switch (this->ec.dp->id)
-	{
-		case ECC_SECP256R1:
-			this->keysize = 256;
-			break;
-		case ECC_SECP384R1:
-			this->keysize = 384;
-			break;
-		case ECC_SECP521R1:
-			this->keysize = 521;
-			break;
-		default:
-			break;
 	}
 	return &this->public;
 }

@@ -310,6 +310,31 @@ key_type_t key_type_from_oid(int oid);
 signature_scheme_t signature_scheme_from_oid(int oid);
 
 /**
+ * Convert a curve name or OID in dotted notation to a DER-encoded OID.
+ *
+ * @param str			name or OID
+ * @return				DER-encoded OID (allocated), chunk_empty on error
+ */
+chunk_t ecdsa_curve_from_string(char *str);
+
+/**
+ * Convert the given DER-encoded OID to a string (name if known or dotted
+ * notation).
+ *
+ * @param curve			DER-encoded OID
+ * @return				allocated name/OID string, NULL on error
+ */
+char *ecdsa_curve_to_string(chunk_t curve);
+
+/**
+ * Extract a DER-encoded curve OID from a subjectPublicKeyInfo structure.
+ *
+ * @param spki			subjectPublicKeyInfo structure
+ * @return				DER-encoded OID (allocated), chunk_empty on error
+ */
+chunk_t ecdsa_curve_from_spki(chunk_t spki);
+
+/**
  * Conversion of signature scheme to ASN.1 signature OID.
  *
  * @param scheme		signature scheme

@@ -53,6 +53,8 @@ ENUM(auth_rule_names, AUTH_RULE_IDENTITY, AUTH_HELPER_AC_CERT,
 	"RULE_GROUP",
 	"RULE_RSA_STRENGTH",
 	"RULE_ECDSA_STRENGTH",
+	"RULE_ECDSA_CURVE",
+	"RULE_IKE_ECDSA_CURVE",
 	"RULE_SIGNATURE_SCHEME",
 	"RULE_IKE_SIGNATURE_SCHEME",
 	"RULE_CERT_POLICY",
@@ -84,6 +86,8 @@ ENUM(auth_rule_names_lower, AUTH_RULE_IDENTITY, AUTH_HELPER_AC_CERT,
 	"group",
 	"rsa_strength",
 	"ecdsa_strength",
+	"ecdsa_curve",
+	"ike_ecdsa_curve",
 	"signature_scheme",
 	"ike_signature_scheme",
 	"cert_policy",
@@ -126,6 +130,8 @@ static inline bool is_multi_value_rule(auth_rule_t type)
 		case AUTH_RULE_CERT_POLICY:
 		case AUTH_RULE_RSA_STRENGTH:
 		case AUTH_RULE_ECDSA_STRENGTH:
+		case AUTH_RULE_ECDSA_CURVE:
+		case AUTH_RULE_IKE_ECDSA_CURVE:
 		case AUTH_RULE_SIGNATURE_SCHEME:
 		case AUTH_RULE_IKE_SIGNATURE_SCHEME:
 		case AUTH_HELPER_IM_CERT:
@@ -262,6 +268,8 @@ static void init_entry(entry_t *this, auth_rule_t type, va_list args)
 		case AUTH_RULE_IM_CERT:
 		case AUTH_RULE_SUBJECT_CERT:
 		case AUTH_RULE_CERT_POLICY:
+		case AUTH_RULE_ECDSA_CURVE:
+		case AUTH_RULE_IKE_ECDSA_CURVE:
 		case AUTH_RULE_SIGNATURE_SCHEME:
 		case AUTH_RULE_IKE_SIGNATURE_SCHEME:
 		case AUTH_HELPER_IM_CERT:
@@ -337,6 +345,8 @@ static bool entry_equals(entry_t *e1, entry_t *e2)
 			return signature_params_equal(e1->value, e2->value);
 		}
 		case AUTH_RULE_CERT_POLICY:
+		case AUTH_RULE_ECDSA_CURVE:
+		case AUTH_RULE_IKE_ECDSA_CURVE:
 		case AUTH_RULE_XAUTH_BACKEND:
 		case AUTH_HELPER_IM_HASH_URL:
 		case AUTH_HELPER_SUBJECT_HASH_URL:
@@ -380,6 +390,8 @@ static void destroy_entry_value(entry_t *entry)
 			break;
 		}
 		case AUTH_RULE_CERT_POLICY:
+		case AUTH_RULE_ECDSA_CURVE:
+		case AUTH_RULE_IKE_ECDSA_CURVE:
 		case AUTH_RULE_XAUTH_BACKEND:
 		case AUTH_HELPER_IM_HASH_URL:
 		case AUTH_HELPER_SUBJECT_HASH_URL:
@@ -447,6 +459,8 @@ static void replace(private_auth_cfg_t *this, entry_enumerator_t *enumerator,
 			case AUTH_RULE_IM_CERT:
 			case AUTH_RULE_SUBJECT_CERT:
 			case AUTH_RULE_CERT_POLICY:
+			case AUTH_RULE_ECDSA_CURVE:
+			case AUTH_RULE_IKE_ECDSA_CURVE:
 			case AUTH_RULE_SIGNATURE_SCHEME:
 			case AUTH_RULE_IKE_SIGNATURE_SCHEME:
 			case AUTH_HELPER_IM_CERT:
@@ -527,6 +541,8 @@ METHOD(auth_cfg_t, get, void*,
 		case AUTH_RULE_IM_CERT:
 		case AUTH_RULE_SUBJECT_CERT:
 		case AUTH_RULE_CERT_POLICY:
+		case AUTH_RULE_ECDSA_CURVE:
+		case AUTH_RULE_IKE_ECDSA_CURVE:
 		case AUTH_RULE_SIGNATURE_SCHEME:
 		case AUTH_RULE_IKE_SIGNATURE_SCHEME:
 		case AUTH_HELPER_IM_CERT:
@@ -589,11 +605,70 @@ static signature_params_t *create_rsa_pss_constraint(char *token)
 	return params;
 }
 
+/**
+ * Map of known key types.
+ */
+static struct {
+	char *name;
+	key_type_t type;
+	auth_rule_t strength;
+} known_key_types[] = {
+	{ "pubkey",		KEY_ANY,		AUTH_RULE_MAX,				},
+	{ "rsa",		KEY_RSA,		AUTH_RULE_RSA_STRENGTH,		},
+	{ "rsa/pss",	KEY_RSA,		AUTH_RULE_RSA_STRENGTH,		},
+	{ "ecdsa",		KEY_ECDSA,		AUTH_RULE_ECDSA_STRENGTH,	},
+	{ "ed25519",	KEY_ED25519,	AUTH_RULE_MAX,				},
+	{ "ed448",		KEY_ED448,		AUTH_RULE_MAX,				},
+	{ "mldsa44",	KEY_ML_DSA_44,	AUTH_RULE_MAX,				},
+	{ "mldsa65",	KEY_ML_DSA_65,	AUTH_RULE_MAX,				},
+	{ "mldsa87",	KEY_ML_DSA_87,	AUTH_RULE_MAX,				},
+};
+
+/**
+ * Determine the key type and optional strength rule for the given token.
+ * Optionally, match as prefix.
+ */
+static bool is_known_key_type(const char *str, bool prefix, key_type_t *type,
+							  auth_rule_t *strength)
+{
+	int i;
+
+	if (strpfx(str, "ike:"))
+	{
+		str += 4;
+	}
+	for (i = 0; i < countof(known_key_types); i++)
+	{
+		if ((prefix && strpfx(str, known_key_types[i].name)) ||
+			(!prefix && streq(str, known_key_types[i].name)))
+		{
+			if (type)
+			{
+				*type = known_key_types[i].type;
+			}
+			if (strength)
+			{
+				*strength = known_key_types[i].strength;
+			}
+			return TRUE;
+		}
+	}
+	return FALSE;
+}
+
+/*
+ * Described in header
+ */
+bool auth_cfg_is_pubkey_prefix(const char *str)
+{
+	return is_known_key_type(str, TRUE, NULL, NULL);
+}
+
 METHOD(auth_cfg_t, add_pubkey_constraints, void,
 	private_auth_cfg_t *this, char* constraints, bool ike)
 {
 	enumerator_t *enumerator;
-	bool ike_added = FALSE, rsa_pss;
+	bool ike_sig_added = FALSE, ike_curve_added = FALSE, rsa_pss;
 	key_type_t expected_type = -1;
 	auth_rule_t expected_strength = AUTH_RULE_MAX;
 	signature_params_t *params;
@@ -636,78 +711,53 @@ METHOD(auth_cfg_t, add_pubkey_constraints, void,
 		};
 
 		if (expected_strength != AUTH_RULE_MAX)
-		{	/* expecting a key strength token */
-			strength = atoi(token);
-			if (strength)
+		{	/* expecting a key strength token, but not a dotted OID */
+			if (!strchr(token, '.'))
 			{
-				add(this, expected_strength, (uintptr_t)strength);
+				strength = atoi(token);
+				if (strength)
+				{
+					add(this, expected_strength, (uintptr_t)strength);
+					expected_strength = AUTH_RULE_MAX;
+					continue;
+				}
 			}
 			expected_strength = AUTH_RULE_MAX;
-			if (strength)
-			{
-				continue;
-			}
 		}
-		if (streq(token, "rsa") || streq(token, "ike:rsa"))
+		if (is_known_key_type(token, FALSE, &expected_type, &expected_strength))
 		{
 			key_token = token;
-			expected_type = KEY_RSA;
-			expected_strength = AUTH_RULE_RSA_STRENGTH;
-			continue;
-		}
-		if (streq(token, "rsa/pss") || streq(token, "ike:rsa/pss"))
-		{
-			key_token = token;
-			expected_type = KEY_RSA;
-			expected_strength = AUTH_RULE_RSA_STRENGTH;
-			continue;
-		}
-		if (streq(token, "ecdsa") || streq(token, "ike:ecdsa"))
-		{
-			key_token = token;
-			expected_type = KEY_ECDSA;
-			expected_strength = AUTH_RULE_ECDSA_STRENGTH;
-			continue;
-		}
-		if (streq(token, "ed25519") || streq(token, "ike:ed25519"))
-		{
-			key_token = token;
-			expected_type = KEY_ED25519;
-			continue;
-		}
-		if (streq(token, "ed448") || streq(token, "ike:ed448"))
-		{
-			key_token = token;
-			expected_type = KEY_ED448;
-			continue;
-		}
-		if (streq(token, "mldsa44") || streq(token, "ike:mldsa44"))
-		{
-			key_token = token;
-			expected_type = KEY_ML_DSA_44;
-			continue;
-		}
-		if (streq(token, "mldsa65") || streq(token, "ike:mldsa65"))
-		{
-			key_token = token;
-			expected_type = KEY_ML_DSA_65;
-			continue;
-		}
-		if (streq(token, "mldsa87") || streq(token, "ike:mldsa87"))
-		{
-			key_token = token;
-			expected_type = KEY_ML_DSA_87;
-			continue;
-		}
-		if (streq(token, "pubkey") || streq(token, "ike:pubkey"))
-		{
-			key_token = token;
-			expected_type = KEY_ANY;
 			continue;
 		}
 		if (key_token && strpfx(key_token, "ike:") && !ike)
 		{
 			continue;
+		}
+
+		if (expected_type == KEY_ECDSA)
+		{
+			chunk_t curve;
+
+			curve = ecdsa_curve_from_string(token);
+			if (curve.len)
+			{
+				char *name = ecdsa_curve_to_string(curve);
+
+				chunk_free(&curve);
+				if (name)
+				{
+					if (strpfx(key_token, "ike:"))
+					{
+						add(this, AUTH_RULE_IKE_ECDSA_CURVE, name);
+						ike_curve_added = TRUE;
+					}
+					else
+					{
+						add(this, AUTH_RULE_ECDSA_CURVE, name);
+					}
+					continue;
+				}
+			}
 		}
 
 		if (key_token && streq(key_token + strlen(key_token) - 3, "pss"))
@@ -718,7 +768,7 @@ METHOD(auth_cfg_t, add_pubkey_constraints, void,
 				if (strpfx(key_token, "ike:"))
 				{
 					add(this, AUTH_RULE_IKE_SIGNATURE_SCHEME, params);
-					ike_added = TRUE;
+					ike_sig_added = TRUE;
 				}
 				else
 				{
@@ -740,7 +790,7 @@ METHOD(auth_cfg_t, add_pubkey_constraints, void,
 						if (strpfx(key_token, "ike:"))
 						{
 							add(this, AUTH_RULE_IKE_SIGNATURE_SCHEME, params);
-							ike_added = TRUE;
+							ike_sig_added = TRUE;
 						}
 						else
 						{
@@ -763,7 +813,7 @@ METHOD(auth_cfg_t, add_pubkey_constraints, void,
 						if (strpfx(key_token, "ike:"))
 						{
 							add(this, AUTH_RULE_IKE_SIGNATURE_SCHEME, params);
-							ike_added = TRUE;
+							ike_sig_added = TRUE;
 						}
 						else
 						{
@@ -781,9 +831,9 @@ METHOD(auth_cfg_t, add_pubkey_constraints, void,
 	}
 	enumerator->destroy(enumerator);
 
-	/* if no explicit IKE signature constraints were added we add them for all
-	 * configured signature constraints */
-	if (ike && !ike_added &&
+	/* if explicit IKE signature constraints or ECDSA curves are missing, we
+	 * mirror the configured constraints */
+	if (ike && (!ike_sig_added || !ike_curve_added) &&
 		lib->settings->get_bool(lib->settings,
 							"%s.signature_authentication_constraints", TRUE,
 							lib->ns))
@@ -791,14 +841,69 @@ METHOD(auth_cfg_t, add_pubkey_constraints, void,
 		enumerator = create_enumerator(this);
 		while (enumerator->enumerate(enumerator, &type, &value))
 		{
-			if (type == AUTH_RULE_SIGNATURE_SCHEME)
+			if (type == AUTH_RULE_SIGNATURE_SCHEME && !ike_sig_added)
 			{
 				add(this, AUTH_RULE_IKE_SIGNATURE_SCHEME,
 					signature_params_clone(value));
 			}
+			else if (type == AUTH_RULE_ECDSA_CURVE && !ike_curve_added)
+			{
+				add(this, AUTH_RULE_IKE_ECDSA_CURVE, strdup(value));
+			}
 		}
 		enumerator->destroy(enumerator);
 	}
+}
+
+/**
+ * Check if ECDSA curves are compliant
+ */
+static bool complies_curve(private_auth_cfg_t *this, auth_cfg_t *constraints,
+						   auth_rule_t type, bool log_error)
+{
+	enumerator_t *e1, *e2;
+	auth_rule_t t1, t2;
+	char *curve, *allowed;
+	bool success = TRUE;
+
+	e2 = create_enumerator(this);
+	while (e2->enumerate(e2, &t2, &curve))
+	{
+		if (t2 != type)
+		{
+			continue;
+		}
+		success = FALSE;
+		e1 = constraints->create_enumerator(constraints);
+		while (e1->enumerate(e1, &t1, &allowed))
+		{
+			if (t1 == t2 && streq(curve, allowed))
+			{
+				success = TRUE;
+				break;
+			}
+		}
+		e1->destroy(e1);
+		if (!success)
+		{
+			if (log_error)
+			{
+				if (streq(curve, AUTH_CFG_ECDSA_CURVE_UNKNOWN))
+				{
+					DBG1(DBG_CFG, "unable to determine ECDSA curve for %s",
+						 AUTH_RULE_ECDSA_CURVE == type ? "X.509" : "IKE");
+				}
+				else
+				{
+					DBG1(DBG_CFG, "ECDSA curve %s not acceptable for %s", curve,
+						 AUTH_RULE_ECDSA_CURVE == type ? "X.509" : "IKE");
+				}
+			}
+			break;
+		}
+	}
+	e2->destroy(e2);
+	return success;
 }
 
 /**
@@ -851,6 +956,7 @@ METHOD(auth_cfg_t, complies, bool,
 	enumerator_t *e1, *e2;
 	bool success = TRUE, group_match = FALSE;
 	bool ca_match = FALSE, cert_match = FALSE;
+	bool curves = FALSE, ike_curves = FALSE;
 	identification_t *require_group = NULL, *require_ca = NULL;
 	certificate_t *require_cert = NULL;
 	signature_params_t *ike_scheme = NULL, *scheme = NULL;
@@ -1102,6 +1208,16 @@ METHOD(auth_cfg_t, complies, bool,
 				scheme = value;
 				break;
 			}
+			case AUTH_RULE_ECDSA_CURVE:
+			{
+				curves = TRUE;
+				break;
+			}
+			case AUTH_RULE_IKE_ECDSA_CURVE:
+			{
+				ike_curves = TRUE;
+				break;
+			}
 			case AUTH_RULE_CERT_POLICY:
 			{
 				char *oid1, *oid2;
@@ -1158,6 +1274,16 @@ METHOD(auth_cfg_t, complies, bool,
 	{
 		success = complies_scheme(this, constraints,
 								  AUTH_RULE_IKE_SIGNATURE_SCHEME, log_error);
+	}
+	if (success && curves)
+	{
+		success = complies_curve(this, constraints, AUTH_RULE_ECDSA_CURVE,
+								 log_error);
+	}
+	if (success && ike_curves)
+	{
+		success = complies_curve(this, constraints, AUTH_RULE_IKE_ECDSA_CURVE,
+								 log_error);
 	}
 
 	/* Check if we have a matching constraint (or none at all) for used
@@ -1237,6 +1363,66 @@ METHOD(auth_cfg_t, complies, bool,
 }
 
 /**
+ * Clone the given value according to the type
+ */
+static void *clone_value(auth_rule_t type, void *value)
+{
+	switch (type)
+	{
+		case AUTH_RULE_IDENTITY:
+		case AUTH_RULE_CA_IDENTITY:
+		case AUTH_RULE_EAP_IDENTITY:
+		case AUTH_RULE_AAA_IDENTITY:
+		case AUTH_RULE_GROUP:
+		case AUTH_RULE_XAUTH_IDENTITY:
+		{
+			identification_t *id = (identification_t*)value;
+			return id->clone(id);
+		}
+		case AUTH_RULE_CA_CERT:
+		case AUTH_RULE_IM_CERT:
+		case AUTH_RULE_SUBJECT_CERT:
+		case AUTH_HELPER_IM_CERT:
+		case AUTH_HELPER_SUBJECT_CERT:
+		case AUTH_HELPER_REVOCATION_CERT:
+		case AUTH_HELPER_AC_CERT:
+		{
+			certificate_t *cert = (certificate_t*)value;
+			return cert->get_ref(cert);
+		}
+		case AUTH_RULE_SIGNATURE_SCHEME:
+		case AUTH_RULE_IKE_SIGNATURE_SCHEME:
+		{
+			return signature_params_clone(value);
+		}
+		case AUTH_RULE_XAUTH_BACKEND:
+		case AUTH_RULE_CERT_POLICY:
+		case AUTH_RULE_ECDSA_CURVE:
+		case AUTH_RULE_IKE_ECDSA_CURVE:
+		case AUTH_HELPER_IM_HASH_URL:
+		case AUTH_HELPER_SUBJECT_HASH_URL:
+		{
+			return strdup((char*)value);
+		}
+		case AUTH_RULE_IDENTITY_LOOSE:
+		case AUTH_RULE_AUTH_CLASS:
+		case AUTH_RULE_EAP_TYPE:
+		case AUTH_RULE_EAP_VENDOR:
+		case AUTH_RULE_CRL_VALIDATION:
+		case AUTH_RULE_OCSP_VALIDATION:
+		case AUTH_RULE_RSA_STRENGTH:
+		case AUTH_RULE_ECDSA_STRENGTH:
+		case AUTH_RULE_CERT_VALIDATION_SUSPENDED:
+		{
+			return value;
+		}
+		case AUTH_RULE_MAX:
+			break;
+	}
+	return NULL;
+}
+
+/**
  * Implementation of auth_cfg_t.merge.
  */
 static void merge(private_auth_cfg_t *this, private_auth_cfg_t *other, bool copy)
@@ -1255,8 +1441,15 @@ static void merge(private_auth_cfg_t *this, private_auth_cfg_t *other, bool copy
 		enumerator = create_enumerator(other);
 		while (enumerator->enumerate(enumerator, &type, &value))
 		{
+			value = clone_value(type, value);
 			switch (type)
 			{
+				case AUTH_RULE_IDENTITY:
+				case AUTH_RULE_CA_IDENTITY:
+				case AUTH_RULE_EAP_IDENTITY:
+				case AUTH_RULE_AAA_IDENTITY:
+				case AUTH_RULE_GROUP:
+				case AUTH_RULE_XAUTH_IDENTITY:
 				case AUTH_RULE_CA_CERT:
 				case AUTH_RULE_IM_CERT:
 				case AUTH_RULE_SUBJECT_CERT:
@@ -1264,51 +1457,27 @@ static void merge(private_auth_cfg_t *this, private_auth_cfg_t *other, bool copy
 				case AUTH_HELPER_SUBJECT_CERT:
 				case AUTH_HELPER_REVOCATION_CERT:
 				case AUTH_HELPER_AC_CERT:
-				{
-					certificate_t *cert = (certificate_t*)value;
-
-					add(this, type, cert->get_ref(cert));
+				case AUTH_RULE_SIGNATURE_SCHEME:
+				case AUTH_RULE_IKE_SIGNATURE_SCHEME:
+				case AUTH_RULE_XAUTH_BACKEND:
+				case AUTH_RULE_CERT_POLICY:
+				case AUTH_RULE_ECDSA_CURVE:
+				case AUTH_RULE_IKE_ECDSA_CURVE:
+				case AUTH_HELPER_IM_HASH_URL:
+				case AUTH_HELPER_SUBJECT_HASH_URL:
+					add(this, type, value);
 					break;
-				}
 				case AUTH_RULE_IDENTITY_LOOSE:
-				case AUTH_RULE_CRL_VALIDATION:
-				case AUTH_RULE_OCSP_VALIDATION:
 				case AUTH_RULE_AUTH_CLASS:
 				case AUTH_RULE_EAP_TYPE:
 				case AUTH_RULE_EAP_VENDOR:
+				case AUTH_RULE_CRL_VALIDATION:
+				case AUTH_RULE_OCSP_VALIDATION:
 				case AUTH_RULE_RSA_STRENGTH:
 				case AUTH_RULE_ECDSA_STRENGTH:
 				case AUTH_RULE_CERT_VALIDATION_SUSPENDED:
-				{
 					add(this, type, (uintptr_t)value);
 					break;
-				}
-				case AUTH_RULE_IDENTITY:
-				case AUTH_RULE_CA_IDENTITY:
-				case AUTH_RULE_EAP_IDENTITY:
-				case AUTH_RULE_AAA_IDENTITY:
-				case AUTH_RULE_GROUP:
-				case AUTH_RULE_XAUTH_IDENTITY:
-				{
-					identification_t *id = (identification_t*)value;
-
-					add(this, type, id->clone(id));
-					break;
-				}
-				case AUTH_RULE_SIGNATURE_SCHEME:
-				case AUTH_RULE_IKE_SIGNATURE_SCHEME:
-				{
-					add(this, type, signature_params_clone(value));
-					break;
-				}
-				case AUTH_RULE_XAUTH_BACKEND:
-				case AUTH_RULE_CERT_POLICY:
-				case AUTH_HELPER_IM_HASH_URL:
-				case AUTH_HELPER_SUBJECT_HASH_URL:
-				{
-					add(this, type, strdup((char*)value));
-					break;
-				}
 				case AUTH_RULE_MAX:
 					break;
 			}
@@ -1414,6 +1583,7 @@ METHOD(auth_cfg_t, clone_, auth_cfg_t*,
 	enumerator = create_enumerator(this);
 	while (enumerator->enumerate(enumerator, &type, &value))
 	{
+		value = clone_value(type, value);
 		switch (type)
 		{
 			case AUTH_RULE_IDENTITY:
@@ -1422,11 +1592,6 @@ METHOD(auth_cfg_t, clone_, auth_cfg_t*,
 			case AUTH_RULE_AAA_IDENTITY:
 			case AUTH_RULE_GROUP:
 			case AUTH_RULE_XAUTH_IDENTITY:
-			{
-				identification_t *id = (identification_t*)value;
-				clone->add(clone, type, id->clone(id));
-				break;
-			}
 			case AUTH_RULE_CA_CERT:
 			case AUTH_RULE_IM_CERT:
 			case AUTH_RULE_SUBJECT_CERT:
@@ -1434,19 +1599,16 @@ METHOD(auth_cfg_t, clone_, auth_cfg_t*,
 			case AUTH_HELPER_SUBJECT_CERT:
 			case AUTH_HELPER_REVOCATION_CERT:
 			case AUTH_HELPER_AC_CERT:
-			{
-				certificate_t *cert = (certificate_t*)value;
-				clone->add(clone, type, cert->get_ref(cert));
-				break;
-			}
+			case AUTH_RULE_SIGNATURE_SCHEME:
+			case AUTH_RULE_IKE_SIGNATURE_SCHEME:
 			case AUTH_RULE_XAUTH_BACKEND:
 			case AUTH_RULE_CERT_POLICY:
+			case AUTH_RULE_ECDSA_CURVE:
+			case AUTH_RULE_IKE_ECDSA_CURVE:
 			case AUTH_HELPER_IM_HASH_URL:
 			case AUTH_HELPER_SUBJECT_HASH_URL:
-			{
-				clone->add(clone, type, strdup(value));
+				clone->add(clone, type, value);
 				break;
-			}
 			case AUTH_RULE_IDENTITY_LOOSE:
 			case AUTH_RULE_AUTH_CLASS:
 			case AUTH_RULE_EAP_TYPE:
@@ -1458,12 +1620,6 @@ METHOD(auth_cfg_t, clone_, auth_cfg_t*,
 			case AUTH_RULE_CERT_VALIDATION_SUSPENDED:
 				clone->add(clone, type, (uintptr_t)value);
 				break;
-			case AUTH_RULE_SIGNATURE_SCHEME:
-			case AUTH_RULE_IKE_SIGNATURE_SCHEME:
-			{
-				clone->add(clone, type, signature_params_clone(value));
-				break;
-			}
 			case AUTH_RULE_MAX:
 				break;
 		}
@@ -1505,4 +1661,30 @@ auth_cfg_t *auth_cfg_create()
 	);
 
 	return &this->public;
+}
+
+/*
+ * Described in header
+ */
+void auth_cfg_add_ecdsa_curve(auth_cfg_t *cfg, auth_rule_t type,
+							  public_key_t *key)
+{
+	chunk_t curve;
+	char *name = NULL;
+
+	if (key->get_type(key) != KEY_ECDSA ||
+		(type != AUTH_RULE_ECDSA_CURVE && type != AUTH_RULE_IKE_ECDSA_CURVE))
+	{
+		return;
+	}
+	if (key->get_encoding(key, PUBKEY_ECDSA_CURVE_DER, &curve))
+	{
+		name = ecdsa_curve_to_string(curve);
+		chunk_free(&curve);
+	}
+	if (!name)
+	{
+		name = strdup(AUTH_CFG_ECDSA_CURVE_UNKNOWN);
+	}
+	cfg->add(cfg, type, name);
 }
