@@ -2022,6 +2022,7 @@ CALLBACK(peer_sn, bool,
 		enumerator_t *enumerator;
 		linked_list_t *auths;
 		auth_data_t *auth, *current;
+		auth_rule_t rule = AUTH_RULE_MAX;
 		certificate_t *cert;
 		identification_t *id;
 
@@ -2035,6 +2036,21 @@ CALLBACK(peer_sn, bool,
 			free_auth_data(auth);
 			return FALSE;
 		}
+		/* add a default auth class */
+		enumerator = auth->cfg->create_enumerator(auth->cfg);
+		while (enumerator->enumerate(enumerator, &rule, NULL))
+		{
+			if (rule == AUTH_RULE_AUTH_CLASS)
+			{
+				break;
+			}
+		}
+		enumerator->destroy(enumerator);
+		if (rule != AUTH_RULE_AUTH_CLASS)
+		{
+			auth->cfg->add(auth->cfg, AUTH_RULE_AUTH_CLASS, AUTH_CLASS_PUBKEY);
+		}
+
 		id = auth->cfg->get(auth->cfg, AUTH_RULE_IDENTITY);
 
 		if (!parse_and_add_pubkeys(auth, id))
@@ -2547,6 +2563,7 @@ CALLBACK(config_sn, bool,
 		INIT(auth,
 			.cfg = auth_cfg_create(),
 		);
+		auth->cfg->add(auth->cfg, AUTH_RULE_AUTH_CLASS, AUTH_CLASS_PUBKEY);
 		peer.local->insert_last(peer.local, auth);
 	}
 	if (peer.remote->get_count(peer.remote) == 0)
@@ -2554,6 +2571,7 @@ CALLBACK(config_sn, bool,
 		INIT(auth,
 			.cfg = auth_cfg_create(),
 		);
+		auth->cfg->add(auth->cfg, AUTH_RULE_AUTH_CLASS, AUTH_CLASS_PUBKEY);
 		peer.remote->insert_last(peer.remote, auth);
 	}
 	if (peer.proposals->get_count(peer.proposals) == 0)
