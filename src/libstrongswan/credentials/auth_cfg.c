@@ -606,74 +606,54 @@ static signature_params_t *create_rsa_pss_constraint(char *token)
 }
 
 /**
- * Map of known key types.
- */
-static struct {
-	char *name;
-	key_type_t type;
-	auth_rule_t strength;
-} known_key_types[] = {
-	{ "pubkey",		KEY_ANY,		AUTH_RULE_MAX,				},
-	{ "rsa",		KEY_RSA,		AUTH_RULE_RSA_STRENGTH,		},
-	{ "rsa/pss",	KEY_RSA,		AUTH_RULE_RSA_STRENGTH,		},
-	{ "ecdsa",		KEY_ECDSA,		AUTH_RULE_ECDSA_STRENGTH,	},
-	{ "ed25519",	KEY_ED25519,	AUTH_RULE_MAX,				},
-	{ "ed448",		KEY_ED448,		AUTH_RULE_MAX,				},
-	/* these are reordered slightly and have to precede the plain ML-DSA types
-	 * for prefix matching */
-	{ "mldsa44+rsa2048pss",		KEY_MLDSA44_RSA2048_PSS,	AUTH_RULE_MAX },
-	{ "mldsa44+rsa2048pkcs15",	KEY_MLDSA44_RSA2048_PKCS15,	AUTH_RULE_MAX },
-	{ "mldsa44+ed25519",		KEY_MLDSA44_ED25519,		AUTH_RULE_MAX },
-	{ "mldsa44+ecdsa256",		KEY_MLDSA44_ECDSA_P256,		AUTH_RULE_MAX },
-	{ "mldsa65+rsa3072pss",		KEY_MLDSA65_RSA3072_PSS,	AUTH_RULE_MAX },
-	{ "mldsa65+rsa3072pkcs15",	KEY_MLDSA65_RSA3072_PKCS15,	AUTH_RULE_MAX },
-	{ "mldsa65+rsa4096pss",		KEY_MLDSA65_RSA4096_PSS,	AUTH_RULE_MAX },
-	{ "mldsa65+rsa4096pkcs15",	KEY_MLDSA65_RSA4096_PKCS15,	AUTH_RULE_MAX },
-	{ "mldsa65+ecdsa256bp",		KEY_MLDSA65_ECDSA_BPP256R1,	AUTH_RULE_MAX },
-	{ "mldsa65+ecdsa256",		KEY_MLDSA65_ECDSA_P256,		AUTH_RULE_MAX },
-	{ "mldsa65+ecdsa384",		KEY_MLDSA65_ECDSA_P384,		AUTH_RULE_MAX },
-	{ "mldsa65+ed25519",		KEY_MLDSA65_ED25519,		AUTH_RULE_MAX },
-	{ "mldsa87+ecdsa384bp",		KEY_MLDSA87_ECDSA_BPP384R1,	AUTH_RULE_MAX },
-	{ "mldsa87+ecdsa384",		KEY_MLDSA87_ECDSA_P384,		AUTH_RULE_MAX },
-	{ "mldsa87+ed448",			KEY_MLDSA87_ED448,			AUTH_RULE_MAX },
-	{ "mldsa87+rsa3072pss",		KEY_MLDSA87_RSA3072_PSS,	AUTH_RULE_MAX },
-	{ "mldsa87+rsa4096pss",		KEY_MLDSA87_RSA4096_PSS,	AUTH_RULE_MAX },
-	{ "mldsa87+ecdsa521",		KEY_MLDSA87_ECDSA_P521,		AUTH_RULE_MAX },
-	{ "mldsa44",	KEY_ML_DSA_44,	AUTH_RULE_MAX,				},
-	{ "mldsa65",	KEY_ML_DSA_65,	AUTH_RULE_MAX,				},
-	{ "mldsa87",	KEY_ML_DSA_87,	AUTH_RULE_MAX,				},
-};
-
-/**
  * Determine the key type and optional strength rule for the given token.
  * Optionally, match as prefix.
  */
 static bool is_known_key_type(const char *str, bool prefix, key_type_t *type,
 							  auth_rule_t *strength)
 {
-	int i;
+	auth_rule_t strength_rule = AUTH_RULE_MAX;
+	key_type_t found;
 
 	if (strcasepfx(str, "ike:"))
 	{
 		str += 4;
 	}
-	for (i = 0; i < countof(known_key_types); i++)
+	/* special case these as they currently have no meaning outside of these
+	 * constraints */
+	if (strcasematch(str, "pubkey", prefix))
 	{
-		if ((prefix && strcasepfx(str, known_key_types[i].name)) ||
-			(!prefix && strcaseeq(str, known_key_types[i].name)))
-		{
-			if (type)
-			{
-				*type = known_key_types[i].type;
-			}
-			if (strength)
-			{
-				*strength = known_key_types[i].strength;
-			}
-			return TRUE;
-		}
+		found = KEY_ANY;
 	}
-	return FALSE;
+	else if (strcasematch(str, "rsa/pss", prefix))
+	{
+		found = KEY_RSA;
+	}
+	else if (!key_type_from_string(str, prefix, &found))
+	{
+		return FALSE;
+	}
+
+	if (type)
+	{
+		*type = found;
+	}
+	if (strength)
+	{
+		switch (found)
+		{
+			case KEY_RSA:
+				strength_rule = AUTH_RULE_RSA_STRENGTH;
+				break;
+			case KEY_ECDSA:
+				strength_rule = AUTH_RULE_ECDSA_STRENGTH;
+				break;
+			default:
+				break;
+		}
+		*strength = strength_rule;
+	}
+	return TRUE;
 }
 
 /*

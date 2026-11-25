@@ -347,6 +347,92 @@ key_type_t key_type_from_oid(int oid)
 	}
 }
 
+/**
+ * String map for known key types
+ */
+static struct {
+	char *name;
+	key_type_t type;
+} known_key_types[] = {
+	{ "rsa",					KEY_RSA,					},
+	{ "ecdsa",					KEY_ECDSA,					},
+	{ "ed25519",				KEY_ED25519,				},
+	{ "ed448",					KEY_ED448,					},
+	/* these are reordered slightly and have to precede the plain ML-DSA types
+	 * for prefix matching */
+	{ "mldsa44+rsa2048pss",		KEY_MLDSA44_RSA2048_PSS,	},
+	{ "mldsa44+rsa2048pkcs15",	KEY_MLDSA44_RSA2048_PKCS15,	},
+	{ "mldsa44+ed25519",		KEY_MLDSA44_ED25519,		},
+	{ "mldsa44+ecdsa256",		KEY_MLDSA44_ECDSA_P256,		},
+	{ "mldsa65+rsa3072pss",		KEY_MLDSA65_RSA3072_PSS,	},
+	{ "mldsa65+rsa3072pkcs15",	KEY_MLDSA65_RSA3072_PKCS15,	},
+	{ "mldsa65+rsa4096pss",		KEY_MLDSA65_RSA4096_PSS,	},
+	{ "mldsa65+rsa4096pkcs15",	KEY_MLDSA65_RSA4096_PKCS15,	},
+	{ "mldsa65+ecdsa256bp",		KEY_MLDSA65_ECDSA_BPP256R1,	},
+	{ "mldsa65+ecdsa256",		KEY_MLDSA65_ECDSA_P256,		},
+	{ "mldsa65+ecdsa384",		KEY_MLDSA65_ECDSA_P384,		},
+	{ "mldsa65+ed25519",		KEY_MLDSA65_ED25519,		},
+	{ "mldsa87+ecdsa384bp",		KEY_MLDSA87_ECDSA_BPP384R1,	},
+	{ "mldsa87+ecdsa384",		KEY_MLDSA87_ECDSA_P384,		},
+	{ "mldsa87+ed448",			KEY_MLDSA87_ED448,			},
+	{ "mldsa87+rsa3072pss",		KEY_MLDSA87_RSA3072_PSS,	},
+	{ "mldsa87+rsa4096pss",		KEY_MLDSA87_RSA4096_PSS,	},
+	{ "mldsa87+ecdsa521",		KEY_MLDSA87_ECDSA_P521,		},
+	/* these match the names in key_type_names as aliases to convert back
+	 * what e.g. pki --print reports, also preceding the plain ML-DSA types
+	 * for prefix matching */
+	{ "ML_DSA_44",				KEY_ML_DSA_44,				},
+	{ "ML_DSA_65",				KEY_ML_DSA_65,				},
+	{ "ML_DSA_87",				KEY_ML_DSA_87,				},
+	{ "MLDSA44_RSA2048_PSS",	KEY_MLDSA44_RSA2048_PSS,	},
+	{ "MLDSA44_RSA2048_PKCS15",	KEY_MLDSA44_RSA2048_PKCS15,	},
+	{ "MLDSA44_ED25519",		KEY_MLDSA44_ED25519,		},
+	{ "MLDSA44_ECDSA_P256",		KEY_MLDSA44_ECDSA_P256,		},
+	{ "MLDSA65_RSA3072_PSS",	KEY_MLDSA65_RSA3072_PSS,	},
+	{ "MLDSA65_RSA3072_PKCS15",	KEY_MLDSA65_RSA3072_PKCS15,	},
+	{ "MLDSA65_RSA4096_PSS",	KEY_MLDSA65_RSA4096_PSS,	},
+	{ "MLDSA65_RSA4096_PKCS15",	KEY_MLDSA65_RSA4096_PKCS15,	},
+	{ "MLDSA65_ECDSA_P256",		KEY_MLDSA65_ECDSA_P256,		},
+	{ "MLDSA65_ECDSA_P384",		KEY_MLDSA65_ECDSA_P384,		},
+	{ "MLDSA65_ECDSA_BPP256R1",	KEY_MLDSA65_ECDSA_BPP256R1,	},
+	{ "MLDSA65_ED25519",		KEY_MLDSA65_ED25519,		},
+	{ "MLDSA87_ECDSA_P384",		KEY_MLDSA87_ECDSA_P384,		},
+	{ "MLDSA87_ECDSA_BPP384R1",	KEY_MLDSA87_ECDSA_BPP384R1,	},
+	{ "MLDSA87_ED448",			KEY_MLDSA87_ED448,			},
+	{ "MLDSA87_RSA3072_PSS",	KEY_MLDSA87_RSA3072_PSS,	},
+	{ "MLDSA87_RSA4096_PSS",	KEY_MLDSA87_RSA4096_PSS,	},
+	{ "MLDSA87_ECDSA_P521",		KEY_MLDSA87_ECDSA_P521,		},
+	{ "mldsa44",				KEY_ML_DSA_44,				},
+	{ "mldsa65",				KEY_ML_DSA_65,				},
+	{ "mldsa87",				KEY_ML_DSA_87,				},
+};
+
+/*
+ * Described in header
+ */
+bool key_type_from_string(const char *str, bool prefix, key_type_t *type)
+{
+	int i;
+
+	if (!str)
+	{
+		return FALSE;
+	}
+
+	for (i = 0; i < countof(known_key_types); i++)
+	{
+		if (strcasematch(str, known_key_types[i].name, prefix))
+		{
+			if (type)
+			{
+				*type = known_key_types[i].type;
+			}
+			return TRUE;
+		}
+	}
+	return FALSE;
+}
+
 /*
  * Defined in header.
  */

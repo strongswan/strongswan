@@ -374,6 +374,16 @@ int key_type_to_oid(key_type_t type);
 key_type_t key_type_from_oid(int oid);
 
 /**
+ * Determine the key type for the given string.
+ *
+ * @param str			string to check (case-insensitively)
+ * @param prefix		TRUE to do a prefix match
+ * @param[out] type		key type if found (optional)
+ * @return				TRUE if name matched a known key type
+ */
+bool key_type_from_string(const char *str, bool prefix, key_type_t *type);
+
+/**
  * Conversion of ASN.1 signature or hash OID to signature scheme.
  *
  * @param oid			ASN.1 OID

@@ -50,6 +50,17 @@ static inline bool strpfx(const char *x, const char *prefix)
 }
 
 /**
+ * Helper function that checks if a string either starts with a given prefix
+ * of matches fully depending on a flag.
+ */
+static inline bool strmatch(const char *x, const char *y_or_prefix,
+							bool prefix)
+{
+	return (prefix && strpfx(x, y_or_prefix)) ||
+		   (!prefix && streq(x, y_or_prefix));
+}
+
+/**
  * Helper function that compares two strings for equality ignoring case
  */
 static inline bool strcaseeq(const char *x, const char *y)
@@ -71,6 +82,17 @@ static inline bool strncaseeq(const char *x, const char *y, size_t len)
 static inline bool strcasepfx(const char *x, const char *prefix)
 {
 	return strncaseeq(x, prefix, strlen(prefix));
+}
+
+/**
+ * Helper function that checks if a string either starts with a given prefix
+ * of matches fully depending on a flag.
+ */
+static inline bool strcasematch(const char *x, const char *y_or_prefix,
+								bool prefix)
+{
+	return (prefix && strcasepfx(x, y_or_prefix)) ||
+		   (!prefix && strcaseeq(x, y_or_prefix));
 }
 
 /**
