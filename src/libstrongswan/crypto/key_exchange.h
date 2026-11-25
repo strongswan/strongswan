@@ -147,6 +147,9 @@ struct key_exchange_t {
 	 *
 	 * See the interface description on how this method is used with KEMs.
 	 *
+	 * @note On initiators, this is expected to return the same value when
+	 * called multiple times.
+	 *
 	 * @param value		public key (allocated)
 	 * @return			TRUE if public key retrieved
 	 */

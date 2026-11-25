@@ -1741,6 +1741,11 @@ static bool test_single_ke(key_exchange_method_t method, ke_test_vector_t *v,
 	{
 		goto failure;
 	}
+	chunk_free(&a_pub);
+	if (!a->get_public_key(a, &a_pub) || !chunk_equals(a_pub, v->pub_i))
+	{
+		goto failure;
+	}
 	if (!b->set_public_key(b, a_pub))
 	{
 		goto failure;
@@ -1779,10 +1784,10 @@ failure:
 static bool test_single_ke(key_exchange_method_t method, ke_constructor_t create)
 {
 	key_exchange_t *a = NULL, *b = NULL;
-	chunk_t a_pub, b_pub, a_sec, b_sec;
+	chunk_t a_pub, a_pub2, b_pub, a_sec, b_sec;
 	bool success = FALSE;
 
-	a_pub = b_pub = a_sec = b_sec = chunk_empty;
+	a_pub = a_pub2 = b_pub = a_sec = b_sec = chunk_empty;
 	a = create(method);
 	b = create(method);
 	if (!a || !b)
@@ -1790,6 +1795,8 @@ static bool test_single_ke(key_exchange_method_t method, ke_constructor_t create
 		goto failure;
 	}
 	if (!a->get_public_key(a, &a_pub) ||
+		!a->get_public_key(a, &a_pub2) ||
+		!chunk_equals(a_pub, a_pub2) ||
 		!b->set_public_key(b, a_pub) ||
 		!b->get_shared_secret(b, &b_sec) ||
 		!b->get_public_key(b, &b_pub) ||
@@ -1806,6 +1813,7 @@ failure:
 	DESTROY_IF(a);
 	DESTROY_IF(b);
 	chunk_free(&a_pub);
+	chunk_free(&a_pub2);
 	chunk_free(&b_pub);
 	chunk_free(&a_sec);
 	chunk_free(&b_sec);

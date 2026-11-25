@@ -49,7 +49,7 @@ struct private_key_exchange_t {
 
 	/**
 	 * Encryption/public key and matrix A as initiator (array of k polynomials,
-	 * followed by a matrix of k*k polynomials).
+	 * followed by seed rho, followed by a matrix of k*k polynomials).
 	 */
 	chunk_t public_key;
 
@@ -530,6 +530,22 @@ static void poly_to_message(ml_poly_t *p, uint8_t *m)
 }
 
 /**
+ * Encode the public key from the stored polynomial t and rho.
+ */
+static chunk_t encode_public_key(private_key_exchange_t *this)
+{
+	const uint8_t k = this->params->k;
+
+	chunk_t ek;
+
+	ek = chunk_alloc(k * ML_KEM_POLY_LEN + ML_KEM_SEED_LEN);
+	encode_poly_arr(k, (ml_poly_t*)this->public_key.ptr, ek.ptr);
+	memcpy(ek.ptr + k * ML_KEM_POLY_LEN,
+		   this->public_key.ptr + k * sizeof(ml_poly_t), ML_KEM_SEED_LEN);
+	return ek;
+}
+
+/**
  * Generate a key pair from the given random seed d.  Returns the encoded public
  * key.
  *
@@ -541,7 +557,7 @@ static bool pke_keygen(private_key_exchange_t *this, chunk_t d, chunk_t *ek)
 	const uint8_t eta1 = this->params->eta1;
 
 	uint8_t seeds[2 * ML_KEM_SEED_LEN];
-	uint8_t *rho = seeds;
+	uint8_t *rho = seeds, *rho_ek;
 	uint8_t *sigma = seeds + ML_KEM_SEED_LEN;
 	uint8_t N = 0;
 	ml_poly_t *a, *s, e[k], *t;
@@ -556,9 +572,11 @@ static bool pke_keygen(private_key_exchange_t *this, chunk_t d, chunk_t *ek)
 		goto err;
 	}
 
-	this->public_key = chunk_alloc((k+1) * k * sizeof(ml_poly_t));
+	this->public_key = chunk_alloc((k+1) * k * sizeof(ml_poly_t) +
+								   ML_KEM_SEED_LEN);
 	t = (ml_poly_t*)this->public_key.ptr;
-	a = (ml_poly_t*)this->public_key.ptr + k;
+	rho_ek = this->public_key.ptr + k * sizeof(ml_poly_t);
+	a = (ml_poly_t*)(rho_ek + ML_KEM_SEED_LEN);
 
 	/* generate matrix A */
 	if (!generate_a(this, a, rho))
@@ -600,17 +618,15 @@ static bool pke_keygen(private_key_exchange_t *this, chunk_t d, chunk_t *ek)
 	}
 	ml_poly_add_arr(k, t, e, t);
 
-	/* pack public key and rho */
-	*ek = chunk_alloc(k * ML_KEM_POLY_LEN + ML_KEM_SEED_LEN);
-	encode_poly_arr(k, t, ek->ptr);
-	memcpy(ek->ptr + k * ML_KEM_POLY_LEN, rho, ML_KEM_SEED_LEN);
+	memcpy(rho_ek, rho, ML_KEM_SEED_LEN);
+	*ek = encode_public_key(this);
 
 	success = TRUE;
 
 err:
 	memwipe(seeds, sizeof(seeds));
-	memwipe(sigma, ML_KEM_SEED_LEN);
 	memwipe(e, sizeof(e));
+
 	return success;
 }
 
@@ -652,7 +668,8 @@ static bool pke_encrypt(private_key_exchange_t *this, chunk_t ek, uint8_t *m,
 	{
 		/* as initiator, we already have the decoded polynomial and matrix A */
 		t = (ml_poly_t*)this->public_key.ptr;
-		a = (ml_poly_t*)this->public_key.ptr + k;
+		a = (ml_poly_t*)(this->public_key.ptr + k * sizeof(ml_poly_t) +
+						 ML_KEM_SEED_LEN);
 	}
 
 	/* sample y from CBD using noise seed r and nonce N as input */
@@ -750,12 +767,12 @@ static bool pke_decrypt(private_key_exchange_t *this, chunk_t ciphertext,
  *
  * Algorithm 16/19 in FIPS 203.
  */
-static bool generate_keypair(private_key_exchange_t *this, chunk_t *ek)
+static bool generate_keypair(private_key_exchange_t *this, chunk_t *out)
 {
 	uint8_t dz[2*ML_KEM_SEED_LEN];
 	chunk_t d = chunk_create(dz, ML_KEM_SEED_LEN);
 	chunk_t z = chunk_create(dz + ML_KEM_SEED_LEN, ML_KEM_SEED_LEN);
-	chunk_t Hek;
+	chunk_t ek = chunk_empty, Hek;
 	bool success = FALSE;
 
 	/* get random seeds d and z */
@@ -766,11 +783,18 @@ static bool generate_keypair(private_key_exchange_t *this, chunk_t *ek)
 
 	/* generate a key pair and generate a hash of the latter to be stored
 	 * together with the rejection seed z */
-	if (pke_keygen(this, d, ek) &&
-		this->H->allocate_hash(this->H, *ek, &Hek))
+	if (pke_keygen(this, d, &ek) &&
+		this->H->allocate_hash(this->H, ek, &Hek))
 	{
+		*out = ek;
 		this->key_data = chunk_cat("mc", Hek, z);
 		success = TRUE;
+	}
+	else
+	{
+		chunk_free(&ek);
+		chunk_free(&this->public_key);
+		chunk_clear(&this->private_key);
 	}
 
 	memwipe(dz, sizeof(dz));
@@ -789,6 +813,11 @@ METHOD(key_exchange_t, get_public_key, bool,
 	}
 
 	/* as initiator, we generate a key pair and return the public key */
+	if (this->public_key.ptr)
+	{
+		*value = encode_public_key(this);
+		return TRUE;
+	}
 	return generate_keypair(this, value);
 }
 
