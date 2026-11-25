@@ -2526,6 +2526,21 @@ static status_t parse_payloads(private_message_t *this)
 }
 
 /**
+ * Determines the actual payload type from the given payload
+ */
+static payload_type_t get_actual_payload_type(payload_t *payload)
+{
+	payload_type_t type = payload->get_type(payload);
+
+	if (type == PL_UNKNOWN)
+	{
+		unknown_payload_t *unknown = (unknown_payload_t*)payload;
+		type = unknown->get_type(unknown);
+	}
+	return type;
+}
+
+/**
  * Decrypt an encrypted payload and extract all contained payloads.
  */
 static status_t decrypt_and_extract(private_message_t *this, keymat_t *keymat,
@@ -2602,7 +2617,7 @@ static status_t decrypt_and_extract(private_message_t *this, keymat_t *keymat,
 
 	while ((encrypted = encryption->remove_payload(encryption)))
 	{
-		type = encrypted->get_type(encrypted);
+		type = get_actual_payload_type(encrypted);
 		if (previous)
 		{
 			previous->set_next_type(previous, type);
@@ -2684,6 +2699,8 @@ static status_t decrypt_payloads(private_message_t *this, keymat_t *keymat)
 	status_t status = SUCCESS;
 	char *was_encrypted = NULL;
 
+	this->first_payload = PL_NONE;
+
 	enumerator = this->payloads->create_enumerator(this->payloads);
 	while (enumerator->enumerate(enumerator, &payload))
 	{
@@ -2744,7 +2761,15 @@ static status_t decrypt_payloads(private_message_t *this, keymat_t *keymat)
 			{
 				break;
 			}
+			if (!previous)
+			{	/* no specific type until we reassemble the complete message */
+				this->first_payload = PLV2_FRAGMENT;
+			}
 			was_encrypted = "encrypted fragment payload";
+		}
+		else if (!previous)
+		{
+			this->first_payload = get_actual_payload_type(payload);
 		}
 
 		if (type != PL_UNKNOWN && !was_encrypted &&
