@@ -74,8 +74,8 @@ METHOD(private_key_t, sign, bool,
 
 	if (key_type_from_signature_scheme(scheme) != this->type)
 	{
-		DBG1(DBG_LIB, "signature scheme %N not supported",
-			 signature_scheme_names, scheme);
+		DBG1(DBG_LIB, "signature scheme %N not supported by %N key",
+			 signature_scheme_names, scheme, key_type_names, this->type);
 		return FALSE;
 	}
 
@@ -83,6 +83,13 @@ METHOD(private_key_t, sign, bool,
 	 * by Botan */
 	if (!pqc_params_create(params, &pqc_params))
 	{
+		return FALSE;
+	}
+	else if (pqc_params.ctx.len)
+	{
+		DBG1(DBG_LIB, "creating %N signature with context string not supported "
+			 "by Botan", signature_scheme_names, scheme);
+		pqc_params_free(&pqc_params);
 		return FALSE;
 	}
 	sig_mode = pqc_params.deterministic ? "Deterministic" : "Randomized";

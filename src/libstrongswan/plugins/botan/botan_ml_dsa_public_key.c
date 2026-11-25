@@ -73,12 +73,27 @@ METHOD(public_key_t, verify, bool,
 	private_public_key_t *this, signature_scheme_t scheme,
 	void *params, chunk_t data, chunk_t signature)
 {
+	pqc_params_t pqc_params;
+
 	if (key_type_from_signature_scheme(scheme) != this->type)
 	{
-		DBG1(DBG_LIB, "signature scheme %N not supported via botan",
-			 signature_scheme_names, scheme);
+		DBG1(DBG_LIB, "signature scheme %N not supported by %N key",
+			 signature_scheme_names, scheme, key_type_names, this->type);
 		return FALSE;
 	}
+	/* context strings are currently not supported by Botan */
+	if (!pqc_params_create(params, &pqc_params))
+	{
+		return FALSE;
+	}
+	else if (pqc_params.ctx.len)
+	{
+		DBG1(DBG_LIB, "verifying %N signature with context string not "
+			 "supported by Botan", signature_scheme_names, scheme);
+		pqc_params_free(&pqc_params);
+		return FALSE;
+	}
+	pqc_params_free(&pqc_params);
 	return botan_verify_signature(this->key, "Pure", data, signature);
 }
 
