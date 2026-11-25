@@ -5,7 +5,7 @@ moon:: swanctl --list-sas --ike-id 2 --raw 2> /dev/null::rw.*version=2 state=EST
 carol::cat /var/log/daemon.log::using PPK for PPK_ID 'ppk-carol@strongswan.org'::YES
 dave:: cat /var/log/daemon.log::peer didn't use PPK for PPK_ID 'ppk-dave@strongswan.org'::YES
 moon:: cat /var/log/daemon.log::using PPK for PPK_ID 'ppk-carol@strongswan.org'::YES
-moon:: cat /var/log/daemon.log::no PPK for 'ppk-dave@strongswan.org' found, ignored because PPK is not required::YES
+moon:: cat /var/log/daemon.log::no PPK found for 'ppk-dave@strongswan.org'::YES
 moon:: cat /var/log/daemon.log::no PPK available, using NO_PPK_AUTH notify::YES
 alice::ping -c 1 -W 1 192.168.0.100::64 bytes from 192.168.0.100: icmp_.eq=1::YES
 alice::ping -c 1 -W 1 192.168.0.200::64 bytes from 192.168.0.200: icmp_.eq=1::YES

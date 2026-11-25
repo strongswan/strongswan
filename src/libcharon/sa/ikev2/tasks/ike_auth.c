@@ -72,6 +72,23 @@ struct private_ike_auth_t {
 	chunk_t ppk;
 
 	/**
+	 * Whether the peer's PPK_ID was processed and a PPK searched as responder
+	 */
+	bool ppk_checked;
+
+	/**
+	 * Whether a key was found for the peer's PPK_ID as responder (the actual
+	 * PPK is cleared once we applied it)
+	 */
+	bool ppk_found;
+
+	/**
+	 * PPK_ID received from the peer as responder (the ID above is cleared once
+	 * we applied the PPK)
+	 */
+	identification_t *ppk_id_peer;
+
+	/**
 	 * IKE_SA_INIT message sent by us
 	 */
 	packet_t *my_packet;
@@ -442,6 +459,30 @@ static bool load_cfg_candidates(private_ike_auth_t *this)
 }
 
 /**
+ * Check whether the given peer config matches the observed PPK data
+ */
+static bool ppk_cfg_matches(private_ike_auth_t *this, peer_cfg_t *cfg)
+{
+	identification_t *ppk_id_cfg = cfg->get_ppk_id(cfg);
+	bool required = cfg->has_option(cfg, OPT_PPK_REQUIRED);
+
+	if (!this->ike_sa->supports_extension(this->ike_sa, EXT_PPK))
+	{
+		return !required;
+	}
+	if (!this->ppk_id_peer)
+	{
+		return !required;
+	}
+	if (ppk_id_cfg &&
+		!this->ppk_id_peer->matches(this->ppk_id_peer, ppk_id_cfg))
+	{
+		return FALSE;
+	}
+	return !required || this->ppk_found;
+}
+
+/**
  * update the current peer candidate if necessary, using candidates
  */
 static bool update_cfg_candidates(private_ike_auth_t *this, bool strict)
@@ -485,6 +526,10 @@ static bool update_cfg_candidates(private_ike_auth_t *this, bool strict)
 			}
 			e1->destroy(e1);
 			e2->destroy(e2);
+			if (this->ppk_checked && !ppk_cfg_matches(this, this->peer_cfg))
+			{
+				comply_error = "PPK policy mismatch";
+			}
 			if (!comply_error)
 			{
 				break;
@@ -679,14 +724,7 @@ static bool get_ppk(private_ike_auth_t *this, identification_t *ppk_id)
 	key = lib->credmgr->get_shared(lib->credmgr, SHARED_PPK, ppk_id, NULL);
 	if (!key)
 	{
-		if (this->peer_cfg->has_option(this->peer_cfg, OPT_PPK_REQUIRED))
-		{
-			DBG1(DBG_CFG, "PPK required but no PPK found for '%Y'", ppk_id);
-			return FALSE;
-		}
-		DBG1(DBG_CFG, "no PPK for '%Y' found, ignored because PPK is not "
-			 "required", ppk_id);
-		return TRUE;
+		return FALSE;
 	}
 	this->ppk = chunk_clone(key->get_key(key));
 	this->ppk_id = ppk_id->clone(ppk_id);
@@ -722,51 +760,50 @@ static bool get_ppk_i(private_ike_auth_t *this)
 		}
 		return TRUE;
 	}
-	return get_ppk(this, ppk_id);
+	if (!get_ppk(this, ppk_id))
+	{
+		if (this->peer_cfg->has_option(this->peer_cfg, OPT_PPK_REQUIRED))
+		{
+			DBG1(DBG_CFG, "PPK required but no PPK found for '%Y'", ppk_id);
+			return FALSE;
+		}
+		DBG1(DBG_CFG, "no PPK found for '%Y', ignored because PPK is not "
+			 "required", ppk_id);
+	}
+	return TRUE;
 }
 
 /**
- * Check if we have a PPK available and if not whether we require one as
- * responder
+ * Lookup and store PPK_ID and PPK as responder, enforcement happens in
+ * ppk_cfg_matches().
  */
-static bool get_ppk_r(private_ike_auth_t *this, message_t *msg)
+static void get_ppk_r(private_ike_auth_t *this, message_t *msg)
 {
 	notify_payload_t *notify;
-	identification_t *ppk_id, *ppk_id_cfg;
-	bool result;
+	identification_t *ppk_id;
 
+	if (this->ppk_checked)
+	{
+		return;
+	}
+	/* set even if the peer doesn't support PPKs, so configs that require one
+	 * are rejected later */
+	this->ppk_checked = TRUE;
 	if (!this->ike_sa->supports_extension(this->ike_sa, EXT_PPK))
 	{
-		if (this->peer_cfg->has_option(this->peer_cfg, OPT_PPK_REQUIRED))
-		{
-			DBG1(DBG_CFG, "PPK required but peer does not support PPK");
-			return FALSE;
-		}
-		return TRUE;
+		return;
 	}
-
 	notify = msg->get_notify(msg, PPK_IDENTITY);
 	if (!notify || !parse_ppk_identity(notify, &ppk_id))
 	{
-		if (this->peer_cfg->has_option(this->peer_cfg, OPT_PPK_REQUIRED))
-		{
-			DBG1(DBG_CFG, "PPK required but no PPK_IDENTITY received");
-			return FALSE;
-		}
-		return TRUE;
+		return;
 	}
-
-	ppk_id_cfg = this->peer_cfg->get_ppk_id(this->peer_cfg);
-	if (ppk_id_cfg && !ppk_id->matches(ppk_id, ppk_id_cfg))
+	this->ppk_id_peer = ppk_id;
+	this->ppk_found = get_ppk(this, ppk_id);
+	if (!this->ppk_found)
 	{
-		DBG1(DBG_CFG, "received PPK_ID '%Y', but require '%Y'", ppk_id,
-			 ppk_id_cfg);
-		ppk_id->destroy(ppk_id);
-		return FALSE;
+		DBG1(DBG_CFG, "no PPK found for '%Y'", ppk_id);
 	}
-	result = get_ppk(this, ppk_id);
-	ppk_id->destroy(ppk_id);
-	return result;
 }
 
 /**
@@ -1095,12 +1132,8 @@ METHOD(task_t, process_r, status_t,
 	if (message->get_payload(message, PLV2_AUTH) &&
 		is_first_round(this, FALSE))
 	{
-		if (!get_ppk_r(this, message))
-		{
-			this->authentication_failed = TRUE;
-			return NEED_MORE;
-		}
-		else if (this->ppk.ptr && this->other_auth->use_ppk)
+		get_ppk_r(this, message);
+		if (this->ppk.ptr && this->other_auth->use_ppk)
 		{
 			this->other_auth->use_ppk(this->other_auth, this->ppk, FALSE);
 		}
@@ -1803,6 +1836,7 @@ METHOD(task_t, destroy, void,
 	DESTROY_IF(this->other_auth);
 	DESTROY_IF(this->peer_cfg);
 	DESTROY_IF(this->redirect_to);
+	DESTROY_IF(this->ppk_id_peer);
 	this->candidates->destroy_offset(this->candidates, offsetof(peer_cfg_t, destroy));
 	free(this);
 }
