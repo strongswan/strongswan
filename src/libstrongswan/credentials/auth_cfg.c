@@ -619,6 +619,26 @@ static struct {
 	{ "ecdsa",		KEY_ECDSA,		AUTH_RULE_ECDSA_STRENGTH,	},
 	{ "ed25519",	KEY_ED25519,	AUTH_RULE_MAX,				},
 	{ "ed448",		KEY_ED448,		AUTH_RULE_MAX,				},
+	/* these are reordered slightly and have to precede the plain ML-DSA types
+	 * for prefix matching */
+	{ "mldsa44+rsa2048pss",		KEY_MLDSA44_RSA2048_PSS,	AUTH_RULE_MAX },
+	{ "mldsa44+rsa2048pkcs15",	KEY_MLDSA44_RSA2048_PKCS15,	AUTH_RULE_MAX },
+	{ "mldsa44+ed25519",		KEY_MLDSA44_ED25519,		AUTH_RULE_MAX },
+	{ "mldsa44+ecdsa256",		KEY_MLDSA44_ECDSA_P256,		AUTH_RULE_MAX },
+	{ "mldsa65+rsa3072pss",		KEY_MLDSA65_RSA3072_PSS,	AUTH_RULE_MAX },
+	{ "mldsa65+rsa3072pkcs15",	KEY_MLDSA65_RSA3072_PKCS15,	AUTH_RULE_MAX },
+	{ "mldsa65+rsa4096pss",		KEY_MLDSA65_RSA4096_PSS,	AUTH_RULE_MAX },
+	{ "mldsa65+rsa4096pkcs15",	KEY_MLDSA65_RSA4096_PKCS15,	AUTH_RULE_MAX },
+	{ "mldsa65+ecdsa256bp",		KEY_MLDSA65_ECDSA_BPP256R1,	AUTH_RULE_MAX },
+	{ "mldsa65+ecdsa256",		KEY_MLDSA65_ECDSA_P256,		AUTH_RULE_MAX },
+	{ "mldsa65+ecdsa384",		KEY_MLDSA65_ECDSA_P384,		AUTH_RULE_MAX },
+	{ "mldsa65+ed25519",		KEY_MLDSA65_ED25519,		AUTH_RULE_MAX },
+	{ "mldsa87+ecdsa384bp",		KEY_MLDSA87_ECDSA_BPP384R1,	AUTH_RULE_MAX },
+	{ "mldsa87+ecdsa384",		KEY_MLDSA87_ECDSA_P384,		AUTH_RULE_MAX },
+	{ "mldsa87+ed448",			KEY_MLDSA87_ED448,			AUTH_RULE_MAX },
+	{ "mldsa87+rsa3072pss",		KEY_MLDSA87_RSA3072_PSS,	AUTH_RULE_MAX },
+	{ "mldsa87+rsa4096pss",		KEY_MLDSA87_RSA4096_PSS,	AUTH_RULE_MAX },
+	{ "mldsa87+ecdsa521",		KEY_MLDSA87_ECDSA_P521,		AUTH_RULE_MAX },
 	{ "mldsa44",	KEY_ML_DSA_44,	AUTH_RULE_MAX,				},
 	{ "mldsa65",	KEY_ML_DSA_65,	AUTH_RULE_MAX,				},
 	{ "mldsa87",	KEY_ML_DSA_87,	AUTH_RULE_MAX,				},
@@ -633,14 +653,14 @@ static bool is_known_key_type(const char *str, bool prefix, key_type_t *type,
 {
 	int i;
 
-	if (strpfx(str, "ike:"))
+	if (strcasepfx(str, "ike:"))
 	{
 		str += 4;
 	}
 	for (i = 0; i < countof(known_key_types); i++)
 	{
-		if ((prefix && strpfx(str, known_key_types[i].name)) ||
-			(!prefix && streq(str, known_key_types[i].name)))
+		if ((prefix && strcasepfx(str, known_key_types[i].name)) ||
+			(!prefix && strcaseeq(str, known_key_types[i].name)))
 		{
 			if (type)
 			{
@@ -708,6 +728,24 @@ METHOD(auth_cfg_t, add_pubkey_constraints, void,
 			{ "identity",	SIGN_ML_DSA_44,					KEY_ML_DSA_44, },
 			{ "identity",	SIGN_ML_DSA_65,					KEY_ML_DSA_65, },
 			{ "identity",	SIGN_ML_DSA_87,					KEY_ML_DSA_87, },
+			{ "identity",	SIGN_MLDSA44_RSA2048_PSS,		KEY_MLDSA44_RSA2048_PSS,	},
+			{ "identity",	SIGN_MLDSA44_RSA2048_PKCS15,	KEY_MLDSA44_RSA2048_PKCS15,	},
+			{ "identity",	SIGN_MLDSA44_ED25519,			KEY_MLDSA44_ED25519,		},
+			{ "identity",	SIGN_MLDSA44_ECDSA_P256,		KEY_MLDSA44_ECDSA_P256,		},
+			{ "identity",	SIGN_MLDSA65_RSA3072_PSS,		KEY_MLDSA65_RSA3072_PSS,	},
+			{ "identity",	SIGN_MLDSA65_RSA3072_PKCS15,	KEY_MLDSA65_RSA3072_PKCS15, },
+			{ "identity",	SIGN_MLDSA65_RSA4096_PSS,		KEY_MLDSA65_RSA4096_PSS,	},
+			{ "identity",	SIGN_MLDSA65_RSA4096_PKCS15,	KEY_MLDSA65_RSA4096_PKCS15,	},
+			{ "identity",	SIGN_MLDSA65_ECDSA_P256,		KEY_MLDSA65_ECDSA_P256,		},
+			{ "identity",	SIGN_MLDSA65_ECDSA_P384,		KEY_MLDSA65_ECDSA_P384,		},
+			{ "identity",	SIGN_MLDSA65_ECDSA_BPP256R1,	KEY_MLDSA65_ECDSA_BPP256R1, },
+			{ "identity",	SIGN_MLDSA65_ED25519,			KEY_MLDSA65_ED25519,		},
+			{ "identity",	SIGN_MLDSA87_ECDSA_P384,		KEY_MLDSA87_ECDSA_P384,		},
+			{ "identity",	SIGN_MLDSA87_ECDSA_BPP384R1,	KEY_MLDSA87_ECDSA_BPP384R1, },
+			{ "identity",	SIGN_MLDSA87_ED448,				KEY_MLDSA87_ED448,			},
+			{ "identity",	SIGN_MLDSA87_RSA3072_PSS,		KEY_MLDSA87_RSA3072_PSS,	},
+			{ "identity",	SIGN_MLDSA87_RSA4096_PSS,		KEY_MLDSA87_RSA4096_PSS,	},
+			{ "identity",	SIGN_MLDSA87_ECDSA_P521,		KEY_MLDSA87_ECDSA_P521,		},
 		};
 
 		if (expected_strength != AUTH_RULE_MAX)
@@ -729,7 +767,7 @@ METHOD(auth_cfg_t, add_pubkey_constraints, void,
 			key_token = token;
 			continue;
 		}
-		if (key_token && strpfx(key_token, "ike:") && !ike)
+		if (key_token && strcasepfx(key_token, "ike:") && !ike)
 		{
 			continue;
 		}
@@ -746,7 +784,7 @@ METHOD(auth_cfg_t, add_pubkey_constraints, void,
 				chunk_free(&curve);
 				if (name)
 				{
-					if (strpfx(key_token, "ike:"))
+					if (strcasepfx(key_token, "ike:"))
 					{
 						add(this, AUTH_RULE_IKE_ECDSA_CURVE, name);
 						ike_curve_added = TRUE;
@@ -760,12 +798,14 @@ METHOD(auth_cfg_t, add_pubkey_constraints, void,
 			}
 		}
 
-		if (key_token && streq(key_token + strlen(key_token) - 3, "pss"))
+		if (key_token &&
+			strcaseeq(key_token + (strcasepfx(key_token, "ike:") ? 4 : 0),
+					  "rsa/pss"))
 		{
 			params = create_rsa_pss_constraint(token);
 			if (params)
 			{
-				if (strpfx(key_token, "ike:"))
+				if (strcasepfx(key_token, "ike:"))
 				{
 					add(this, AUTH_RULE_IKE_SIGNATURE_SCHEME, params);
 					ike_sig_added = TRUE;
@@ -787,7 +827,7 @@ METHOD(auth_cfg_t, add_pubkey_constraints, void,
 					params = create_rsa_pss_constraint(token);
 					if (params)
 					{
-						if (strpfx(key_token, "ike:"))
+						if (strcasepfx(key_token, "ike:"))
 						{
 							add(this, AUTH_RULE_IKE_SIGNATURE_SCHEME, params);
 							ike_sig_added = TRUE;
@@ -802,7 +842,7 @@ METHOD(auth_cfg_t, add_pubkey_constraints, void,
 			}
 			for (i = 0; i < countof(schemes); i++)
 			{
-				if (streq(schemes[i].name, token))
+				if (strcaseeq(schemes[i].name, token))
 				{
 					if (expected_type == KEY_ANY ||
 						expected_type == schemes[i].key)
@@ -810,7 +850,7 @@ METHOD(auth_cfg_t, add_pubkey_constraints, void,
 						INIT(params,
 							.scheme = schemes[i].scheme,
 						);
-						if (strpfx(key_token, "ike:"))
+						if (strcasepfx(key_token, "ike:"))
 						{
 							add(this, AUTH_RULE_IKE_SIGNATURE_SCHEME, params);
 							ike_sig_added = TRUE;
