@@ -60,7 +60,50 @@ struct private_cmd_creds_t {
 	 * Local identity
 	 */
 	char *identity;
+
+	/**
+	 * Prompt for a one-time password after the EAP password
+	 */
+	bool otp;
 };
+
+/**
+ * Prompt for EAP password and one-time password (e.g. a FortiToken code) and
+ * return them concatenated, which is what OTP servers like FortiAuthenticator
+ * expect via EAP-GTC/RADIUS PAP. The password may be empty for OTP-only users.
+ */
+static char *prompt_password_otp()
+{
+	char *pwd = NULL, *pass, *otp;
+
+#ifdef HAVE_GETPASS
+	pwd = getpass("EAP password: ");
+#endif
+	if (!pwd)
+	{
+		return NULL;
+	}
+	/* getpass() uses a static buffer */
+	pass = strdup(pwd);
+	memwipe(pwd, strlen(pwd));
+#ifdef HAVE_GETPASS
+	pwd = getpass("OTP code: ");
+#endif
+	if (!pwd || strlen(pwd) == 0)
+	{
+		memwipe(pass, strlen(pass));
+		free(pass);
+		return NULL;
+	}
+	if (asprintf(&otp, "%s%s", pass, pwd) < 0)
+	{
+		otp = NULL;
+	}
+	memwipe(pwd, strlen(pwd));
+	memwipe(pass, strlen(pass));
+	free(pass);
+	return otp;
+}
 
 /**
  * Callback function to prompt for secret
@@ -72,11 +115,21 @@ static shared_key_t* callback_shared(private_cmd_creds_t *this,
 {
 	shared_key_t *shared;
 	linked_list_t *owners;
-	char *label, *pwd = NULL;
+	char *label, *pwd = NULL, *otp = NULL;
 
 	if (type == this->prompted)
 	{
 		return NULL;
+	}
+	if (type == SHARED_EAP && this->otp)
+	{
+		otp = prompt_password_otp();
+		if (!otp)
+		{
+			return NULL;
+		}
+		pwd = otp;
+		goto prompted;
 	}
 	switch (type)
 	{
@@ -102,6 +155,7 @@ static shared_key_t* callback_shared(private_cmd_creds_t *this,
 	{
 		return NULL;
 	}
+prompted:
 	this->prompted = type;
 	if (match_me)
 	{
@@ -113,6 +167,7 @@ static shared_key_t* callback_shared(private_cmd_creds_t *this,
 	}
 	shared = shared_key_create(type, chunk_clone(chunk_from_str(pwd)));
 	memwipe(pwd, strlen(pwd));
+	free(otp);
 	/* cache password in case it is required more than once */
 	owners = linked_list_create();
 	if (me)
@@ -255,6 +310,9 @@ METHOD(cmd_creds_t, handle, bool,
 			break;
 		case CMD_OPT_IDENTITY:
 			this->identity = arg;
+			break;
+		case CMD_OPT_OTP:
+			this->otp = TRUE;
 			break;
 		case CMD_OPT_AGENT:
 			this->agent = arg ?: getenv("SSH_AUTH_SOCK");

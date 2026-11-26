@@ -136,6 +136,16 @@ struct private_cmd_connection_t {
 	 * Selected connection profile
 	 */
 	profile_t profile;
+
+	/**
+	 * Use TCP encapsulation (RFC 9329)
+	 */
+	bool tcp;
+
+	/**
+	 * Remote port, 0 for default
+	 */
+	uint16_t remote_port;
 };
 
 /**
@@ -160,6 +170,7 @@ static peer_cfg_t* create_peer_cfg(private_cmd_connection_t *this)
 		.remote_port = IKEV2_UDP_PORT,
 		.fragmentation = FRAGMENTATION_YES,
 		.childless = this->childless,
+		.tcp = this->tcp,
 	};
 	peer_cfg_create_t peer = {
 		.cert_policy = CERT_SEND_IF_ASKED,
@@ -195,9 +206,18 @@ static peer_cfg_t* create_peer_cfg(private_cmd_connection_t *this)
 	}
 
 	ike.local_port = charon->socket->get_port(charon->socket, FALSE);
-	if (ike.local_port != IKEV2_UDP_PORT)
-	{
+	if (ike.local_port != IKEV2_UDP_PORT || this->tcp)
+	{	/* RFC 9329 uses TCP port 4500 by default */
 		ike.remote_port = IKEV2_NATT_PORT;
+	}
+	if (this->remote_port)
+	{
+		ike.remote_port = this->remote_port;
+	}
+	if (this->tcp && ike.version != IKEV2)
+	{
+		DBG1(DBG_CFG, "TCP encapsulation requires IKEv2");
+		return NULL;
 	}
 	ike_cfg = ike_cfg_create(&ike);
 	if (this->ike_proposals->get_count(this->ike_proposals))
@@ -447,6 +467,11 @@ static job_requeue_t initiate(private_cmd_connection_t *this)
 	}
 
 	peer_cfg = create_peer_cfg(this);
+	if (!peer_cfg)
+	{
+		terminate(pid);
+		return JOB_REQUEUE_NONE;
+	}
 
 	if (!add_auth_cfgs(this, peer_cfg))
 	{
@@ -565,6 +590,17 @@ METHOD(cmd_connection_t, handle, bool,
 			break;
 		case CMD_OPT_PROFILE:
 			set_profile(this, arg);
+			break;
+		case CMD_OPT_TCP:
+			this->tcp = TRUE;
+			break;
+		case CMD_OPT_REMOTE_PORT:
+			this->remote_port = atoi(arg);
+			if (!this->remote_port)
+			{
+				DBG1(DBG_CFG, "invalid remote port '%s'", arg);
+				exit(1);
+			}
 			break;
 		default:
 			return FALSE;

@@ -75,4 +75,12 @@ cmd_option_t cmd_options[CMD_OPT_COUNT] = {
 		"  ikev1-pub[-am], ikev1-xauth[-am],",
 		"  ikev1-xauth-psk[-am], ikev1-hybrid[-am]",
 	}},
+	{ CMD_OPT_TCP, "tcp", no_argument, "",
+	  "encapsulate IKE and ESP in TCP (RFC 9329, IKEv2 only)", {}},
+	{ CMD_OPT_REMOTE_PORT, "remote-port", required_argument, "port",
+	  "remote IKE port (default: 500, 4500 with --tcp)", {}},
+	{ CMD_OPT_OTP, "otp", no_argument, "",
+	  "prompt for EAP password and one-time password separately and send", {
+		"them concatenated (e.g. for EAP-GTC with FortiToken)",
+	}},
 };
