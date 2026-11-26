@@ -596,6 +596,10 @@ static void list_ike(private_vici_query_t *this, vici_builder_t *b,
 	add_condition(b, ike_sa, "nat-remote", COND_NAT_THERE);
 	add_condition(b, ike_sa, "nat-fake", COND_NAT_FAKE);
 	add_condition(b, ike_sa, "nat-any", COND_NAT_ANY);
+	if (ike_sa->get_tcp_conn(ike_sa))
+	{
+		b->add_kv(b, "encap-tcp", "yes");
+	}
 
 	if_id = ike_sa->get_if_id(ike_sa, TRUE);
 	if (if_id)

@@ -302,6 +302,11 @@ CALLBACK(ike_sa, int,
 		}
 		printf("\n");
 
+		if (streq(ike->get(ike, "encap-tcp"), "yes"))
+		{
+			printf("  TCP encapsulation (RFC 9329)\n");
+		}
+
 		if (ike->get(ike, "encr-alg"))
 		{
 			printf("  %s", ike->get(ike, "encr-alg"));
