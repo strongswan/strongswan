@@ -159,6 +159,15 @@ static inline void memwipe(void *ptr, size_t n)
 #endif /* HAVE_EXPLICIT_BZERO */
 
 /**
+ * Safely overwrite n bytes of memory at ptr with zero and then free it.
+ */
+static inline void memwipe_free(void *ptr, size_t n)
+{
+	memwipe(ptr, n);
+	free(ptr);
+}
+
+/**
  * A variant of strstr with the characteristics of memchr, where haystack is not
  * a null-terminated string but simply a memory area of length n.
  */
