@@ -14,6 +14,7 @@ endif
 
 libstrongswan_socket_default_la_SOURCES = \
 	socket_default_socket.h socket_default_socket.c \
+	socket_default_tcp.h socket_default_tcp.c \
 	socket_default_plugin.h socket_default_plugin.c
 
 libstrongswan_socket_default_la_LDFLAGS = -module -avoid-version

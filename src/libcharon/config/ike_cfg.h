@@ -226,6 +226,13 @@ struct ike_cfg_t {
 	bool (*force_encap) (ike_cfg_t *this);
 
 	/**
+	 * Use TCP encapsulation of IKE and ESP (RFC 9329) as initiator?
+	 *
+	 * @return				TRUE to connect over TCP
+	 */
+	bool (*use_tcp) (ike_cfg_t *this);
+
+	/**
 	 * Use IKE fragmentation
 	 *
 	 * @return				TRUE to use fragmentation
@@ -300,6 +307,8 @@ struct ike_cfg_create_t {
 	bool ocsp_certreq;
 	/** Enforce UDP encapsulation by faking NATD notify */
 	bool force_encap;
+	/** Use TCP encapsulation (RFC 9329) to reach the remote port */
+	bool tcp;
 	/** Use IKE fragmentation */
 	fragmentation_t fragmentation;
 	/** Childless IKE_SA configuration */

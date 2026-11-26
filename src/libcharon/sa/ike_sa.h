@@ -523,6 +523,23 @@ struct ike_sa_t {
 	void (*float_ports)(ike_sa_t *this);
 
 	/**
+	 * Get the TCP connection this IKE_SA uses (RFC 9329).
+	 *
+	 * @return				connection identifier, 0 if UDP is used
+	 */
+	uint32_t (*get_tcp_conn)(ike_sa_t *this);
+
+	/**
+	 * Use the given TCP connection for this IKE_SA (RFC 9329).
+	 *
+	 * A reference to the new connection is acquired, the one to the previous
+	 * connection is released.
+	 *
+	 * @param conn			connection identifier, 0 to use UDP
+	 */
+	void (*set_tcp_conn)(ike_sa_t *this, uint32_t conn);
+
+	/**
 	 * Update the IKE_SAs host and CHILD_SAs.
 	 *
 	 * Hosts may be NULL to use current host.

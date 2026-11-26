@@ -99,6 +99,9 @@ struct kernel_ipsec_add_sa_t {
 	uint32_t cpu;
 	/** TRUE to enable UDP encapsulation for NAT traversal */
 	bool encap;
+	/** TRUE to use TCP instead of UDP encapsulation (RFC 9329), requires
+	 * encap and uses the ports of the TCP connection */
+	bool encap_tcp;
 	/** HW offload mode */
 	hw_offload_t hw_offload;
 	/** Mark the SA should apply to packets after processing */
@@ -141,6 +144,8 @@ struct kernel_ipsec_update_sa_t {
 	bool encap;
 	/** TRUE to enable UDP encapsulation */
 	bool new_encap;
+	/** TRUE if encapsulation uses TCP instead of UDP (RFC 9329) */
+	bool encap_tcp;
 	/** Old reqid */
 	uint32_t old_reqid;
 	/** New reqid, might be the same as old_reqid */

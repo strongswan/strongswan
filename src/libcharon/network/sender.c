@@ -122,9 +122,11 @@ METHOD(sender_t, send_, void,
 		message->destroy(message);
 	}
 
-	/* if neither source nor destination port is 500 we add a Non-ESP marker */
-	if (dst->get_port(dst) != IKEV2_UDP_PORT &&
-		src->get_port(src) != IKEV2_UDP_PORT)
+	/* if neither source nor destination port is 500 we add a Non-ESP marker,
+	 * IKE messages over TCP always carry one (RFC 9329, section 3) */
+	if (packet_get_tcp_conn(packet) ||
+		(dst->get_port(dst) != IKEV2_UDP_PORT &&
+		 src->get_port(src) != IKEV2_UDP_PORT))
 	{
 		chunk_t data, marker = chunk_from_chars(0x00, 0x00, 0x00, 0x00);
 

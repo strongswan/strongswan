@@ -166,6 +166,21 @@ struct private_receiver_t {
 };
 
 /**
+ * Let a response use the TCP connection a request was received on, if any
+ */
+static void copy_tcp_conn(message_t *request, message_t *response)
+{
+	metadata_t *conn;
+
+	conn = request->get_metadata(request, TCP_CONN_METADATA);
+	if (conn)
+	{
+		response->set_metadata(response, TCP_CONN_METADATA,
+							   conn->clone(conn));
+	}
+}
+
+/**
  * send a notify back to the sender
  */
 static void send_notify(message_t *request, int major, exchange_type_t exchange,
@@ -183,6 +198,7 @@ static void send_notify(message_t *request, int major, exchange_type_t exchange,
 	src = request->get_destination(request);
 	response->set_source(response, src->clone(src));
 	response->set_destination(response, dst->clone(dst));
+	copy_tcp_conn(request, response);
 	if (major == IKEV2_MAJOR_VERSION)
 	{
 		response->set_request(response, FALSE);
@@ -507,10 +523,23 @@ static job_requeue_t receive_packets(private_receiver_t *this)
 		return JOB_REQUEUE_DIRECT;
 	}
 
+	/* IKE messages over TCP always carry a Non-ESP marker, ESP packets are
+	 * handled by the kernel (RFC 9329, section 3) */
+	if (packet_get_tcp_conn(packet))
+	{
+		if (!memeq(data.ptr, marker.ptr, marker.len))
+		{
+			DBG1(DBG_NET, "received TCP message from %#H without Non-ESP "
+				 "marker - ignored", src);
+			packet->destroy(packet);
+			return JOB_REQUEUE_DIRECT;
+		}
+		packet->skip_bytes(packet, marker.len);
+	}
 	/* if neither source nor destination port is 500 we assume an IKE packet
 	 * with Non-ESP marker or an ESP packet */
-	if (dst->get_port(dst) != IKEV2_UDP_PORT &&
-		src->get_port(src) != IKEV2_UDP_PORT)
+	else if (dst->get_port(dst) != IKEV2_UDP_PORT &&
+			 src->get_port(src) != IKEV2_UDP_PORT)
 	{
 		if (memeq(data.ptr, marker.ptr, marker.len))
 		{	/* remove Non-ESP marker */

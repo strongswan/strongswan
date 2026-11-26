@@ -97,6 +97,11 @@
 #define UDP_ENCAP_ESPINUDP 2
 #endif
 
+/* from linux/udp.h, encapsulation type for ESP in TCP (RFC 9329) */
+#ifndef TCP_ENCAP_ESPINTCP
+#define TCP_ENCAP_ESPINTCP 7
+#endif
+
 /* this is not defined on some platforms */
 #ifndef SOL_UDP
 #define SOL_UDP IPPROTO_UDP
@@ -2098,7 +2103,8 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 		{
 			goto failed;
 		}
-		tmpl->encap_type = UDP_ENCAP_ESPINUDP;
+		tmpl->encap_type = data->encap_tcp ? TCP_ENCAP_ESPINTCP
+										   : UDP_ENCAP_ESPINUDP;
 		tmpl->encap_sport = htons(id->src->get_port(id->src));
 		tmpl->encap_dport = htons(id->dst->get_port(id->dst));
 		memset(&tmpl->encap_oa, 0, sizeof (xfrm_address_t));
@@ -2687,7 +2693,8 @@ static status_t migrate_sa(private_kernel_netlink_ipsec_t *this,
 		{
 			goto failed;
 		}
-		encap->encap_type = UDP_ENCAP_ESPINUDP;
+		encap->encap_type = data->encap_tcp ? TCP_ENCAP_ESPINTCP
+											: UDP_ENCAP_ESPINUDP;
 		encap->encap_sport = htons(data->new_src->get_port(data->new_src));
 		encap->encap_dport = htons(data->new_dst->get_port(data->new_dst));
 		memset(&encap->encap_oa, 0, sizeof (xfrm_address_t));
@@ -2984,7 +2991,8 @@ METHOD(kernel_ipsec_t, update_sa, status_t,
 		{
 			goto failed;
 		}
-		encap->encap_type = UDP_ENCAP_ESPINUDP;
+		encap->encap_type = data->encap_tcp ? TCP_ENCAP_ESPINTCP
+											: UDP_ENCAP_ESPINUDP;
 		encap->encap_sport = htons(data->new_src->get_port(data->new_src));
 		encap->encap_dport = htons(data->new_dst->get_port(data->new_dst));
 		memset(&encap->encap_oa, 0, sizeof (xfrm_address_t));

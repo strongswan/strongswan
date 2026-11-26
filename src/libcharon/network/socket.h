@@ -110,10 +110,82 @@ struct socket_t {
 	socket_family_t (*supported_families)(socket_t *this);
 
 	/**
+	 * Open a TCP connection to the given peer for TCP encapsulation of IKE
+	 * and ESP (RFC 9329), optional.
+	 *
+	 * The connection is established asynchronously, packets sent before it
+	 * is up are queued. The returned connection gets one reference that has
+	 * to be released with tcp_release().
+	 *
+	 * @param src			local address to bind to (may be %any), port ignored
+	 * @param dst			remote address and port
+	 * @param local			local address and port of the connection (allocated)
+	 * @param conn			unique identifier of the connection
+	 * @return				TRUE if connection initiated
+	 */
+	bool (*tcp_connect)(socket_t *this, host_t *src, host_t *dst,
+						host_t **local, uint32_t *conn);
+
+	/**
+	 * Acquire a reference to a TCP connection, optional.
+	 *
+	 * @param conn			connection identifier
+	 * @return				TRUE if the connection is known
+	 */
+	bool (*tcp_acquire)(socket_t *this, uint32_t conn);
+
+	/**
+	 * Release a reference to a TCP connection, optional. The connection is
+	 * closed once the last reference is gone.
+	 *
+	 * @param conn			connection identifier
+	 */
+	void (*tcp_release)(socket_t *this, uint32_t conn);
+
+	/**
 	 * Destroy a socket implementation.
 	 */
 	void (*destroy)(socket_t *this);
 };
+
+/**
+ * Packet/message metadata key that stores the identifier (an int) of the TCP
+ * connection a packet was received on or should be sent over. Packets without
+ * it use UDP.
+ */
+#define TCP_CONN_METADATA "tcp-conn"
+
+/**
+ * Get the TCP connection identifier attached to a packet.
+ *
+ * @param packet		packet to check
+ * @return				connection identifier, 0 for UDP
+ */
+static inline uint32_t packet_get_tcp_conn(packet_t *packet)
+{
+	metadata_t *metadata;
+	int conn = 0;
+
+	metadata = packet->get_metadata(packet, TCP_CONN_METADATA);
+	if (metadata)
+	{
+		metadata->get(metadata, &conn);
+	}
+	return conn;
+}
+
+/**
+ * Attach a TCP connection identifier to a packet.
+ *
+ * @param packet		packet to modify
+ * @param conn			connection identifier, 0 to remove it (UDP)
+ */
+static inline void packet_set_tcp_conn(packet_t *packet, uint32_t conn)
+{
+	packet->set_metadata(packet, TCP_CONN_METADATA, conn ?
+			lib->metadata->create(lib->metadata, METADATA_TYPE_INT, (int)conn) :
+			NULL);
+}
 
 /**
  * Helper function to (un-)register socket interfaces from plugin features.

@@ -237,6 +237,11 @@ struct private_child_sa_t {
 	bool encap;
 
 	/**
+	 * Specifies if encapsulation uses TCP (RFC 9329), implies encap
+	 */
+	bool encap_tcp;
+
+	/**
 	 * Specifies the IPComp transform used (IPCOMP_NONE if disabled)
 	 */
 	ipcomp_transform_t ipcomp;
@@ -1113,6 +1118,7 @@ static status_t install_internal(private_child_sa_t *this, chunk_t encr,
 		.ipcomp = this->ipcomp,
 		.cpi = cpi,
 		.encap = this->encap,
+		.encap_tcp = this->encap_tcp,
 		.cpu = this->per_cpu ? this->cpu : CPU_ID_MAX,
 		.hw_offload = this->config->get_hw_offload(this->config),
 		.mark = this->config->get_set_mark(this->config, inbound),
@@ -1761,6 +1767,7 @@ static bool update_sas(private_child_sa_t *this, host_t *me, host_t *other,
 			.new_dst = me,
 			.encap = this->encap,
 			.new_encap = encap,
+			.encap_tcp = this->encap_tcp,
 			.old_reqid = this->reqid,
 			.new_reqid = reqid ?: this->reqid,
 			.hw_offload = this->config->get_hw_offload(this->config),
@@ -1794,6 +1801,7 @@ static bool update_sas(private_child_sa_t *this, host_t *me, host_t *other,
 			.new_dst = other,
 			.encap = this->encap,
 			.new_encap = encap,
+			.encap_tcp = this->encap_tcp,
 			.old_reqid = this->reqid,
 			.new_reqid = reqid ?: this->reqid,
 			.hw_offload = this->config->get_hw_offload(this->config),
@@ -1823,6 +1831,7 @@ static bool update_sas(private_child_sa_t *this, host_t *me, host_t *other,
 					.new_dst = this->my_addr,
 					.encap = encap,
 					.new_encap = this->encap,
+					.encap_tcp = this->encap_tcp,
 					.old_reqid = reqid ?: this->reqid,
 					.new_reqid = this->reqid,
 					.hw_offload = this->config->get_hw_offload(this->config),
@@ -1901,6 +1910,9 @@ METHOD(child_sa_t, update, status_t,
 	array_t *new_my_ts = NULL, *new_other_ts = NULL;
 	child_sa_state_t old;
 	bool transport_proxy_mode;
+
+	/* TCP encapsulated SAs always use encapsulation, even without NAT */
+	encap = encap || this->encap_tcp;
 
 	/* anything changed at all? */
 	if (me->equals(me, this->my_addr) &&
@@ -2303,7 +2315,8 @@ child_sa_t *child_sa_create(host_t *me, host_t *other, child_cfg_t *config,
 			.create_policy_enumerator = _create_policy_enumerator,
 			.destroy = _destroy,
 		},
-		.encap = data->encap,
+		.encap = data->encap || data->encap_tcp,
+		.encap_tcp = data->encap_tcp,
 		.ipcomp = IPCOMP_NONE,
 		.state = CHILD_CREATED,
 		.my_ts = array_create(0, 0),

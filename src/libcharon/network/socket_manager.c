@@ -115,6 +115,51 @@ METHOD(socket_manager_t, supported_families, socket_family_t,
 	return families;
 }
 
+METHOD(socket_manager_t, tcp_connect, bool,
+	private_socket_manager_t *this, host_t *src, host_t *dst, host_t **local,
+	uint32_t *conn)
+{
+	bool success = FALSE;
+
+	this->lock->read_lock(this->lock);
+	if (this->socket && this->socket->tcp_connect)
+	{
+		success = this->socket->tcp_connect(this->socket, src, dst, local, conn);
+	}
+	else
+	{
+		DBG1(DBG_NET, "socket implementation does not support TCP "
+			 "encapsulation");
+	}
+	this->lock->unlock(this->lock);
+	return success;
+}
+
+METHOD(socket_manager_t, tcp_acquire, bool,
+	private_socket_manager_t *this, uint32_t conn)
+{
+	bool success = FALSE;
+
+	this->lock->read_lock(this->lock);
+	if (this->socket && this->socket->tcp_acquire)
+	{
+		success = this->socket->tcp_acquire(this->socket, conn);
+	}
+	this->lock->unlock(this->lock);
+	return success;
+}
+
+METHOD(socket_manager_t, tcp_release, void,
+	private_socket_manager_t *this, uint32_t conn)
+{
+	this->lock->read_lock(this->lock);
+	if (this->socket && this->socket->tcp_release)
+	{
+		this->socket->tcp_release(this->socket, conn);
+	}
+	this->lock->unlock(this->lock);
+}
+
 static void create_socket(private_socket_manager_t *this)
 {
 	socket_constructor_t create;
@@ -181,6 +226,9 @@ socket_manager_t *socket_manager_create()
 			.receive = _receiver,
 			.get_port = _get_port,
 			.supported_families = _supported_families,
+			.tcp_connect = _tcp_connect,
+			.tcp_acquire = _tcp_acquire,
+			.tcp_release = _tcp_release,
 			.add_socket = _add_socket,
 			.remove_socket = _remove_socket,
 			.destroy = _destroy,

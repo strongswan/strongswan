@@ -325,6 +325,14 @@ charon.port_nat_t = 4500
 	allocated.  Has to be different from **charon.port**, otherwise a random
 	port will be allocated.
 
+charon.port_tcp = 0
+	TCP port to accept TCP encapsulated IKE and ESP packets on (RFC 9329).
+
+	TCP port used locally to accept IKE and ESP packets encapsulated in TCP
+	according to RFC 9329 (_4500_ is the standard port). Disabled if set to 0.
+	Requires a Linux kernel with espintcp support. Connecting to peers over TCP
+	as initiator is configured per connection and works without this option.
+
 charon.prefer_best_path = no
 	Whether to prefer updating SAs to the path with the best route.
 

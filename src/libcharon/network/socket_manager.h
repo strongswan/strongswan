@@ -68,6 +68,28 @@ struct socket_manager_t {
 	socket_family_t (*supported_families)(socket_manager_t *this);
 
 	/**
+	 * Open a TCP connection for TCP encapsulation (RFC 9329).
+	 *
+	 * @see socket_t.tcp_connect
+	 */
+	bool (*tcp_connect)(socket_manager_t *this, host_t *src, host_t *dst,
+						host_t **local, uint32_t *conn);
+
+	/**
+	 * Acquire a reference to a TCP connection.
+	 *
+	 * @see socket_t.tcp_acquire
+	 */
+	bool (*tcp_acquire)(socket_manager_t *this, uint32_t conn);
+
+	/**
+	 * Release a reference to a TCP connection.
+	 *
+	 * @see socket_t.tcp_release
+	 */
+	void (*tcp_release)(socket_manager_t *this, uint32_t conn);
+
+	/**
 	 * Register a socket constructor.
 	 *
 	 * @param create		constructor for the socket
