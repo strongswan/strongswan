@@ -70,6 +70,44 @@ static bool fake_create_child_sa(listener_t *listener, ike_sa_t *ike_sa,
 	exchange_test_helper->add_listener(exchange_test_helper, _msg_listener); \
 })
 
+typedef struct proposal_mismatch_listener_t proposal_mismatch_listener_t;
+
+/** Listener that records the provenance of proposal mismatch alerts. */
+struct proposal_mismatch_listener_t {
+	listener_t listener;
+	alert_t expected;
+	u_int received, configured;
+	u_int received_proposals, configured_proposals;
+};
+
+static bool proposal_mismatch_alert(listener_t *listener, ike_sa_t *ike_sa,
+								alert_t alert, va_list args)
+{
+	proposal_mismatch_listener_t *this =
+		(proposal_mismatch_listener_t*)listener;
+	linked_list_t *proposals;
+	bool received;
+
+	if (alert != this->expected)
+	{
+		return TRUE;
+	}
+
+	received = va_arg(args, int);
+	proposals = va_arg(args, linked_list_t*);
+	if (received)
+	{
+		this->received++;
+		this->received_proposals = proposals->get_count(proposals);
+	}
+	else
+	{
+		this->configured++;
+		this->configured_proposals = proposals->get_count(proposals);
+	}
+	return TRUE;
+}
+
 /**
  * This ensures we don't accept a CREATE_CHILD_SA request before the IKE SA is
  * established.
@@ -350,6 +388,106 @@ START_TEST(test_multi_ke)
 }
 END_TEST
 
+/**
+ * A responder-side proposal mismatch is reported as received, while the
+ * initiator's resulting NO_PROPOSAL_CHOSEN alert is reported as configured.
+ */
+START_TEST(test_proposal_mismatch_alert_provenance)
+{
+	child_cfg_create_t child = {
+		.mode = MODE_TUNNEL,
+	};
+	proposal_mismatch_listener_t listener = {
+		.listener = {
+			.alert = proposal_mismatch_alert,
+		},
+		.expected = ALERT_PROPOSAL_MISMATCH_CHILD,
+	};
+	child_cfg_t *init_cfg, *resp_cfg;
+	peer_cfg_t *peer_cfg;
+	ike_sa_t *a, *b;
+
+	exchange_test_helper->establish_sa(exchange_test_helper, &a, &b, NULL);
+	exchange_test_helper->add_listener(exchange_test_helper, &listener.listener);
+
+	init_cfg = child_cfg_create("init", &child);
+	init_cfg->add_proposal(init_cfg,
+			proposal_create_from_string(PROTO_ESP, "aes128-sha256"));
+	init_cfg->add_traffic_selector(init_cfg, TRUE,
+			traffic_selector_create_dynamic(6, 0, 65535));
+	init_cfg->add_traffic_selector(init_cfg, FALSE,
+			traffic_selector_create_dynamic(6, 0, 65535));
+
+	resp_cfg = child_cfg_create("resp", &child);
+	resp_cfg->add_proposal(resp_cfg,
+			proposal_create_from_string(PROTO_ESP, "aes256-sha384"));
+	resp_cfg->add_traffic_selector(resp_cfg, TRUE,
+			traffic_selector_create_dynamic(6, 0, 65535));
+	resp_cfg->add_traffic_selector(resp_cfg, FALSE,
+			traffic_selector_create_dynamic(6, 0, 65535));
+	peer_cfg = b->get_peer_cfg(b);
+	peer_cfg->add_child_cfg(peer_cfg, resp_cfg);
+
+	call_ikesa(a, initiate, init_cfg, NULL);
+	exchange_test_helper->process_message(exchange_test_helper, b, NULL);
+	exchange_test_helper->process_message(exchange_test_helper, a, NULL);
+
+	ck_assert_int_eq(listener.received, 1);
+	ck_assert_int_eq(listener.received_proposals, 1);
+	ck_assert_int_eq(listener.configured, 1);
+	ck_assert_int_eq(listener.configured_proposals, 1);
+
+	call_ikesa(a, destroy);
+	call_ikesa(b, destroy);
+}
+END_TEST
+
+/**
+ * A responder-side IKE proposal mismatch is reported as received, while the
+ * initiator's resulting NO_PROPOSAL_CHOSEN alert is reported as configured.
+ */
+START_TEST(test_ike_proposal_mismatch_alert_provenance)
+{
+	exchange_test_sa_conf_t conf = {
+		.initiator = {
+			.ike = "aes128-sha256-modp2048",
+		},
+		.responder = {
+			.ike = "aes256-sha384-modp2048",
+		},
+	};
+	proposal_mismatch_listener_t listener = {
+		.listener = {
+			.alert = proposal_mismatch_alert,
+		},
+		.expected = ALERT_PROPOSAL_MISMATCH_IKE,
+	};
+	child_cfg_t *child_cfg;
+	ike_sa_id_t *id_a, *id_b;
+	ike_sa_t *a, *b;
+
+	child_cfg = exchange_test_helper->create_sa(exchange_test_helper, &a, &b,
+													 &conf);
+	id_a = a->get_id(a);
+	id_b = b->get_id(b);
+	exchange_test_helper->add_listener(exchange_test_helper, &listener.listener);
+
+	call_ikesa(a, initiate, child_cfg, NULL);
+	id_b->set_initiator_spi(id_b, id_a->get_initiator_spi(id_a));
+	exchange_test_helper->process_message(exchange_test_helper, b, NULL);
+	id_a->set_responder_spi(id_a, id_b->get_responder_spi(id_b));
+	exchange_test_helper->process_message(exchange_test_helper, a, NULL);
+
+	ck_assert_int_eq(listener.received, 1);
+	ck_assert_int_eq(listener.received_proposals, 1);
+	ck_assert_int_eq(listener.configured, 1);
+	ck_assert_int_eq(listener.configured_proposals, 1);
+
+	call_ikesa(a, destroy);
+	call_ikesa(b, destroy);
+}
+END_TEST
+
 Suite *child_create_suite_create()
 {
 	Suite *s;
@@ -371,6 +509,11 @@ Suite *child_create_suite_create()
 
 	tc = tcase_create("multiple key exchanges");
 	tcase_add_test(tc, test_multi_ke);
+	suite_add_tcase(s, tc);
+
+	tc = tcase_create("proposal mismatch alerts");
+	tcase_add_test(tc, test_proposal_mismatch_alert_provenance);
+	tcase_add_test(tc, test_ike_proposal_mismatch_alert_provenance);
 	suite_add_tcase(s, tc);
 
 	return s;
