@@ -48,6 +48,7 @@ libstrongswan_tests_SOURCES = tests.h tests.c \
   suites/test_rsa_oaep_sha512.c \
   suites/test_certpolicy.c \
   suites/test_certnames.c \
+  suites/test_credential_manager.c \
   suites/test_serial_gen.c \
   suites/test_serial_parse.c \
   suites/test_host.c \
