@@ -47,6 +47,7 @@ import org.strongswan.android.data.VpnType.VpnTypeFeature;
 import org.strongswan.android.logic.VpnStateService;
 import org.strongswan.android.logic.VpnStateService.State;
 import org.strongswan.android.utils.Constants;
+import org.strongswan.android.utils.TileStart;
 
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
@@ -319,11 +320,13 @@ public class VpnProfileControlActivity extends AppCompatActivity
 	}
 
 	/**
-	 * Start the given VPN profile
+	 * Data about the profile for connecting (also used by the quick settings tile,
+	 * which connects without this activity if no prompt is needed)
 	 *
 	 * @param profile VPN profile
+	 * @return profile info
 	 */
-	public void startVpnProfile(VpnProfile profile)
+	public static Bundle profileInfo(VpnProfile profile)
 	{
 		Bundle profileInfo = new Bundle();
 		profileInfo.putString(VpnProfileDataSource.KEY_UUID, profile.getUUID().toString());
@@ -333,6 +336,48 @@ public class VpnProfileControlActivity extends AppCompatActivity
 		profileInfo.putBoolean(PROFILE_CERTIFICATE_MISSING, profile.getVpnType().has(VpnTypeFeature.CERTIFICATE) &&
 							   profile.getUserCertificateAlias() == null);
 		profileInfo.putString(PROFILE_NAME, profile.getName());
+		return profileInfo;
+	}
+
+	/**
+	 * Whether connecting the profile needs no prompt of this activity (the same
+	 * checks as startVpnProfile() and onVpnServicePrepared())
+	 *
+	 * @param context context
+	 * @param profile VPN profile
+	 * @return true if the profile can be connected without this activity
+	 */
+	public static boolean canConnectWithoutPrompt(Context context, VpnProfile profile)
+	{
+		boolean prepared;
+		try
+		{
+			prepared = VpnService.prepare(context) == null;
+		}
+		catch (IllegalStateException | NullPointerException ex)
+		{	/* lockdown or no VPN support, the activity shows the error */
+			prepared = false;
+		}
+		PowerManager pm = (PowerManager)context.getSystemService(Context.POWER_SERVICE);
+		SharedPreferences pref = PreferenceManager.getDefaultSharedPreferences(context);
+		boolean powerPrompt = !pm.isIgnoringBatteryOptimizations(context.getPackageName()) &&
+							  !pref.getBoolean(Constants.PREF_IGNORE_POWER_WHITELIST, false);
+		boolean notificationPrompt = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+			ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED;
+		return TileStart.direct(prepared,
+								profile.getVpnType().has(VpnTypeFeature.CERTIFICATE) && profile.getUserCertificateAlias() == null,
+								profile.getVpnType().has(VpnTypeFeature.USER_PASS) && profile.getPassword() == null,
+								powerPrompt, notificationPrompt);
+	}
+
+	/**
+	 * Start the given VPN profile
+	 *
+	 * @param profile VPN profile
+	 */
+	public void startVpnProfile(VpnProfile profile)
+	{
+		Bundle profileInfo = profileInfo(profile);
 
 		removeFragmentByTag(DIALOG_TAG);
 
