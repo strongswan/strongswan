@@ -54,7 +54,7 @@ tls_ldflags = \
 
 # fuzzers that use crypto plugins in a significant way
 fuzzers_with_plugins = \
-	fuzz_certs fuzz_crls fuzz_ocsp_req fuzz_ocsp_rsp
+	fuzz_certs fuzz_crls fuzz_ike_init fuzz_ocsp_req fuzz_ocsp_rsp
 
 fuzzers_with_def = $(fuzzers_with_plugins:%=%_def)
 fuzzers_with_cus = $(fuzzers_with_plugins:%=%_cus)
@@ -112,6 +112,12 @@ fuzz_tls: fuzz_tls.c ${libfuzzer}
 
 fuzz_vici: fuzz_vici.c ${libfuzzer}
 	$(CC) $(AM_CPPFLAGS) $(CFLAGS) -o $@ $< $(charon_ldflags)
+
+fuzz_ike_init_def: fuzz_ike_init.c ${libfuzzer}
+	$(CC) $(fuzz_cppflags_def) $(CFLAGS) -o $@ $< $(charon_ldflags)
+
+fuzz_ike_init_cus: fuzz_ike_init.c ${libfuzzer}
+	$(CC) $(fuzz_cppflags_cus) $(CFLAGS) -o $@ $< $(charon_ldflags)
 
 noinst_LIBRARIES = libFuzzerLocal.a
 libFuzzerLocal_a_SOURCES = libFuzzerLocal.c
