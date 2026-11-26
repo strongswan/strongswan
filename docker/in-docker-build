@@ -1,0 +1,80 @@
+#! /bin/ash
+
+case $1 in
+configure)
+    ./configure \
+        --prefix=/usr \
+    	--sysconfdir=/etc \
+        --with-random-device=/dev/urandom \
+    	--enable-eap-aka \
+    	--enable-eap-aka-3gpp2 \
+    	--enable-eap-sim \
+    	--enable-eap-sim-file \
+    	--enable-eap-simaka-sql \
+    	--enable-eap-md5 \
+    	--enable-md4 \
+    	--enable-eap-mschapv2 \
+    	--enable-eap-identity \
+    	--enable-eap-radius \
+    	--enable-eap-dynamic \
+    	--enable-eap-tls \
+    	--enable-eap-ttls \
+    	--enable-eap-peap \
+    	--enable-eap-tnc \
+    	--enable-tnc-pdp \
+    	--enable-tnccs-20 \
+    	--enable-tnccs-dynamic \
+    	--enable-mediation \
+    	--enable-botan \
+    	--enable-openssl \
+    	--enable-blowfish \
+    	--enable-kernel-pfkey \
+    	--enable-integrity-test \
+    	--enable-leak-detective \
+    	--enable-load-tester \
+    	--enable-test-vectors \
+    	--enable-gcrypt \
+    	--enable-socket-default \
+    	--enable-socket-dynamic \
+    	--enable-connmark \
+    	--enable-forecast \
+    	--enable-addrblock \
+    	--enable-ctr \
+    	--enable-ccm \
+    	--enable-gcm \
+    	--enable-cmac \
+    	--enable-chapoly \
+    	--enable-ha \
+    	--enable-af-alg \
+    	--enable-whitelist \
+    	--enable-xauth-generic \
+    	--enable-xauth-eap \
+    	--enable-pkcs8 \
+    	--enable-unity \
+    	--enable-ipseckey \
+    	--enable-dnscert \
+    	--enable-acert \
+    	--enable-cmd \
+    	--enable-libipsec \
+    	--enable-ntru \
+    	--enable-lookip \
+    	--enable-sha3 \
+    	--enable-newhope \
+    	--enable-counters \
+    	--enable-save-keys
+    	#--enable-wolfssl
+    	#--enable-bliss \
+    ;;
+
+make)
+    make -j$(getconf _NPROCESSORS_ONLN) all
+    ;;
+
+install)
+    make install DESTDIR=/target
+    ;;
+
+*)  echo "unknown operation: $1"
+    exit 1
+    ;;
+esac

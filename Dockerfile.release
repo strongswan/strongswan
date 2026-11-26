@@ -1,0 +1,26 @@
+
+arg ALPINE_TAG=3.18.4
+
+# ------------------------------------------------------------------------
+from alpine:${ALPINE_TAG} as build
+
+run apk add --no-cache alpine-sdk gmp-dev iptables-dev openssl-dev libgcrypt-dev botan-dev
+workdir /build
+
+arg SWAN_VERSION=5.9.11
+run wget -O- https://download.strongswan.org/strongswan-${SWAN_VERSION}.tar.bz2 | tar xj --strip-components=1
+
+copy docker/in-docker-build .
+run ./in-docker-build configure
+run ./in-docker-build make
+run ./in-docker-build install
+
+# ------------------------------------------------------------------------
+from alpine:${ALPINE_TAG}
+
+run apk add --no-cache iproute2 iptables gmp openssl libgcrypt botan
+
+copy docker/entrypoint.sh /
+entrypoint ["/entrypoint.sh"]
+
+copy --from=build /target/ /
