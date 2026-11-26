@@ -754,8 +754,7 @@ METHOD(database_t, destroy, void,
 	this->mutex->destroy(this->mutex);
 	free(this->host);
 	free(this->username);
-	memwipe(this->password, this->password ? strlen(this->password) : 0);
-	free(this->password);
+	strwipe_free(this->password);
 	free(this->database);
 	free(this);
 }
@@ -800,8 +799,7 @@ static bool parse_uri(private_mysql_database_t *this, char *uri)
 				this->password = strdup(password);
 				this->database = strdup(database);
 				this->port = atoi(port);
-				memwipe(username, strlen(uri) - scheme_len);
-				free(username);
+				memwipe_free(username, strlen(uri) - scheme_len);
 				return TRUE;
 			}
 			DBG1(DBG_LIB, "parsing MySQL database uri 'mysql://%s:***@%s' "
@@ -818,8 +816,7 @@ static bool parse_uri(private_mysql_database_t *this, char *uri)
 		DBG1(DBG_LIB, "parsing MySQL database uri of the form "
 			 "'mysql://username:[password]@host[:port]/database' failed");
 	}
-	memwipe(username, strlen(uri) - scheme_len);
-	free(username);
+	memwipe_free(username, strlen(uri) - scheme_len);
 	return FALSE;
 }
 

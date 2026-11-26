@@ -175,8 +175,7 @@ static bool decrypt_and_unpack(private_pkcs12_t *this)
 		{
 			case PARSE_ERROR:
 				/* password was incorrect, try another */
-				memwipe(password, strlen(password));
-				free(password);
+				strwipe_free(password);
 				continue;
 			case SUCCESS:
 				success = TRUE;
@@ -185,8 +184,7 @@ static bool decrypt_and_unpack(private_pkcs12_t *this)
 				/* password was correct but we were unable to unpack anything */
 				break;
 		}
-		memwipe(password, strlen(password));
-		free(password);
+		strwipe_free(password);
 		break;
 	}
 	enumerator->destroy(enumerator);

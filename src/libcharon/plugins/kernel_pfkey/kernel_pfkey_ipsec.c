@@ -1991,8 +1991,7 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 
 failed:
 	memwipe(&request, sizeof(request));
-	memwipe(out, len);
-	free(out);
+	memwipe_free(out, len);
 	return status;
 }
 
@@ -2151,8 +2150,7 @@ METHOD(kernel_ipsec_t, update_sa, status_t,
 	}
 #endif /*SADB_X_EXT_NEW_ADDRESS_SRC*/
 
-	memwipe(out, len);
-	free(out);
+	memwipe_free(out, len);
 	out = NULL;
 
 	if (pfkey_send(this, msg, &out, &len) != SUCCESS)
@@ -2171,8 +2169,7 @@ METHOD(kernel_ipsec_t, update_sa, status_t,
 	status = SUCCESS;
 failed:
 	memwipe(&request, sizeof(request));
-	memwipe(out, len);
-	free(out);
+	memwipe_free(out, len);
 	return status;
 }
 
@@ -2253,8 +2250,7 @@ METHOD(kernel_ipsec_t, query_sa, status_t,
 
 	status = SUCCESS;
 failed:
-	memwipe(out, len);
-	free(out);
+	memwipe_free(out, len);
 	return status;
 }
 

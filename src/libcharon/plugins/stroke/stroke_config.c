@@ -1361,8 +1361,8 @@ METHOD(stroke_config_t, set_user_credentials, void,
 		char *pass;
 
 		pass = msg->user_creds.password;
-		password = chunk_clone(chunk_create(pass, strlen(pass)));
-		memwipe(pass, strlen(pass));
+		password = chunk_clone(chunk_from_str(pass));
+		strwipe(pass);
 	}
 	else
 	{	/* prompt the user for the password */

@@ -112,7 +112,7 @@ static shared_key_t* callback_shared(private_cmd_creds_t *this,
 		*match_other = ID_MATCH_PERFECT;
 	}
 	shared = shared_key_create(type, chunk_clone(chunk_from_str(pwd)));
-	memwipe(pwd, strlen(pwd));
+	strwipe(pwd);
 	/* cache password in case it is required more than once */
 	owners = linked_list_create();
 	if (me)
