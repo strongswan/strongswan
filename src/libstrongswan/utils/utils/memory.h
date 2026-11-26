@@ -115,8 +115,8 @@ void memwipe_noinline(void *ptr, size_t n);
  */
 static inline void memwipe_inline(void *ptr, size_t n)
 {
-	volatile char *c = (volatile char*)ptr;
-	size_t m, i;
+	volatile char *c = (volatile char*) ptr;
+	size_t i;
 
 	/* byte wise until long aligned */
 	for (i = 0; (uintptr_t)&c[i] % sizeof(long) && i < n; i++)
@@ -124,12 +124,9 @@ static inline void memwipe_inline(void *ptr, size_t n)
 		c[i] = 0;
 	}
 	/* word wise */
-	if (n >= sizeof(long))
+	for (; i + sizeof(long) <= n; i += sizeof(long))
 	{
-		for (m = n - sizeof(long); i <= m; i += sizeof(long))
-		{
-			*(volatile long*)&c[i] = 0;
-		}
+		*((volatile long*) &c[i]) = 0;
 	}
 	/* byte wise of the rest */
 	for (; i < n; i++)
