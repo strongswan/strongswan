@@ -690,6 +690,32 @@ START_TEST(test_strpfx)
 END_TEST
 
 /*******************************************************************************
+ * strmatch
+ */
+
+START_TEST(test_strmatch_eq)
+{
+	bool eq;
+
+	eq = strmatch(streq_data[_i].a, streq_data[_i].b, FALSE);
+	ck_assert(eq == streq_data[_i].eq);
+	eq = strcasematch(streq_data[_i].a, streq_data[_i].b, FALSE);
+	ck_assert(eq == streq_data[_i].case_eq);
+}
+END_TEST
+
+START_TEST(test_strmatch_pfx)
+{
+	bool prefix;
+
+	prefix = strmatch(strpfx_data[_i].str, strpfx_data[_i].pfx, TRUE);
+	ck_assert(prefix == strpfx_data[_i].prefix);
+	prefix = strcasematch(strpfx_data[_i].str, strpfx_data[_i].pfx, TRUE);
+	ck_assert(prefix == strpfx_data[_i].case_prefix);
+}
+END_TEST
+
+/*******************************************************************************
  * malloc_align/free_align
  */
 
@@ -1681,6 +1707,8 @@ Suite *utils_suite_create()
 	tcase_add_loop_test(tc, test_streq, 0, countof(streq_data));
 	tcase_add_loop_test(tc, test_strneq, 0, countof(strneq_data));
 	tcase_add_loop_test(tc, test_strpfx, 0, countof(strpfx_data));
+	tcase_add_loop_test(tc, test_strmatch_eq, 0, countof(streq_data));
+	tcase_add_loop_test(tc, test_strmatch_pfx, 0, countof(strpfx_data));
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("malloc_align");

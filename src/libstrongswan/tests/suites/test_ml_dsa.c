@@ -2659,16 +2659,13 @@ START_TEST(test_ml_dsa_sig)
 	/* set deterministic signatures */
 	pqc_params.deterministic = TRUE;
 
-	/* set non-empty context string */
-	pqc_params.ctx = chunk_from_str("strongSwan Project");
+	/* set empty context string */
+	pqc_params.ctx = chunk_empty;
 
-	/* generate and verify signature with non-empty context string */
+	/* generate and verify signature with empty context string */
 	ck_assert(key->sign(key, scheme, &pqc_params, msg, &signature));
-	if (chunk_equals(signature, tests[_i].sig))
-	{
-		warn("non-empty context string in ML-DSA signature not supported");
-	}
-	else if (!chunk_equals(signature, tests[_i].sig_ctx))
+	ck_assert(pubkey->verify(pubkey, scheme, &pqc_params, msg, signature));
+	if (!chunk_equals(signature, tests[_i].sig))
 	{
 		/* if the implementation only supports random signatures, make sure
 		 * they are different and validate against the public key */
@@ -2676,32 +2673,45 @@ START_TEST(test_ml_dsa_sig)
 		if (!chunk_equals(signature, randsig))
 		{
 			warn("deterministic ML-DSA signatures not supported");
+			ck_assert(pubkey->verify(pubkey, scheme, &pqc_params, msg, randsig));
 		}
 		else
 		{
-			ck_assert_chunk_eq(signature, tests[_i].sig_ctx);
+			ck_assert_chunk_eq(signature, tests[_i].sig);
 		}
-	}
-	ck_assert(pubkey->verify(pubkey, scheme, &pqc_params, msg, signature));
-	if (randsig.len)
-	{
-		ck_assert(pubkey->verify(pubkey, scheme, &pqc_params, msg, randsig));
+		ck_assert(pubkey->verify(pubkey, scheme, &pqc_params, msg,
+								 tests[_i].sig));
 	}
 	chunk_free(&signature);
 
-	/* set empty context string */
-	pqc_params.ctx = chunk_empty;
+	/* set non-empty context string */
+	pqc_params.ctx = chunk_from_str("strongSwan Project");
 
-	/* generate and verify signature with empty context string */
-	ck_assert(key->sign(key, scheme, &pqc_params, msg, &signature));
-	if (!randsig.len)
+	/* generate and verify signature with non-empty context string */
+	if (!key->sign(key, scheme, &pqc_params, msg, &signature) ||
+		chunk_equals(signature, tests[_i].sig))
 	{
-		ck_assert_chunk_eq(signature, tests[_i].sig);
+		warn("non-empty context string in ML-DSA signature not supported");
 	}
-	ck_assert(pubkey->verify(pubkey, scheme, &pqc_params, msg, signature));
+	else
+	{
+		if (!randsig.len)
+		{
+			ck_assert_chunk_eq(signature, tests[_i].sig_ctx);
+		}
+		else
+		{
+			ck_assert(pubkey->verify(pubkey, scheme, &pqc_params, msg,
+									 tests[_i].sig_ctx));
+		}
+		ck_assert(pubkey->verify(pubkey, scheme, &pqc_params, msg, signature));
+	}
 	chunk_free(&signature);
 	key->destroy(key);
 	pubkey->destroy(pubkey);
+
+	/* do the rest without context string */
+	pqc_params.ctx = chunk_empty;
 
 	/* load private key in expanded format */
 	asn1 = chunk_cat("cc", tests[_i].asn1_privkey, tests[_i].privkey);
@@ -2719,7 +2729,6 @@ START_TEST(test_ml_dsa_sig)
 		ck_assert_chunk_eq(encoding, asn1);
 		chunk_free(&encoding);
 		chunk_free(&asn1);
-		/* generate and verify signature with empty context string */
 		ck_assert(key->sign(key, scheme, &pqc_params, msg, &signature));
 		ck_assert_chunk_eq(signature, tests[_i].sig);
 		chunk_free(&signature);
@@ -2803,28 +2812,23 @@ START_TEST(test_ml_dsa_verify)
 	scheme = signature_scheme_from_oid(key_type_to_oid(tests[_i].type));
 	msg = chunk_from_str(msg_str);
 
-	/* set deterministic signatures */
+	/* set empty context string */
+	pqc_params.ctx = chunk_empty;
+
+	/* set deterministic signatures (not relevant when verifying) */
 	pqc_params.deterministic = TRUE;
+
+	/* verify signature */
+	ck_assert(pubkey->verify(pubkey, scheme, &pqc_params, msg, tests[_i].sig));
 
 	/* set non-empty context string */
 	pqc_params.ctx = chunk_from_str("strongSwan Project");
 
 	/* verify signature with non-empty context string */
-	if (pubkey->verify(pubkey, scheme, &pqc_params, msg, tests[_i].sig))
+	if (!pubkey->verify(pubkey, scheme, &pqc_params, msg, tests[_i].sig_ctx))
 	{
 		warn("non-empty context string in ML-DSA signature not supported");
 	}
-	else
-	{
-		ck_assert(pubkey->verify(pubkey, scheme, &pqc_params, msg,
-								 tests[_i].sig_ctx));
-	}
-
-	/* set empty context string */
-	pqc_params.ctx = chunk_empty;
-
-	/* verify signature */
-	ck_assert(pubkey->verify(pubkey, scheme, &pqc_params, msg, tests[_i].sig));
 
 	/* cleanup */
 	pubkey->destroy(pubkey);
