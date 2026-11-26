@@ -27,6 +27,7 @@
 #define __APPLE_USE_RFC_3542
 
 #include "socket_default_socket.h"
+#include "socket_default_tcp.h"
 
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -151,6 +152,21 @@ struct private_socket_default_socket_t {
 	 * A counter to implement round-robin selection of read sockets
 	 */
 	u_int rr_counter;
+
+	/**
+	 * TCP encapsulation (RFC 9329), NULL if not supported
+	 */
+	socket_default_tcp_t *tcp;
+
+	/**
+	 * Poll array used by the receiving thread
+	 */
+	struct pollfd *pfd;
+
+	/**
+	 * Allocated number of entries in pfd
+	 */
+	u_int pfd_size;
 };
 
 /**
@@ -245,40 +261,80 @@ METHOD(socket_t, receiver, status_t,
 	chunk_t data;
 	packet_t *pkt;
 	host_t *source = NULL, *dest = NULL;
-	int i, rr, index, bytes_read = 0, selected = -1;
+	int i, rr, index, bytes_read = 0, selected = -1, timeout, udp_count = 4;
 	bool oldstate;
 	uint16_t port = 0;
-	struct pollfd pfd[] = {
-		{ .fd = this->ipv4,			.events = POLLIN },
-		{ .fd = this->ipv4_natt,	.events = POLLIN },
-		{ .fd = this->ipv6,			.events = POLLIN },
-		{ .fd = this->ipv6_natt,	.events = POLLIN },
+	u_int count;
+	int fds[] = {
+		this->ipv4, this->ipv4_natt, this->ipv6, this->ipv6_natt,
 	};
 	int ports[] = {
 		/* port numbers associated to pollfds */
 		this->port, this->natt, this->port, this->natt,
 	};
 
-	DBG2(DBG_NET, "waiting for data on sockets");
-	oldstate = thread_cancelability(TRUE);
-	if (poll(pfd, countof(pfd), -1) <= 0)
+	while (TRUE)
 	{
-		thread_cancelability(oldstate);
-		return FAILED;
-	}
-	thread_cancelability(oldstate);
+		struct pollfd *pfd;
 
-	rr = this->rr_counter++;
-	for (i = 0; i < countof(pfd); i++)
-	{
-		/* To serve all ports with equal priority, we use a round-robin
-		 * scheme to choose the one to process in this invocation */
-		index = (rr + i) % countof(pfd);
-		if (pfd[index].revents & POLLIN)
+		/* the first entries are the UDP sockets, TCP sockets follow */
+		if (this->pfd_size < udp_count)
 		{
-			selected = pfd[index].fd;
-			port = ports[index];
+			this->pfd_size = 16;
+			this->pfd = realloc(this->pfd,
+								this->pfd_size * sizeof(struct pollfd));
+		}
+		for (i = 0; i < udp_count; i++)
+		{
+			this->pfd[i] = (struct pollfd){
+				.fd = fds[i],
+				.events = POLLIN,
+			};
+		}
+		count = udp_count;
+		timeout = -1;
+		if (this->tcp)
+		{
+			timeout = this->tcp->prepare_poll(this->tcp, &this->pfd,
+											  &this->pfd_size, &count);
+		}
+		pfd = this->pfd;
+
+		DBG2(DBG_NET, "waiting for data on sockets");
+		oldstate = thread_cancelability(TRUE);
+		i = poll(pfd, count, timeout);
+		thread_cancelability(oldstate);
+		if (i < 0)
+		{
+			return FAILED;
+		}
+
+		rr = this->rr_counter++;
+		for (i = 0; i < udp_count; i++)
+		{
+			/* To serve all ports with equal priority, we use a round-robin
+			 * scheme to choose the one to process in this invocation */
+			index = (rr + i) % udp_count;
+			if (pfd[index].revents & POLLIN)
+			{
+				selected = pfd[index].fd;
+				port = ports[index];
+				break;
+			}
+		}
+		if (selected != -1)
+		{
 			break;
+		}
+		if (this->tcp)
+		{
+			pkt = this->tcp->process_poll(this->tcp, pfd + udp_count,
+										  count - udp_count);
+			if (pkt)
+			{
+				*packet = pkt;
+				return SUCCESS;
+			}
 		}
 	}
 	if (selected != -1)
@@ -509,6 +565,16 @@ METHOD(socket_t, sender, status_t,
 	dst = packet->get_destination(packet);
 	data = packet->get_data(packet);
 
+	if (packet_get_tcp_conn(packet))
+	{
+		if (!this->tcp)
+		{
+			DBG1(DBG_NET, "TCP encapsulation not supported");
+			return FAILED;
+		}
+		return this->tcp->send(this->tcp, packet, packet_get_tcp_conn(packet));
+	}
+
 	DBG2(DBG_NET, "sending packet: from %#H to %#H", src, dst);
 
 	/* send data */
@@ -647,6 +713,33 @@ METHOD(socket_t, supported_families, socket_family_t,
 		families |= SOCKET_FAMILY_IPV6;
 	}
 	return families;
+}
+
+METHOD(socket_t, tcp_connect, bool,
+	private_socket_default_socket_t *this, host_t *src, host_t *dst,
+	host_t **local, uint32_t *conn)
+{
+	if (!this->tcp)
+	{
+		DBG1(DBG_NET, "TCP encapsulation not supported");
+		return FALSE;
+	}
+	return this->tcp->connect(this->tcp, src, dst, local, conn);
+}
+
+METHOD(socket_t, tcp_acquire, bool,
+	private_socket_default_socket_t *this, uint32_t conn)
+{
+	return this->tcp && this->tcp->acquire(this->tcp, conn);
+}
+
+METHOD(socket_t, tcp_release, void,
+	private_socket_default_socket_t *this, uint32_t conn)
+{
+	if (this->tcp)
+	{
+		this->tcp->release(this->tcp, conn);
+	}
 }
 
 /**
@@ -847,6 +940,8 @@ METHOD(socket_t, destroy, void,
 	{
 		close(this->ipv6_natt);
 	}
+	DESTROY_IF(this->tcp);
+	free(this->pfd);
 	free(this);
 }
 
@@ -864,6 +959,9 @@ socket_default_socket_t *socket_default_socket_create()
 				.receive = _receiver,
 				.get_port = _get_port,
 				.supported_families = _supported_families,
+				.tcp_connect = _tcp_connect,
+				.tcp_acquire = _tcp_acquire,
+				.tcp_release = _tcp_release,
 				.destroy = _destroy,
 			},
 		},
@@ -909,6 +1007,12 @@ socket_default_socket_t *socket_default_socket_create()
 		destroy(this);
 		return NULL;
 	}
+
+	/* TCP encapsulation (RFC 9329), we listen only if a port is configured */
+	this->tcp = socket_default_tcp_create(
+					lib->settings->get_int(lib->settings, "%s.port_tcp", 0,
+										   lib->ns),
+					this->max_packet);
 
 	return &this->public;
 }

@@ -612,6 +612,8 @@ struct child_sa_create_t {
 	uint32_t seq;
 	/** TRUE to enable UDP encapsulation (NAT traversal) */
 	bool encap;
+	/** TRUE to use TCP encapsulation (RFC 9329), implies encap */
+	bool encap_tcp;
 };
 
 /**

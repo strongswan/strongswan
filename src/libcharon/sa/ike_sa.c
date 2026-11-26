@@ -300,6 +300,11 @@ struct private_ike_sa_t {
 	size_t fragment_size;
 
 	/**
+	 * TCP connection used for IKE and ESP (RFC 9329), 0 for UDP
+	 */
+	uint32_t tcp_conn;
+
+	/**
 	 * Whether to follow IKEv2 redirects
 	 */
 	bool follow_redirects;
@@ -677,7 +682,7 @@ METHOD(ike_sa_t, get_message_id, uint32_t,
 }
 
 /**
- * Set configured DSCP value on packet
+ * Set configured DSCP value on packet and the TCP connection to use, if any
  */
 static void set_dscp(private_ike_sa_t *this, packet_t *packet)
 {
@@ -685,6 +690,36 @@ static void set_dscp(private_ike_sa_t *this, packet_t *packet)
 	{
 		packet->set_dscp(packet, this->ike_cfg->get_dscp(this->ike_cfg));
 	}
+	packet_set_tcp_conn(packet, this->tcp_conn);
+}
+
+METHOD(ike_sa_t, get_tcp_conn, uint32_t,
+	private_ike_sa_t *this)
+{
+	return this->tcp_conn;
+}
+
+METHOD(ike_sa_t, set_tcp_conn, void,
+	private_ike_sa_t *this, uint32_t conn)
+{
+	if (conn == this->tcp_conn)
+	{
+		return;
+	}
+	if (conn && !charon->socket->tcp_acquire(charon->socket, conn))
+	{
+		DBG1(DBG_IKE, "TCP connection %u is gone, keeping %u", conn,
+			 this->tcp_conn);
+		return;
+	}
+	if (this->tcp_conn)
+	{
+		charon->socket->tcp_release(charon->socket, this->tcp_conn);
+	}
+	DBG1(DBG_IKE, "IKE_SA %s[%u] uses TCP connection %u",
+		 this->peer_cfg ? this->peer_cfg->get_name(this->peer_cfg) : "(unnamed)",
+		 this->unique_id, conn);
+	this->tcp_conn = conn;
 }
 
 METHOD(ike_sa_t, send_keepalive, void,
@@ -702,6 +737,10 @@ METHOD(ike_sa_t, send_keepalive, void,
 	}
 	if (!(this->conditions & COND_NAT_HERE) || (this->conditions & COND_STALE))
 	{	/* disable keepalives if we are not NATed anymore, or the SA is stale */
+		return;
+	}
+	if (this->tcp_conn)
+	{	/* no NAT-keepalives over TCP (RFC 9329, section 6.6) */
 		return;
 	}
 
@@ -1166,6 +1205,10 @@ METHOD(ike_sa_t, has_mapping_changed, bool,
 METHOD(ike_sa_t, float_ports, void,
 	   private_ike_sa_t *this)
 {
+	if (this->tcp_conn)
+	{	/* a NAT doesn't change the encapsulation (RFC 9329, section 6.5) */
+		return;
+	}
 	/* even if the remote port is not 500 (e.g. because the response was natted)
 	 * we switch the remote port if we used port 500 */
 	if (this->other_host->get_port(this->other_host) == IKEV2_UDP_PORT ||
@@ -1340,8 +1383,8 @@ METHOD(ike_sa_t, generate_message_fragmented, status_t,
 	bool use_frags = FALSE;
 	bool pre_generated = FALSE;
 
-	if (this->ike_cfg)
-	{
+	if (this->ike_cfg && !this->tcp_conn)
+	{	/* no IKE fragmentation over TCP (RFC 9329, section 7.5) */
 		switch (this->ike_cfg->fragmentation(this->ike_cfg))
 		{
 			case FRAGMENTATION_FORCE:
@@ -1574,6 +1617,32 @@ static void resolve_hosts(private_ike_sa_t *this)
 	}
 }
 
+/**
+ * Open a TCP connection to the peer (RFC 9329) and use the local endpoint of
+ * the connection as our address
+ */
+static bool connect_tcp(private_ike_sa_t *this)
+{
+	host_t *local;
+	uint32_t conn;
+
+	/* resolve_hosts() might have reset the port to 500 */
+	this->other_host->set_port(this->other_host,
+							   this->ike_cfg->get_other_port(this->ike_cfg));
+	if (!charon->socket->tcp_connect(charon->socket, this->my_host,
+									 this->other_host, &local, &conn))
+	{
+		DBG1(DBG_IKE, "unable to connect to %#H over TCP, initiate aborted",
+			 this->other_host);
+		return FALSE;
+	}
+	DBG1(DBG_IKE, "IKE_SA uses TCP connection %u %#H - %#H", conn, local,
+		 this->other_host);
+	set_my_host(this, local);
+	this->tcp_conn = conn;
+	return TRUE;
+}
+
 METHOD(ike_sa_t, initiate, status_t,
 	private_ike_sa_t *this, child_cfg_t *child_cfg, child_init_args_t *args)
 {
@@ -1605,6 +1674,14 @@ METHOD(ike_sa_t, initiate, status_t,
 				 this->ike_cfg->get_other_addr(this->ike_cfg),
 				 this->retry_initiate_interval);
 			defer_initiate = TRUE;
+		}
+
+		if (!defer_initiate && this->ike_cfg->use_tcp(this->ike_cfg) &&
+			!this->tcp_conn && !connect_tcp(this))
+		{
+			DESTROY_IF(child_cfg);
+			charon->bus->alert(charon->bus, ALERT_PEER_INIT_UNREACHABLE, 0);
+			return DESTROY_ME;
 		}
 
 		set_condition(this, COND_ORIGINAL_INITIATOR, TRUE);
@@ -1684,6 +1761,18 @@ METHOD(ike_sa_t, process_message, status_t,
 		/* TODO-IKEv1: fall back to IKEv1 if we receive an IKEv1
 		 * INVALID_MAJOR_VERSION on an IKEv2 SA. */
 		return FAILED;
+	}
+	if (this->state == IKE_CREATED && !this->tcp_conn &&
+		!has_condition(this, COND_ORIGINAL_INITIATOR))
+	{	/* responder: use the TCP connection the initial message arrived on */
+		metadata_t *conn = message->get_metadata(message, TCP_CONN_METADATA);
+		int id;
+
+		if (conn)
+		{
+			conn->get(conn, &id);
+			set_tcp_conn(this, id);
+		}
 	}
 	status = this->task_manager->process_message(this->task_manager, message);
 	if (this->flush_auth_cfg && this->state == IKE_ESTABLISHED)
@@ -2958,6 +3047,8 @@ METHOD(ike_sa_t, inherit_pre, void,
 	set_peer_cfg(this, other->peer_cfg);
 	set_my_host(this, other->my_host->clone(other->my_host));
 	set_other_host(this, other->other_host->clone(other->other_host));
+	/* a rekeyed IKE_SA continues to use the same TCP connection */
+	set_tcp_conn(this, other->tcp_conn);
 
 	/* apply extensions and conditions with a few exceptions */
 	this->extensions = other->extensions;
@@ -3145,6 +3236,10 @@ METHOD(ike_sa_t, destroy, void,
 #endif /* ME */
 	free(this->nat_detection_dest.ptr);
 
+	if (this->tcp_conn)
+	{
+		charon->socket->tcp_release(charon->socket, this->tcp_conn);
+	}
 	DESTROY_IF(this->my_host);
 	DESTROY_IF(this->other_host);
 	DESTROY_IF(this->my_id);
@@ -3213,6 +3308,8 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id, bool initiator,
 			.set_message_id = _set_message_id,
 			.get_message_id = _get_message_id,
 			.float_ports = _float_ports,
+			.get_tcp_conn = _get_tcp_conn,
+			.set_tcp_conn = _set_tcp_conn,
 			.update_hosts = _update_hosts,
 			.get_my_id = _get_my_id,
 			.set_my_id = _set_my_id,

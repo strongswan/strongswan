@@ -63,6 +63,8 @@ connections.<conn>.remote_port = 500
 	Remote UDP port for IKE communication. If the default of port _500_ is used,
 	automatic IKE port floating to port 4500 is used to work around NAT issues.
 
+	If **tcp** is enabled, this is the remote TCP port and defaults to _4500_.
+
 connections.<conn>.proposals = default
 	Comma separated proposals to accept for IKE.
 
@@ -130,6 +132,21 @@ connections.<conn>.encap = no
 
 	Usually this is not required, but it can help to work around connectivity
 	issues with too restrictive intermediary firewalls.
+
+connections.<conn>.tcp = no
+	Use TCP encapsulation of IKE and ESP packets (RFC 9329) as initiator.
+
+	Use TCP encapsulation of IKE and ESP packets according to RFC 9329 when
+	initiating this connection. A TCP connection is opened to **remote_port**
+	(_4500_ by default if TCP is enabled), and all IKE messages and ESP packets
+	of the IKE_SA and its CHILD_SAs are sent over it. This helps on networks
+	that block UDP. As responder, TCP encapsulated IKE_SAs are accepted if
+	**charon.port_tcp** is configured, independent of this option.
+
+	Requires IKEv2 and a Linux kernel with espintcp support
+	(CONFIG_INET_ESPINTCP/CONFIG_INET6_ESPINTCP) via the kernel-netlink plugin.
+	MOBIKE and IKE fragmentation are not used over TCP, and there is no
+	automatic fallback from UDP to TCP.
 
 connections.<conn>.mobike = yes
 	Enables MOBIKE on IKEv2 connections.

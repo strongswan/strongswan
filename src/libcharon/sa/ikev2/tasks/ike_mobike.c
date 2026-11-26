@@ -140,6 +140,11 @@ static void process_payloads(private_ike_mobike_t *this, message_t *message)
 				{
 					DBG1(DBG_IKE, "peer supports MOBIKE, but disabled in config");
 				}
+				else if (this->ike_sa->get_tcp_conn(this->ike_sa))
+				{
+					DBG1(DBG_IKE, "peer supports MOBIKE, but it is not "
+						 "supported with TCP encapsulation");
+				}
 				else
 				{
 					DBG1(DBG_IKE, "peer supports MOBIKE");

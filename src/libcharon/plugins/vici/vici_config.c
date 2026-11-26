@@ -263,6 +263,7 @@ typedef struct {
 	peer_cfg_option_t options;
 	uint32_t version;
 	bool encap;
+	bool tcp;
 	bool send_certreq;
 	identification_t *ppk_id;
 	cert_policy_t send_cert;
@@ -390,6 +391,7 @@ static void log_peer_data(peer_data_t *data)
 	DBG2(DBG_CFG, "  aggressive = %u", has_opt(data, OPT_IKEV1_AGGRESSIVE));
 	DBG2(DBG_CFG, "  pull = %u", !has_opt(data, OPT_IKEV1_PUSH_MODE));
 	DBG2(DBG_CFG, "  dscp = 0x%.2x", data->dscp);
+	DBG2(DBG_CFG, "  tcp = %u", data->tcp);
 	DBG2(DBG_CFG, "  encap = %u", data->encap);
 	DBG2(DBG_CFG, "  dpd_delay = %llu", data->dpd_delay);
 	DBG2(DBG_CFG, "  dpd_timeout = %llu", data->dpd_timeout);
@@ -1723,6 +1725,7 @@ CALLBACK(peer_kv, bool,
 		VICI_RULE_CUSTOM("pull", &peer->options, parse_opt_pull),
 		VICI_RULE_CUSTOM("dscp", &peer->dscp, parse_dscp),
 		VICI_RULE_BOOL("encap", &peer->encap),
+		VICI_RULE_BOOL("tcp", &peer->tcp),
 		VICI_RULE_CUSTOM("mobike", &peer->options, parse_opt_mobike),
 		VICI_RULE_TIME("dpd_delay", &peer->dpd_delay),
 		VICI_RULE_TIME("dpd_timeout", &peer->dpd_timeout),
@@ -2527,7 +2530,6 @@ CALLBACK(config_sn, bool,
 		.send_cert = CERT_SEND_IF_ASKED,
 		.ocsp = OCSP_SEND_REPLY,
 		.version = IKEV2,
-		.remote_port = IKEV2_UDP_PORT,
 		.fragmentation = FRAGMENTATION_YES,
 		.unique = UNIQUE_NO,
 		.keyingtries = 1,
@@ -2658,6 +2660,17 @@ CALLBACK(config_sn, bool,
 	}
 #endif /* ME */
 
+	if (!peer.remote_port)
+	{	/* RFC 9329, section 2: TCP encapsulation uses port 4500 by default */
+		peer.remote_port = peer.tcp ? IKEV2_NATT_PORT : IKEV2_UDP_PORT;
+	}
+	if (peer.tcp && peer.version != IKEV2)
+	{
+		request->reply = vici_create_reply("TCP encapsulation requires IKEv2");
+		free_peer_data(&peer);
+		return FALSE;
+	}
+
 	log_peer_data(&peer);
 
 #ifdef USE_IKEV1
@@ -2678,6 +2691,7 @@ CALLBACK(config_sn, bool,
 		.ocsp_certreq = peer.ocsp == OCSP_SEND_BOTH ||
 						peer.ocsp == OCSP_SEND_REQUEST,
 		.force_encap = peer.encap,
+		.tcp = peer.tcp,
 		.fragmentation = peer.fragmentation,
 		.childless = peer.childless,
 		.dscp = peer.dscp,

@@ -107,6 +107,11 @@ struct private_ike_cfg_t {
 	bool force_encap;
 
 	/**
+	 * use TCP encapsulation as initiator
+	 */
+	bool tcp;
+
+	/**
 	 * use IKE fragmentation
 	 */
 	fragmentation_t fragmentation;
@@ -149,6 +154,12 @@ METHOD(ike_cfg_t, force_encap_, bool,
 	private_ike_cfg_t *this)
 {
 	return this->force_encap;
+}
+
+METHOD(ike_cfg_t, use_tcp, bool,
+	private_ike_cfg_t *this)
+{
+	return this->tcp;
 }
 
 METHOD(ike_cfg_t, fragmentation, fragmentation_t,
@@ -409,6 +420,7 @@ METHOD(ike_cfg_t, equals, bool,
 		this->certreq == other->certreq &&
 		this->ocsp_certreq == other->ocsp_certreq &&
 		this->force_encap == other->force_encap &&
+		this->tcp == other->tcp &&
 		this->fragmentation == other->fragmentation &&
 		this->childless == other->childless &&
 		streq(this->me, other->me) &&
@@ -609,6 +621,7 @@ ike_cfg_t *ike_cfg_create(ike_cfg_create_t *data)
 			.send_certreq = _send_certreq,
 			.send_ocsp_certreq = _send_ocsp_certreq,
 			.force_encap = _force_encap_,
+			.use_tcp = _use_tcp,
 			.fragmentation = _fragmentation,
 			.childless = _childless,
 			.resolve_me = _resolve_me,
@@ -634,6 +647,7 @@ ike_cfg_t *ike_cfg_create(ike_cfg_create_t *data)
 		.certreq = !data->no_certreq,
 		.ocsp_certreq = data->ocsp_certreq,
 		.force_encap = data->force_encap,
+		.tcp = data->tcp,
 		.fragmentation = data->fragmentation,
 		.childless = data->childless,
 		.me = strdup(data->local),

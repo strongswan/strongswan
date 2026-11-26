@@ -147,6 +147,19 @@ sections below. Defaults to
 if a private key was supplied, and to
 .B ikev2\-eap
 otherwise.
+.TP
+.B "\-\-tcp"
+Encapsulate IKE and ESP packets in TCP according to RFC 9329 (IKEv2 only,
+requires a Linux kernel with espintcp support). The remote port defaults to
+4500.
+.TP
+.BI "\-\-remote\-port " port
+Remote IKE port to connect to (default: 500, or 4500 with
+.BR \-\-tcp ).
+.TP
+.B "\-\-otp"
+Prompt for the EAP password and a one-time password separately and send them
+concatenated, as expected by some OTP servers via EAP-GTC.
 .PP
 .SS "IKEv2 Authentication Profiles"
 .TP

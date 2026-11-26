@@ -346,6 +346,64 @@ static void send_packets(private_task_manager_t *this, array_t *packets,
 }
 
 /**
+ * Send packets in the given array (they get cloned) over a TCP connection
+ */
+static void send_tcp_packets(private_task_manager_t *this, array_t *packets,
+							 uint32_t conn)
+{
+	packet_t *packet, *clone;
+	int i;
+
+	for (i = 0; i < array_count(packets); i++)
+	{
+		array_get(packets, i, &packet);
+		clone = packet->clone(packet);
+		packet_set_tcp_conn(clone, conn);
+		charon->sender->send(charon->sender, clone);
+	}
+}
+
+/**
+ * Get the TCP connection a message was received on, 0 for UDP
+ */
+static uint32_t get_msg_tcp_conn(message_t *msg)
+{
+	metadata_t *metadata;
+	int conn = 0;
+
+	metadata = msg->get_metadata(msg, TCP_CONN_METADATA);
+	if (metadata)
+	{
+		metadata->get(metadata, &conn);
+	}
+	return conn;
+}
+
+/**
+ * Update the TCP connection and endpoints of a TCP encapsulated IKE_SA based on
+ * a verified message. The TCP connection defines the addresses and ports, so
+ * they are always updated, e.g. after the originator reconnected
+ * (RFC 9329, section 6.1).
+ *
+ * @return			TRUE if the IKE_SA uses TCP and was updated
+ */
+static bool update_tcp(private_task_manager_t *this, message_t *msg,
+					   host_t *me, host_t *other)
+{
+	uint32_t conn;
+
+	conn = get_msg_tcp_conn(msg);
+	if (!conn || !this->ike_sa->get_tcp_conn(this->ike_sa))
+	{
+		return FALSE;
+	}
+	this->ike_sa->set_tcp_conn(this->ike_sa, conn);
+	this->ike_sa->update_hosts(this->ike_sa, me, other,
+							   UPDATE_HOSTS_FORCE_ADDRS);
+	return TRUE;
+}
+
+/**
  * Generates the given message and stores packet(s) in the given array
  */
 static bool generate_message(private_task_manager_t *this, message_t *message,
@@ -1879,6 +1937,12 @@ METHOD(task_manager_t, process_message, status_t,
 				this->ike_sa->set_statistic(this->ike_sa, STAT_INBOUND,
 											time_monotonic(NULL));
 				charon->bus->alert(charon->bus, ALERT_RETRANSMIT_RECEIVE, msg);
+				if (get_msg_tcp_conn(msg))
+				{	/* reply over the connection the retransmit arrived on */
+					send_tcp_packets(this, this->responding.packets,
+									 get_msg_tcp_conn(msg));
+					return SUCCESS;
+				}
 				send_packets(this, this->responding.packets,
 							 msg->get_destination(msg), msg->get_source(msg));
 				return SUCCESS;
@@ -1960,7 +2024,10 @@ METHOD(task_manager_t, process_message, status_t,
 		{
 			return FAILED;
 		}
-		if (!this->ike_sa->supports_extension(this->ike_sa, EXT_MOBIKE))
+		if (update_tcp(this, msg, me, other))
+		{	/* TCP encapsulated IKE_SAs are updated based on the connection */
+		}
+		else if (!this->ike_sa->supports_extension(this->ike_sa, EXT_MOBIKE))
 		{	/* only do implicit updates without MOBIKE, and only force
 			 * updates for IKE_AUTH (ports might change due to NAT-T) */
 			this->ike_sa->update_hosts(this->ike_sa, me, other,
@@ -2003,7 +2070,10 @@ METHOD(task_manager_t, process_message, status_t,
 			this->ike_sa->get_state(this->ike_sa) == IKE_CONNECTING ||
 			msg->get_exchange_type(msg) != IKE_SA_INIT)
 		{	/* only do updates based on verified messages (or initial ones) */
-			if (!this->ike_sa->supports_extension(this->ike_sa, EXT_MOBIKE))
+			if (update_tcp(this, msg, me, other))
+			{	/* TCP encapsulated IKE_SAs are updated based on the connection */
+			}
+			else if (!this->ike_sa->supports_extension(this->ike_sa, EXT_MOBIKE))
 			{	/* only do implicit updates without MOBIKE, we force an
 				 * update of the local address on IKE_SA_INIT as we might
 				 * not know it yet, but never for the remote address */

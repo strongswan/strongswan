@@ -1763,6 +1763,12 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 	ipsec_mode_t mode = data->mode;
 	status_t status = FAILED;
 
+	if (data->encap_tcp)
+	{
+		DBG1(DBG_KNL, "TCP encapsulation is not supported by kernel-pfkey");
+		return FAILED;
+	}
+
 	/* if IPComp is used, we install an additional IPComp SA. if the cpi is 0
 	 * we are in the recursive call below */
 	if (ipcomp != IPCOMP_NONE && data->cpi != 0)

@@ -1774,6 +1774,7 @@ METHOD(task_t, build_i, status_t,
 	this->child.if_id_in_def = this->ike_sa->get_if_id(this->ike_sa, TRUE);
 	this->child.if_id_out_def = this->ike_sa->get_if_id(this->ike_sa, FALSE);
 	this->child.encap = this->ike_sa->has_condition(this->ike_sa, COND_NAT_ANY);
+	this->child.encap_tcp = this->ike_sa->get_tcp_conn(this->ike_sa) != 0;
 	this->child_sa = child_sa_create(this->ike_sa->get_my_host(this->ike_sa),
 									 this->ike_sa->get_other_host(this->ike_sa),
 									 this->config, &this->child);
@@ -2417,6 +2418,7 @@ METHOD(task_t, build_r, status_t,
 	this->child.if_id_in_def = this->ike_sa->get_if_id(this->ike_sa, TRUE);
 	this->child.if_id_out_def = this->ike_sa->get_if_id(this->ike_sa, FALSE);
 	this->child.encap = this->ike_sa->has_condition(this->ike_sa, COND_NAT_ANY);
+	this->child.encap_tcp = this->ike_sa->get_tcp_conn(this->ike_sa) != 0;
 
 	if (!this->rekey && this->config->has_option(this->config, OPT_PER_CPU_SAS))
 	{
