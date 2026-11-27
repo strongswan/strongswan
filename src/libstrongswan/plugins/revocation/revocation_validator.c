@@ -428,6 +428,38 @@ static bool is_crl_not_valid_yet(certificate_t *crl, time_t now)
 }
 
 /**
+ * Check if a CRL covers the subject: if the CRL names the distribution point
+ * it was issued for, the subject must list it as one of its own (RFC 5280,
+ * section 6.3.3 (b)(2)(i)), so a CRL partitioned by distribution point is
+ * never applied to a certificate of another partition
+ */
+static bool is_crl_in_scope(crl_t *crl, x509_t *subject)
+{
+	enumerator_t *idps, *cdps;
+	x509_cdp_t *cdp;
+	char *idp;
+	bool scoped = FALSE, match = FALSE;
+
+	idps = crl->create_idp_uri_enumerator(crl);
+	while (!match && idps->enumerate(idps, &idp))
+	{
+		scoped = TRUE;
+		cdps = subject->create_crl_uri_enumerator(subject);
+		while (cdps->enumerate(cdps, &cdp))
+		{
+			if (streq(idp, cdp->uri))
+			{
+				match = TRUE;
+				break;
+			}
+		}
+		cdps->destroy(cdps);
+	}
+	idps->destroy(idps);
+	return !scoped || match;
+}
+
+/**
  * Get the better of two CRLs, and check for usable CRL info
  */
 static certificate_t *get_better_crl(certificate_t *cand, certificate_t *best,
@@ -456,6 +488,14 @@ static certificate_t *get_better_crl(certificate_t *cand, certificate_t *best,
 			cand->destroy(cand);
 			return best;
 		}
+	}
+
+	if (!is_crl_in_scope(crl, subject))
+	{
+		DBG1(DBG_CFG, "crl issued for a distribution point the certificate "
+			 "does not list, skipped");
+		cand->destroy(cand);
+		return best;
 	}
 
 	/* check CRL signature */

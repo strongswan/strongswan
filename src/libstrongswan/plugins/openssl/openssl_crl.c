@@ -104,6 +104,11 @@ struct private_openssl_crl_t {
 	linked_list_t *crl_uris;
 
 	/**
+	 * URIs of the issuingDistributionPoint
+	 */
+	linked_list_t *idp_uris;
+
+	/**
 	 * AuthorityKeyIdentifier of the issuing CA
 	 */
 	chunk_t authKeyIdentifier;
@@ -164,6 +169,12 @@ typedef struct {
  */
 bool openssl_parse_crlDistributionPoints(X509_EXTENSION *ext,
 										 linked_list_t *list);
+
+/**
+ * from openssl_x509
+ */
+bool openssl_parse_issuingDistributionPoint(X509_EXTENSION *ext,
+											linked_list_t *list);
 
 METHOD(enumerator_t, crl_enumerate, bool,
 	crl_enumerator_t *this, va_list args)
@@ -257,6 +268,12 @@ METHOD(crl_t, create_delta_crl_uri_enumerator, enumerator_t*,
 	private_openssl_crl_t *this)
 {
 	return this->crl_uris->create_enumerator(this->crl_uris);
+}
+
+METHOD(crl_t, create_idp_uri_enumerator, enumerator_t*,
+	private_openssl_crl_t *this)
+{
+	return this->idp_uris->create_enumerator(this->idp_uris);
 }
 
 METHOD(crl_t, get_authKeyIdentifier, chunk_t,
@@ -431,6 +448,7 @@ METHOD(certificate_t, destroy, void,
 		signature_params_destroy(this->scheme);
 		this->crl_uris->destroy_function(this->crl_uris,
 										 (void*)x509_cdp_destroy);
+		this->idp_uris->destroy_function(this->idp_uris, free);
 		DESTROY_IF(this->issuer);
 		free(this->authKeyIdentifier.ptr);
 		free(this->base.ptr);
@@ -468,10 +486,12 @@ static private_openssl_crl_t *create_empty()
 				.get_authKeyIdentifier = _get_authKeyIdentifier,
 				.is_delta_crl = _is_delta_crl,
 				.create_delta_crl_uri_enumerator = _create_delta_crl_uri_enumerator,
+				.create_idp_uri_enumerator = _create_idp_uri_enumerator,
 				.create_enumerator = _create_enumerator,
 			},
 		},
 		.crl_uris = linked_list_create(),
+		.idp_uris = linked_list_create(),
 		.ref = 1,
 	);
 	return this;
@@ -547,6 +567,10 @@ static bool parse_extensions(private_openssl_crl_t *this)
 					break;
 				case NID_freshest_crl:
 					ok = openssl_parse_crlDistributionPoints(ext, this->crl_uris);
+					break;
+				case NID_issuing_distribution_point:
+					ok = openssl_parse_issuingDistributionPoint(ext,
+																this->idp_uris);
 					break;
 				default:
 					ok = X509_EXTENSION_get_critical(ext) == 0 ||
