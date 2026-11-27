@@ -23,6 +23,8 @@
 #ifndef STRING_H_
 #define STRING_H_
 
+#include "memory.h"
+
 #include <ctype.h>
 
 /**
@@ -101,6 +103,28 @@ static inline bool strcasematch(const char *x, const char *y_or_prefix,
 static inline char *strdupnull(const char *s)
 {
 	return s ? strdup(s) : NULL;
+}
+
+/**
+ * Wipe the given string (only to the first 0-byte, use memwipe() if the buffer
+ * is larger and the length is known).
+ */
+static inline void strwipe(char *s)
+{
+	if (s)
+	{
+		memwipe(s, strlen(s));
+	}
+}
+
+/**
+ * Wipe and free the given string (only to the first 0-byte, use memwipe_free()
+ * if the buffer is larger and the length is known).
+ */
+static inline void strwipe_free(char *s)
+{
+	strwipe(s);
+	free(s);
 }
 
 /**

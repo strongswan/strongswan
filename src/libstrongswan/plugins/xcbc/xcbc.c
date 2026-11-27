@@ -279,10 +279,8 @@ METHOD(mac_t, destroy, void,
 	private_mac_t *this)
 {
 	this->k1->destroy(this->k1);
-	memwipe(this->k2, this->b);
-	free(this->k2);
-	memwipe(this->k3, this->b);
-	free(this->k3);
+	memwipe_free(this->k2, this->b);
+	memwipe_free(this->k3, this->b);
 	free(this->e);
 	free(this->remaining);
 	free(this);

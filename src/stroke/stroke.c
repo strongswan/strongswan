@@ -130,7 +130,7 @@ static int send_stroke_msg(stroke_msg_t *msg)
 			if (pass)
 			{
 				stream->write_all(stream, pass, strlen(pass));
-				memwipe(pass, strlen(pass));
+				strwipe(pass);
 				stream->write_all(stream, "\n", 1);
 			}
 		}

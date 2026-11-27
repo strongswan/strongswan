@@ -361,7 +361,7 @@ METHOD(nm_creds_t, set_username_password, void,
 	this->lock->write_lock(this->lock);
 	DESTROY_IF(this->user);
 	this->user = id->clone(id);
-	free(this->pass);
+	strwipe_free(this->pass);
 	this->pass = strdupnull(password);
 	this->lock->unlock(this->lock);
 }
@@ -370,7 +370,7 @@ METHOD(nm_creds_t, set_key_password, void,
 	private_nm_creds_t *this, char *password)
 {
 	this->lock->write_lock(this->lock);
-	free(this->keypass);
+	strwipe_free(this->keypass);
 	this->keypass = strdupnull(password);
 	this->lock->unlock(this->lock);
 }
@@ -379,7 +379,7 @@ METHOD(nm_creds_t, set_pin, void,
 	private_nm_creds_t *this, chunk_t keyid, char *pin)
 {
 	this->lock->write_lock(this->lock);
-	free(this->keypass);
+	strwipe_free(this->keypass);
 	free(this->keyid.ptr);
 	this->keypass = strdupnull(pin);
 	this->keyid = chunk_clone(keyid);
@@ -408,8 +408,8 @@ METHOD(nm_creds_t, clear, void,
 		cert->destroy(cert);
 	}
 	DESTROY_IF(this->user);
-	free(this->pass);
-	free(this->keypass);
+	strwipe_free(this->pass);
+	strwipe_free(this->keypass);
 	free(this->keyid.ptr);
 	DESTROY_IF(this->usercert);
 	DESTROY_IF(this->key);

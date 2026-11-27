@@ -991,8 +991,7 @@ METHOD(crypter_t, set_key, bool,
 METHOD(crypter_t, destroy, void,
 	private_aes_crypter_t *this)
 {
-	memwipe(this, sizeof(*this));
-	free(this);
+	memwipe_free(this, sizeof(*this));
 }
 
 /*

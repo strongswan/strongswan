@@ -1570,8 +1570,7 @@ METHOD(crypter_t, set_key3, bool,
 METHOD(crypter_t, destroy, void,
 	private_des_crypter_t *this)
 {
-	memwipe(this, sizeof(*this));
-	free(this);
+	memwipe_free(this, sizeof(*this));
 }
 
 /*

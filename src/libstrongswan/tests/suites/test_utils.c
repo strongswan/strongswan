@@ -951,6 +951,7 @@ END_TEST
 START_TEST(test_memwipe_null)
 {
 	memwipe(NULL, 16);
+	memwipe_free(NULL, 16);
 }
 END_TEST
 
@@ -998,6 +999,64 @@ START_TEST(test_memwipe_heap)
 	memwipe(buf, len);
 	ck_assert(test_wiped_memory(buf, len));
 	free(buf);
+
+	buf = malloc(len);
+	for (i = 0; i < len; i++)
+	{
+		buf[i] = i;
+	}
+	memwipe_free(buf, len);
+}
+END_TEST
+
+/*******************************************************************************
+ * strwipe
+ */
+
+START_TEST(test_strwipe_null)
+{
+	strwipe(NULL);
+	strwipe_free(NULL);
+}
+END_TEST
+
+START_TEST(test_strwipe_stack)
+{
+	char buf[64];
+	int i;
+
+	for (i = 0; i < sizeof(buf); i++)
+	{
+		buf[i] = i+1;
+	}
+	buf[sizeof(buf)-1] = 0;
+	strwipe(buf);
+	ck_assert(test_wiped_memory(buf, sizeof(buf)));
+}
+END_TEST
+
+START_TEST(test_strwipe_heap)
+{
+	size_t len = 64;
+	char *buf = malloc(len);
+	int i;
+
+	for (i = 0; i < len; i++)
+	{
+		buf[i] = i+1;
+	}
+	buf[len-1] = 0;
+	strwipe(buf);
+	ck_assert(test_wiped_memory(buf, len));
+	free(buf);
+
+	buf = malloc(len);
+	for (i = 0; i < len; i++)
+	{
+		buf[i] = i+1;
+	}
+	buf[len-1] = 0;
+	strwipe_free(buf);
 }
 END_TEST
 
@@ -1737,6 +1796,12 @@ Suite *utils_suite_create()
 	tcase_add_test(tc, test_memwipe_null);
 	tcase_add_test(tc, test_memwipe_stack);
 	tcase_add_test(tc, test_memwipe_heap);
+	suite_add_tcase(s, tc);
+
+	tc = tcase_create("strwipe");
+	tcase_add_test(tc, test_strwipe_null);
+	tcase_add_test(tc, test_strwipe_stack);
+	tcase_add_test(tc, test_strwipe_heap);
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("utils_memrchr");

@@ -1084,7 +1084,7 @@ CALLBACK(clear_content, void,
 {
 	if (*(bool*)clear)
 	{
-		memwipe(str, strlen(str));
+		strwipe(str);
 	}
 	free(str);
 }

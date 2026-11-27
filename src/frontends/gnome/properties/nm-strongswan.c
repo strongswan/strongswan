@@ -655,6 +655,8 @@ save_file_chooser (NMSettingVpn *settings, GtkBuilder *builder,
 	str = g_strdup (g_object_get_data (G_OBJECT (chooser), "path"));
 	if (str && strlen(str)) {
 		nm_setting_vpn_add_data_item (settings, key, str);
+	} else {
+		nm_setting_vpn_remove_data_item (settings, key);
 	}
 	g_free (str);
 }
@@ -670,9 +672,14 @@ save_entry (NMSettingVpn *settings, GtkBuilder *builder,
 	str = (char *) gtk_editable_get_text (GTK_EDITABLE (entry));
 	if (str && strlen (str)) {
 		nm_setting_vpn_add_data_item (settings, key, str);
+	} else {
+		nm_setting_vpn_remove_data_item (settings, key);
 	}
 }
 
+/**
+ * Save cert auth settings, clear them if no builder is passed.
+ */
 static void
 save_cert (NMSettingVpn *settings, GtkBuilder *builder)
 {
@@ -680,33 +687,57 @@ save_cert (NMSettingVpn *settings, GtkBuilder *builder)
 	gboolean cert = FALSE, key = FALSE;
 	char *str;
 
-	widget = GTK_WIDGET (gtk_builder_get_object (builder, "cert-combo"));
-	switch (gtk_combo_box_get_active (GTK_COMBO_BOX (widget)))
+	if (builder)
 	{
-		default:
-		case 0:
-			save_password_and_flags (settings, builder, "userkey-password-entry",
-									 "userkey-password");
-			cert = key = TRUE;
-			str = "file";
-			break;
-		case 1:
-			cert = TRUE;
-			str = "agent";
-			break;
-		case 2:
-			nm_setting_set_secret_flags (NM_SETTING (settings), "pin",
-										 NM_SETTING_SECRET_FLAG_NOT_SAVED, NULL);
-			str = "smartcard";
-			break;
+		widget = GTK_WIDGET (gtk_builder_get_object (builder, "cert-combo"));
+		switch (gtk_combo_box_get_active (GTK_COMBO_BOX (widget)))
+		{
+			default:
+			case 0:
+				save_password_and_flags (settings, builder, "userkey-password-entry",
+										 "userkey-password");
+				cert = key = TRUE;
+				str = "file";
+				break;
+			case 1:
+				cert = TRUE;
+				str = "agent";
+				break;
+			case 2:
+				nm_setting_set_secret_flags (NM_SETTING (settings), "pin",
+											 NM_SETTING_SECRET_FLAG_NOT_SAVED, NULL);
+				str = "smartcard";
+				break;
+		}
+		nm_setting_vpn_add_data_item (settings, "cert-source", str);
+	} else {
+		nm_setting_vpn_remove_data_item (settings, "cert-source");
 	}
-	nm_setting_vpn_add_data_item (settings, "cert-source", str);
 
 	if (cert) {
 		save_file_chooser (settings, builder, "usercert-chooser", "usercert");
+	} else {
+		nm_setting_vpn_remove_data_item (settings, "usercert");
 	}
 	if (key) {
 		save_file_chooser (settings, builder, "userkey-chooser", "userkey");
+	} else {
+		nm_setting_vpn_remove_data_item (settings, "userkey");
+	}
+}
+
+static void
+remove_secret (const char *key, const char *value, gpointer user_data)
+{
+	nm_setting_vpn_remove_secret (user_data, key);
+}
+
+static void
+remove_secret_flags (const char *key, const char *value, gpointer user_data)
+{
+	if (g_str_has_suffix (key, "-flags"))
+	{
+		nm_setting_vpn_remove_data_item (user_data, key);
 	}
 }
 
@@ -717,14 +748,24 @@ update_connection (NMVpnEditor *iface,
 {
 	StrongswanPluginUiWidget *self = STRONGSWAN_PLUGIN_UI_WIDGET (iface);
 	StrongswanPluginUiWidgetPrivate *priv = STRONGSWAN_PLUGIN_UI_WIDGET_GET_PRIVATE (self);
-	NMSettingVpn *settings;
+	NMSettingVpn *settings, *existing;
 	GtkWidget *widget;
-	gboolean active;
+	gboolean active, cert_auth = FALSE, pw_auth = FALSE;
 	char *str;
 
 	if (!check_validity (self, error))
 		return FALSE;
-	settings = NM_SETTING_VPN (nm_setting_vpn_new ());
+
+	existing = nm_connection_get_setting_vpn (connection);
+	if (existing) {
+		settings = NM_SETTING_VPN (nm_setting_duplicate (NM_SETTING (existing)));
+		/* always remove all existing secrets so the editor or later the
+		 * auth-dialog is the only source, same for the flags */
+		nm_setting_vpn_foreach_secret (settings, remove_secret, settings);
+		nm_setting_vpn_foreach_data_item (settings, remove_secret_flags, settings);
+	} else {
+		settings = NM_SETTING_VPN (nm_setting_vpn_new ());
+	}
 
 	g_object_set (settings, NM_SETTING_VPN_SERVICE_TYPE,
 				  NM_DBUS_SERVICE_STRONGSWAN, NULL);
@@ -740,31 +781,40 @@ update_connection (NMVpnEditor *iface,
 	{
 		default:
 		case 0:
-			save_entry (settings, priv->builder, "user-entry", "user");
-			save_password_and_flags (settings, priv->builder, "passwd-entry", "password");
+			pw_auth = TRUE;
 			str = "eap";
 			break;
 		case 1:
-			save_cert (settings, priv->builder);
+			cert_auth = TRUE;
 			str = "cert";
 			break;
 		case 2:
-			save_cert (settings, priv->builder);
+			cert_auth = TRUE;
 			str = "eap-tls";
 			break;
 		case 3:
-			save_entry (settings, priv->builder, "user-entry", "user");
-			save_password_and_flags (settings, priv->builder, "passwd-entry", "password");
+			pw_auth = TRUE;
 			str = "psk";
 			break;
 		case 4:
-			save_entry (settings, priv->builder, "user-entry", "user");
-			save_password_and_flags (settings, priv->builder, "passwd-entry", "password");
-			save_cert (settings, priv->builder);
+			pw_auth = TRUE;
+			cert_auth = TRUE;
 			str = "cert-eap";
 			break;
 	}
 	nm_setting_vpn_add_data_item (settings, "method", str);
+
+	if (pw_auth) {
+		save_entry (settings, priv->builder, "user-entry", "user");
+		save_password_and_flags (settings, priv->builder, "passwd-entry", "password");
+	} else {
+		nm_setting_vpn_remove_data_item (settings, "user");
+	}
+	if (cert_auth) {
+		save_cert (settings, priv->builder);
+	} else {
+		save_cert (settings, NULL);
+	}
 
 	widget = GTK_WIDGET (gtk_builder_get_object (priv->builder, "virtual-check"));
 	active = gtk_check_button_get_active(GTK_CHECK_BUTTON(widget));
@@ -788,6 +838,8 @@ update_connection (NMVpnEditor *iface,
 		str = g_strdelimit (g_strdup (str), ",", ';');
 		nm_setting_vpn_add_data_item (settings, "ike", str);
 		g_free (str);
+	} else {
+		nm_setting_vpn_remove_data_item (settings, "ike");
 	}
 
 	widget = GTK_WIDGET (gtk_builder_get_object (priv->builder, "esp-entry"));
@@ -796,6 +848,8 @@ update_connection (NMVpnEditor *iface,
 		str = g_strdelimit (g_strdup (str), ",", ';');
 		nm_setting_vpn_add_data_item (settings, "esp", str);
 		g_free (str);
+	} else {
+		nm_setting_vpn_remove_data_item (settings, "esp");
 	}
 
 	save_entry (settings, priv->builder, "local-ts-entry", "local-ts");
@@ -812,16 +866,16 @@ dispose (GObject *object)
 	StrongswanPluginUiWidgetPrivate *priv = STRONGSWAN_PLUGIN_UI_WIDGET_GET_PRIVATE (plugin);
 	GtkWidget *widget;
 
-	widget = GTK_WIDGET (gtk_builder_get_object (priv->builder, "passwd-entry"));
-	g_signal_handlers_disconnect_by_func (G_OBJECT (widget), G_CALLBACK (password_storage_changed_cb), plugin);
-	widget = GTK_WIDGET (gtk_builder_get_object (priv->builder, "userkey-password-entry"));
-	g_signal_handlers_disconnect_by_func (G_OBJECT (widget), G_CALLBACK (password_storage_changed_cb), plugin);
-
-	if (priv->widget)
-		g_object_unref (priv->widget);
-
 	if (priv->builder)
-		g_object_unref (priv->builder);
+	{
+		widget = GTK_WIDGET (gtk_builder_get_object (priv->builder, "passwd-entry"));
+		g_signal_handlers_disconnect_by_func (G_OBJECT (widget), G_CALLBACK (password_storage_changed_cb), plugin);
+		widget = GTK_WIDGET (gtk_builder_get_object (priv->builder, "userkey-password-entry"));
+		g_signal_handlers_disconnect_by_func (G_OBJECT (widget), G_CALLBACK (password_storage_changed_cb), plugin);
+	}
+
+	g_clear_object (&priv->widget);
+	g_clear_object (&priv->builder);
 
 	G_OBJECT_CLASS (strongswan_plugin_ui_widget_parent_class)->dispose (object);
 }
