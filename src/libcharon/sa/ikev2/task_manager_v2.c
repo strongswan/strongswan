@@ -1876,8 +1876,6 @@ METHOD(task_manager_t, process_message, status_t,
 			case ALREADY_DONE:
 				DBG1(DBG_IKE, "received retransmit of request with ID %d, "
 					 "retransmitting response", mid);
-				this->ike_sa->set_statistic(this->ike_sa, STAT_INBOUND,
-											time_monotonic(NULL));
 				charon->bus->alert(charon->bus, ALERT_RETRANSMIT_RECEIVE, msg);
 				send_packets(this, this->responding.packets,
 							 msg->get_destination(msg), msg->get_source(msg));
