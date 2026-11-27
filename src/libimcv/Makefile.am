@@ -201,12 +201,15 @@ check_PROGRAMS = $(TESTS)
 imcv_tests_SOURCES = \
 	suites/test_imcv_seg.c \
 	suites/test_imcv_swima.c \
+	suites/test_imcv_quote.c \
 	imcv_tests.h imcv_tests.c
 
 imcv_tests_CFLAGS = \
 	-I$(top_srcdir)/src/libimcv \
 	-I$(top_srcdir)/src/libstrongswan \
 	-I$(top_srcdir)/src/libstrongswan/tests \
+	-DPLUGINDIR=\""$(abs_top_builddir)/src/libstrongswan/plugins\"" \
+	-DPLUGINS=\""${s_plugins}\"" \
 	@COVERAGE_CFLAGS@
 
 imcv_tests_LDFLAGS = @COVERAGE_LDFLAGS@
