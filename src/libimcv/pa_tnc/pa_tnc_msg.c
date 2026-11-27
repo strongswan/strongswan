@@ -186,6 +186,7 @@ METHOD(pa_tnc_msg_t, process, status_t,
 	uint8_t version;
 	uint32_t reserved, offset, attr_offset;
 	pen_type_t error_code = { PEN_IETF, PA_ERROR_INVALID_PARAMETER };
+	status_t status;
 
 	/* process message header */
 	if (this->encoding.len < PA_TNC_HEADER_SIZE)
@@ -230,7 +231,8 @@ METHOD(pa_tnc_msg_t, process, status_t,
 		attr_value = attr->get_value(attr);
 		attr_type  = attr->get_type(attr);
 
-		if (attr->process(attr, &attr_offset) != SUCCESS)
+		status = attr->process(attr, &attr_offset);
+		if (status != SUCCESS)
 		{
 			attr->destroy(attr);
 
@@ -240,6 +242,14 @@ METHOD(pa_tnc_msg_t, process, status_t,
 				/* suppress error while processing a PA-TNC error attribute */
 				offset += attr_value.len;
 				continue;
+			}
+			if (status == NEED_MORE)
+			{
+				/* attributes in a PA-TNC message are not segmented, so the
+				 * value is incomplete, point to the attribute's length field */
+				DBG1(DBG_TNC, "insufficient bytes for PA-TNC attribute value");
+				offset -= PA_TNC_ATTR_HEADER_SIZE;
+				attr_offset = PA_TNC_ATTR_INFO_SIZE;
 			}
 			error_code = pen_type_create(PEN_IETF, PA_ERROR_INVALID_PARAMETER);
 			error = ietf_attr_pa_tnc_error_create_with_offset(error_code,

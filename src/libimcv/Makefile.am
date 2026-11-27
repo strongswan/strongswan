@@ -199,6 +199,7 @@ TESTS = imcv_tests
 check_PROGRAMS = $(TESTS)
 
 imcv_tests_SOURCES = \
+	suites/test_imcv_pa_tnc.c \
 	suites/test_imcv_seg.c \
 	suites/test_imcv_swima.c \
 	imcv_tests.h imcv_tests.c

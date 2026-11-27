@@ -14,5 +14,6 @@
  * for more details.
  */
 
+TEST_SUITE(imcv_pa_tnc_suite_create)
 TEST_SUITE(imcv_seg_suite_create)
 TEST_SUITE(imcv_swima_suite_create)
