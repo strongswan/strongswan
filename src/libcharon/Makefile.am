@@ -635,6 +635,13 @@ if MONOLITHIC
 endif
 endif
 
+if USE_CFG_SUBNET
+  SUBDIRS += plugins/cfg_subnet
+if MONOLITHIC
+  libcharon_la_LIBADD += plugins/cfg_subnet/libstrongswan-cfg-subnet.la
+endif
+endif
+
 if USE_XAUTH_GENERIC
   SUBDIRS += plugins/xauth_generic
 if MONOLITHIC
