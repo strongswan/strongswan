@@ -7,6 +7,7 @@ libcharon_tests_SOURCES = \
   suites/test_peer_cfg.c \
   suites/test_mem_pool.c \
   suites/test_message_chapoly.c \
+  suites/test_message_intermediate.c \
   libcharon_tests.h libcharon_tests.c
 
 libcharon_tests_CFLAGS = \

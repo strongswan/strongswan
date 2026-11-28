@@ -2064,14 +2064,15 @@ METHOD(message_t, get_plain, bool,
 	{
 		/* as mentioned above, assume all received payloads were contained in an
 		 * encrypted payload */
+		header.next_payload = PL_NONE;
 		enumerator = create_payload_enumerator(this);
 		while (enumerator->enumerate(enumerator, &payload))
 		{
 			enc_generator->generate_payload(enc_generator, payload);
+			/* an empty encrypted payload leaves first_payload unchanged */
+			header.next_payload = this->first_payload;
 		}
 		enumerator->destroy(enumerator);
-
-		header.next_payload = this->first_payload;
 	}
 	int_auth_p = enc_generator->get_chunk(enc_generator, NULL);
 
